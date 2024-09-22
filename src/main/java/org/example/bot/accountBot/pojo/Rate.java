@@ -6,6 +6,9 @@ import lombok.Data;
 import java.math.BigDecimal;
 import java.util.Date;
 
+/**
+ * 操作汇率和操作人的动作 时间
+ */
 @Data
 public class Rate {
     //汇率
