@@ -551,7 +551,7 @@ public class accountBot extends TelegramLongPollingBot {
                           Message message, String[] split3, Rate rate, String callBackFirstName,
                           String callBackName, String firstName, Issue issue, List<Issue> issueList) {
         //判断是否符合公式
-        boolean orNo1 = isOrNo(text);
+        boolean orNo1 = isMatcher(text);
         if (text.charAt(0) == '+' || text.charAt(0) == '-') {
             // 如果 text 的第一个字符是 '+'，或者 '-'，或者 orNo1 为 true，则继续执行
             log.info("yesyesyesyes");
@@ -563,7 +563,7 @@ public class accountBot extends TelegramLongPollingBot {
 
 
         BigDecimal num = new BigDecimal(0);
-        if (!isOrNo(text)){
+        if (!isMatcher(text)){
             //当不是公式入账时才赋值
             num=new BigDecimal(text.substring(1));
         }
@@ -719,7 +719,24 @@ public class accountBot extends TelegramLongPollingBot {
             e.printStackTrace();
         }
     }
-    //计算应下发：(t-t*r)/c
+    //计算应下发：(t-t*r)/c     +1000（金额）*0.05（费率）/7（汇率）= （单位结果）
+    private BigDecimal calc(Rate rate, BigDecimal downing, BigDecimal total, BigDecimal num) {
+        BigDecimal divide = num.multiply(rate.getRate()).divide(rate.getExchange());
+        String input = "+1000/7*0.05";
+        // 正则表达式匹配数字（包括负数和小数）
+        String regex = "[-+]?\\d*\\.\\d+|[-+]?\\d+";
+
+        Pattern pattern = Pattern.compile(regex);
+        Matcher matcher = pattern.matcher(input);
+        List<String> numbers = new ArrayList<>();
+
+        while (matcher.find()) {
+            numbers.add(matcher.group());
+        }
+        return downing;
+    }
+
+    //计算应下发：(t-t*r)/c     +1000（金额）*0.05（费率）/7（汇率）= （单位结果）
     private BigDecimal dowingAccount(Rate rate, BigDecimal downing, BigDecimal total, BigDecimal num) {
         log.info("numsssssss:{}",num);
         BigDecimal rate1 = rate.getRate();
@@ -877,7 +894,8 @@ public class accountBot extends TelegramLongPollingBot {
         }
         return false;
     }
-    private boolean isOrNo(String text1) {
+    //是否匹配公式入账
+    private boolean isMatcher(String text1) {
         String text = text1.substring(1);
         //匹配100*8/9
         Pattern pattern = Pattern.compile("^(\\d+)\\*(\\d+)\\/(\\d+)$");
