@@ -38,7 +38,7 @@ public class AccountBot extends TelegramLongPollingBot {
     private String botToken;
     @Value("${telegram.bot.username}")
     private String username;
-
+//111111测试GitHub联通
     @Autowired
     private RateService rateService;
     @Autowired
