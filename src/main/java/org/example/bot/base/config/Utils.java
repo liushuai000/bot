@@ -12,6 +12,17 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
+/**
+ * 入账操作2.0，匹配公式
+ * 加法  用于matchFound 0 1
+ * 加法2 用于matchFound 2 3
+ * 减法
+ * 是否匹配公式入账
+ * 应下发计算公式：d=(total-(total*rate1))/exchange
+ * 计算器的判断是否符合
+ *
+ **/
 @Slf4j
 @Component
 public class Utils {
@@ -178,13 +189,11 @@ public class Utils {
         // 正则表达式匹配形如 "数字 运算符 数字" 的模式
         Pattern pattern = Pattern.compile("^(\\d+)([+\\-*/])(\\d+)$");
         Matcher matcher = pattern.matcher(text);
-
         if (matcher.find()) {
             // 解析数字
             int number1 = Integer.parseInt(matcher.group(1));
             int number2 = Integer.parseInt(matcher.group(3));
             char operator = matcher.group(2).charAt(0);
-
             // 计算结果
             int result = 0;
             switch (operator) {
