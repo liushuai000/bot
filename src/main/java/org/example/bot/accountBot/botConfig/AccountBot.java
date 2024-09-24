@@ -1,13 +1,18 @@
 package org.example.bot.accountBot.botConfig;
+
 import lombok.extern.slf4j.Slf4j;
 import org.example.bot.accountBot.pojo.Account;
 import org.example.bot.accountBot.pojo.Rate;
 import org.example.bot.accountBot.pojo.Issue;
 
 import org.example.bot.accountBot.pojo.User;
-import org.example.bot.accountBot.service.accService;
+import org.example.bot.accountBot.service.AccountService;
+import org.example.bot.accountBot.service.IssueService;
+import org.example.bot.accountBot.service.RateService;
+import org.example.bot.accountBot.service.UserService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
-import org.telegram.telegrambots.bots.DefaultBotOptions;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Message;
@@ -26,30 +31,36 @@ import java.util.regex.Pattern;
 
 @Slf4j
 @Component
-public class accountBot extends TelegramLongPollingBot {
+@SuppressWarnings("unchecked")
+public class AccountBot extends TelegramLongPollingBot {
+    @Value("${telegram.bot.token}")
+    private String botToken;
+    @Value("${telegram.bot.username}")
+    private String username;
 
-    private accService accService;
+    @Autowired
+    private RateService rateService;
+    @Autowired
+    private UserService userService;
+    @Autowired
+    private IssueService issueService;
+    @Autowired
+    private AccountService accountService;
+
     private Date oldSetTime;
     boolean Over24Hour=false;
-    //填你自己的token和username
-    private String token ="7174037873:AAFvDejFixb94JY66NHSr_ROB6fXG4LioRs";
-    private String username ="zqzs18bot";
 
-    public accountBot() {
-        this( new DefaultBotOptions());
-    }
 
-    public accountBot(DefaultBotOptions options) {
-        super(options);
-    }
-    @Override
-    public String getBotToken() {
-        return this.token;
-    }
     @Override
     public String getBotUsername() {
-        return this.username;
+        return username;
     }
+
+    @Override
+    public String getBotToken() {
+        return botToken;
+    }
+
 
     @Override
     public void onUpdateReceived(Update update) {
@@ -63,15 +74,14 @@ public class accountBot extends TelegramLongPollingBot {
             }
         }
         //接收消息
+        assert update != null;
         Message message = update.getMessage();
         //回复人的名称
         String callBackName = null;
         //回复人的昵称
         String callBackFirstName=null;
-        if (update.getMessage() != null &&
-                update.getMessage().getFrom() != null &&
-                update.getMessage().getReplyToMessage() != null &&
-                update.getMessage().getReplyToMessage().getFrom() != null) {
+        if (update.getMessage() != null && update.getMessage().getFrom() != null &&
+                update.getMessage().getReplyToMessage() != null && update.getMessage().getReplyToMessage().getFrom() != null) {
             callBackName = update.getMessage().getReplyToMessage().getFrom().getUserName();  // 确保 userName 不为 null
             callBackFirstName = update.getMessage().getReplyToMessage().getFrom().getFirstName();  // 确保 userName 不为 null
             if (callBackName == null) {
@@ -79,68 +89,55 @@ public class accountBot extends TelegramLongPollingBot {
             }
         }
         log.info("callBackName,callBackFirstName: {},{}", callBackName,callBackFirstName);
-        if (update.hasMessage() && update.getMessage().hasText()) {
-            //获取操作人列表
-            List<User> userList = accService.selectAll();
-            String firstName = message.getFrom().getFirstName();
-            String userName = message.getFrom().getUserName();
-            //判断是否为管理员
+        SendMessage sendMessage = new SendMessage();
+        sendMessage.setChatId(String.valueOf(message.getChatId()));
+        if (update.hasMessage() && update.getMessage().hasText()) this.BusinessHandler(message,sendMessage,callBackName,callBackFirstName,replyToText);
+    }
+
+
+
+    //业务处理
+    public void BusinessHandler(Message message,SendMessage sendMessage,String callBackName,String callBackFirstName,String replyToText) {
+        String firstName = message.getFrom().getFirstName();
+        String userName = message.getFrom().getUserName();
+        //判断是否为管理员
 //            if (!userList.stream().anyMatch(user -> Objects.equals(user.getUsername(), userName))){
 //                return;
 //            }
-            String[] split1 = message.getText().split(" ");
-            String[] split2 = message.getText().split("\\+");
-            String[] split3 = message.getText().split("-");
-            SendMessage sendMessage = new SendMessage();
-            sendMessage.setChatId(String.valueOf(message.getChatId()));
-            Rate rate=new Rate();
-            rate.setAddTime(new Date());
-            //查询Rate
-            if (accService.selectRate()!=null){
-                rate=accService.selectRate();
-                log.info("rates:{}",rate);
-            }else {
-                Long overdue=3153600000000l;
-                rate.setOverDue(overdue);
-                rate.setHandlestatus(1);
-                rate.setCallBackStatus(1);
-                rate.setDetailStatus(1);
-                accService.insertRate(rate);
-            }
-            //搜索出历史账单/判断是否过期
-            List<Account> accountList=isOver24Hour(message,sendMessage);
-            //搜索出历史下发订单/判断是否过期
-            List<Issue> issueList =issueIsOver24Hour(message,sendMessage);
-            BigDecimal total=new BigDecimal(0);
-            BigDecimal down = new BigDecimal(0);
-            Account updateAccount = new Account();
-            Issue issue=new Issue();
+        String[] split1 = message.getText().split(" ");
+        String[] split2 = message.getText().split("\\+");
+        String[] split3 = message.getText().split("-");
+        //初始化
+        Rate rate=rateService.getInitRate();
+        Account updateAccount = new Account();
+        Issue issue=new Issue();
+        //搜索出历史账单/判断是否过期
+        List<Account> accountList=isOver24Hour(message,sendMessage);
+        //搜索出历史下发订单/判断是否过期
+        List<Issue> issueList =issueIsOver24Hour(message,sendMessage);
 
-            //设置操作人员
-            setHandle(split1, userName,firstName, userList, sendMessage, message,callBackName,callBackFirstName,message.getText());
 
-            //设置费率/汇率
-            setRate(message,sendMessage,rate);
-            //撤销入款
-            repeal(message,sendMessage,accountList,replyToText,callBackName,issueList);
-
-            //入账操作
-            inHandle(split2,message.getText(), updateAccount, total, userName, down, sendMessage, accountList, message,split3,
-                    rate,callBackFirstName,callBackName, firstName,issue,issueList);
-            //显示操作人名字
-            replay(sendMessage,updateAccount,rate,issueList,issue,message.getText());
-            //删除操作人员
-            deleteHandle(message.getText(),sendMessage);
-            //删除今日数据/关闭日切/
-            deleteTedayData(message,sendMessage,accountList,replyToText);
-
-            //计算器功能
-            counter(message,sendMessage);
-            //通知功能
-            inform(message.getText(),sendMessage);
-
-        }
+        //设置操作人员
+        setHandle(split1, userName,firstName, userService.selectAll(), sendMessage, message,callBackName,callBackFirstName,message.getText());
+        //设置费率/汇率
+        setRate(message,sendMessage,rate);
+        //撤销入款
+        repeal(message,sendMessage,accountList,replyToText,callBackName,issueList);
+        //入账操作
+        inHandle(split2,message.getText(), updateAccount,  userName, sendMessage, accountList, message,split3,
+                rate,callBackFirstName,callBackName, firstName,issue,issueList);
+        //显示操作人名字
+        replay(sendMessage,updateAccount,rate,issueList,issue,message.getText());
+        //删除操作人员
+        deleteHandle(message.getText(),sendMessage);
+        //删除今日数据/关闭日切/
+        deleteTedayData(message,sendMessage,accountList,replyToText);
+        //计算器功能
+        counter(message,sendMessage);
+        //通知功能
+        inform(message.getText(),sendMessage);
     }
+
 
 
     //显示操作人名字
@@ -150,7 +147,7 @@ public class accountBot extends TelegramLongPollingBot {
         }
         String iusseText="";
         //重新获取最新的数据
-        List<Account> accounts = accService.selectAccount();
+        List<Account> accounts = accountService.selectAccount();
         List<String> newList = new ArrayList<>();
         List<String> newIssueList=new ArrayList<>();
         for (Account account : accounts) {
@@ -165,7 +162,7 @@ public class accountBot extends TelegramLongPollingBot {
 //            num=new BigDecimal(text.substring(1));
 //        }
 
-        List<Issue> issues = accService.selectIssue();
+        List<Issue> issues = issueService.selectIssue();
         log.info("issues,,{}",issues);
         //获取时间数据方便后续操作
 
@@ -180,10 +177,10 @@ public class accountBot extends TelegramLongPollingBot {
         //显示操作人
         if (issuesList.size()==1){
             //显示操作人 rate.getHandlestatus() == 0 ? " @"+issuesList.get(issuesList.size()-1).getHandle()+" "+
-            String text1 = issuesList.get(issuesList.size()-1).getHandleFirstName();
+            String text1 = issuesList.get(0).getHandleFirstName();
             //显示明细
             String text2 = rate.getDetailStatus() == 0 ? "/"+ rate.getExchange().setScale(2, RoundingMode.HALF_UP)+"*"+ rate.getRate().multiply(BigDecimal.valueOf(100)).setScale(2, RoundingMode.HALF_UP)+"=" +
-                    issuesList.get(issuesList.size()-1).getDowned().subtract(issuesList.get(issuesList.size()-1).getDowned().multiply(rate.getRate())).divide(rate.getExchange(), 2, BigDecimal.ROUND_HALF_UP) : "";
+                    issuesList.get(0).getDowned().subtract(issuesList.get(issuesList.size()-1).getDowned().multiply(rate.getRate())).divide(rate.getExchange(), 2, BigDecimal.ROUND_HALF_UP) : "";
             //显示回复人
             String callBackFirstName= rate.getCallBackStatus() ==0 ? " @"+issuesList.get(issuesList.size()-1).getCall_back()+" "+issuesList.get(issuesList.size()-1).getCallBackFirstName() : "";
             iusseText="\n已出账："+num +"，:共"+(issuesList.size())+"笔:\n"+
@@ -213,20 +210,20 @@ public class accountBot extends TelegramLongPollingBot {
             iusseText="\n\n" +"已下发：\n"+
                     "暂无下发数据";
         }
-        List<Account> allAccount = accService.selectAccount();
+        List<Account> allAccount = accountService.selectAccount();
         //显示操作人/显示1明细
         if (accounts.size()==1){
             //是否隐藏操作人
-            String text1 = rate.getHandlestatus() == 0 ? " @"+accounts.get(accounts.size()-1).getHandle()+" "+accounts.get(accounts.size()-1).getHandleFirstName() : "";
+            String text1 = rate.getHandlestatus() == 0 ? " @"+accounts.get(0).getHandle()+" "+accounts.get(0).getHandleFirstName() : "";
             updateAccount=allAccount.get(0);
             //是否隐藏明细
             String text2 = rate.getDetailStatus() == 0 ? "/"+ rate.getExchange().setScale(2, RoundingMode.HALF_UP)+"*"+ rate.getRate().multiply(BigDecimal.valueOf(100)).setScale(2, RoundingMode.HALF_UP)+"=" +
-                    accounts.get(accounts.size()-1).getDowning().setScale(2, RoundingMode.HALF_UP) : "";
+                    accounts.get(0).getDowning().setScale(2, RoundingMode.HALF_UP) : "";
             //是否显示回复人
-            String text3 = rate.getCallBackStatus() == 0 ? " @"+accounts.get(accounts.size()-1).getCall_back()+" "+accounts.get(accounts.size()-1).getCallBackFirstName() : "";
+            String text3 = rate.getCallBackStatus() == 0 ? " @"+accounts.get(0).getCall_back()+" "+accounts.get(0).getCallBackFirstName() : "";
             iusseText="\n已入账："+num +"，共"+(accounts.size())+"笔:\n"+
                     newList.get(newList.size()-1)+" "+
-                    accounts.get(accounts.size()-1).getTotal().setScale(2, RoundingMode.HALF_UP)+text2+text1+text3+"\n"+iusseText+"\n"+
+                    accounts.get(0).getTotal().setScale(2, RoundingMode.HALF_UP)+text2+text1+text3+"\n"+iusseText+"\n"+
                     "\n\n总入账："+ updateAccount.getTotal().setScale(2, RoundingMode.HALF_UP)+
                     "\n汇率："+ rate.getExchange().setScale(2, RoundingMode.HALF_UP)+
                     "\n费率："+ rate.getRate().multiply(BigDecimal.valueOf(100)).setScale(2, RoundingMode.HALF_UP)+
@@ -238,7 +235,7 @@ public class accountBot extends TelegramLongPollingBot {
             Account accountFirsit = allAccount.get(0);
             //是否隐藏操作人
             String text11 = rate.getHandlestatus() == 0 ? " @"+accounts.get(accounts.size()-1).getHandle()+" "+accounts.get(accounts.size()-1).getHandleFirstName() : "";
-            String text12 = rate.getHandlestatus() == 0 ? " @"+accounts.get(accounts.size()-2).getHandle()+" "+accounts.get(accounts.size()-2).getHandleFirstName() : "";
+            String text12 = rate.getHandlestatus() == 0 ? " @"+accounts.get(0).getHandle()+" "+accounts.get(accounts.size()-2).getHandleFirstName() : "";
             //是否隐藏明细
             String text21 = rate.getDetailStatus() == 0 ? "/"+ rate.getExchange().setScale(2, RoundingMode.HALF_UP)+"*"+ rate.getRate().multiply(BigDecimal.valueOf(100)).setScale(2, RoundingMode.HALF_UP)+"=" +
                     accounts.get(accounts.size()-1).getDowning().setScale(2, RoundingMode.HALF_UP) : "";
@@ -259,7 +256,7 @@ public class accountBot extends TelegramLongPollingBot {
                     "\n已下发："+ issue.getDowned().setScale(2, RoundingMode.HALF_UP)+
                     "\n未下发："+ updateAccount.getDown().setScale(2, RoundingMode.HALF_UP);
         }else if (accounts.size()>2){
-           //取所有账户总和
+            //取所有账户总和
             BigDecimal total =  allAccount.stream().filter(Objects::nonNull).map(Account::getTotal).reduce(BigDecimal.ZERO, BigDecimal::add);
             BigDecimal downing =  allAccount.stream().filter(Objects::nonNull).map(Account::getDowning).reduce(BigDecimal.ZERO, BigDecimal::add);
             BigDecimal down =  allAccount.stream().filter(Objects::nonNull).map(Account::getDown).reduce(BigDecimal.ZERO, BigDecimal::add);
@@ -310,7 +307,7 @@ public class accountBot extends TelegramLongPollingBot {
     //通知功能实现/48 小时内在群组发言过的所有人
     private void inform(String text, SendMessage sendMessage) {
         if (text.equals("通知")){
-            List<String> users=accService.inform(new Date());
+            List<String> users=accountService.inform(new Date());
             Set<String> set = new HashSet<>(users);
             List<String> uniqueUsers = new ArrayList<>(set);
             StringBuilder sb = new StringBuilder();
@@ -334,7 +331,7 @@ public class accountBot extends TelegramLongPollingBot {
     }
     //获取并判断下发订单是否过期
     private List<Issue> issueIsOver24Hour(Message message, SendMessage sendMessage) {
-        List<Issue> list=accService.selectIssue();
+        List<Issue> list=issueService.selectIssue();
         int i=8;
         Date setTime=new Date();
         if (list.size()>0){
@@ -342,25 +339,25 @@ public class accountBot extends TelegramLongPollingBot {
             setTime=list.get(list.size()-1).getSetTime();
         }
         log.info("setTime;;;{}",setTime);
-        if (accService.selectIssue().size()!=0){
-            list=accService.selectIssue();
+        if (issueService.selectIssue().size()!=0){
+            list=issueService.selectIssue();
             //获取设置当天的时间
             long diff =list.get(list.size()-1).getAddTime().getTime()-list.get(list.size()-1).getSetTime().getTime();
             //boolean over24hour=diff > 24 * 60 * 60 * 1000;
-            Rate rate=accService.selectRate();
+            Rate rate=rateService.selectRate();
             boolean over24hour=diff >  rate.getOverDue();
             setTime = list.get(list.size()-1).getSetTime();
 
             if (over24hour){
                 Over24Hour=true;
-                accService.updateIssueDataStatus();
+                issueService.updateIssueDataStatus();
                 Rate rate1=new Rate();
-                accService.updateIssueSetTime(setTime);
+                issueService.updateIssueSetTime(setTime);
                 log.info("setTime,,:{}",setTime);
-                accService.updateRate(String.valueOf(rate1.getRate()));
-                accService.updateExchange(rate1.getExchange());
+                rateService.updateRate(String.valueOf(rate1.getRate()));
+                rateService.updateExchange(rate1.getExchange());
                 log.info("over24hour---------:{}",over24hour);
-                list=accService.selectIssue();
+                list=issueService.selectIssue();
                 log.info("listover24:{}",list);
             }
         }
@@ -439,8 +436,8 @@ public class accountBot extends TelegramLongPollingBot {
 
         if (text.length()>=2||replyToText!=null){
             if (text.equals("撤销入款")){
-                accService.deleteInData(list.get(list.size()-1).getAddTime());
-                accService.updateissueDown(list.get(list.size()-1).getDown());
+                accountService.deleteInData(list.get(list.size()-1).getAddTime());
+                issueService.updateissueDown(list.get(list.size()-1).getDown());
                 sendMessage.setText("撤销成功");
                 try {
                     log.info("发送消息7");
@@ -451,11 +448,11 @@ public class accountBot extends TelegramLongPollingBot {
             }else if (text.equals("取消")&&replyToText!=null&&callBackName.equals("chishui_id")){
                 log.info("replyToXXXTentacion:{}",replyToText);
                 if (replyToText.charAt(0)=='+'){
-                    accService.deleteInData(list.get(list.size()-1).getAddTime());
-                    accService.updateissueDown(list.get(list.size()-1).getDown());
+                    accountService.deleteInData(list.get(list.size()-1).getAddTime());
+                    issueService.updateissueDown(list.get(list.size()-1).getDown());
                 }else if (replyToText.charAt(0)=='-'){
-                    accService.deleteNewestIssue(issueList.get(issueList.size()-1).getAddTime());
-                    accService.updateNewestData(issueList.get(issueList.size()-1).getDown());
+                    issueService.deleteNewestIssue(issueList.get(issueList.size()-1).getAddTime());
+                    accountService.updateNewestData(issueList.get(issueList.size()-1).getDown());
                 }else {
                     return;
                 }
@@ -467,8 +464,8 @@ public class accountBot extends TelegramLongPollingBot {
                     log.info("repeal异常");
                 }
             }else if (text.equals("撤销下发")){
-                accService.deleteNewestIssue(issueList.get(issueList.size()-1).getAddTime());
-                accService.updateNewestData(issueList.get(issueList.size()-1).getDown());
+                issueService.deleteNewestIssue(issueList.get(issueList.size()-1).getAddTime());
+                accountService.updateNewestData(issueList.get(issueList.size()-1).getDown());
                 sendMessage.setText("撤销成功");
                 try {
                     log.info("发送消息7");
@@ -495,7 +492,7 @@ public class accountBot extends TelegramLongPollingBot {
         if (split[0].equals("删除操作员")||split[0].equals("删除操作人")){
             String deleteName = split[1].substring(1);
             log.info("删除操作员:{}",deleteName);
-            accService.deleteHandele(deleteName);
+            userService.deleteHandele(deleteName);
             sendMessage.setText("删除成功");
             try {
                 log.info("发送消息8");
@@ -523,7 +520,7 @@ public class accountBot extends TelegramLongPollingBot {
             rates.setRate(bigDecimal);
             rates.setAddTime(new Date());
             log.info("rates:{}",rates);
-            accService.updateRate(String.valueOf(bigDecimal));
+            rateService.updateRate(String.valueOf(bigDecimal));
             sendMessage.setText("设置成功,当前费率为："+rate);
             try {
                 log.info("发送消息9");
@@ -533,7 +530,7 @@ public class accountBot extends TelegramLongPollingBot {
             }
         }else if (text.substring(0,4).equals("设置汇率")){
             rates.setExchange(new BigDecimal(text.substring(4)));
-            accService.updateExchange(rates.getExchange());
+            rateService.updateExchange(rates.getExchange());
             sendMessage.setText("设置成功,当前汇率为："+text.substring(4));
             try {
                 log.info("发送消息10");
@@ -545,20 +542,15 @@ public class accountBot extends TelegramLongPollingBot {
     }
 
     //入账操作
-    private void inHandle(String[] split2, String text,
-                          Account updateAccount, BigDecimal total, String userName,
-                          BigDecimal down, SendMessage sendMessage, List<Account> list,
-                          Message message, String[] split3, Rate rate, String callBackFirstName,
-                          String callBackName, String firstName, Issue issue, List<Issue> issueList) {
+    private void inHandle(String[] split2, String text, Account updateAccount,  String userName, SendMessage sendMessage,
+                          List<Account> list, Message message, String[] split3, Rate rate, String callBackFirstName, String callBackName,
+                          String firstName, Issue issue, List<Issue> issueList) {
+        BigDecimal total;
+        BigDecimal down;
         //判断是否符合公式
         boolean orNo1 = isMatcher(text);
-        if (text.charAt(0) == '+' || text.charAt(0) == '-') {
-            // 如果 text 的第一个字符是 '+'，或者 '-'，或者 orNo1 为 true，则继续执行
-            log.info("yesyesyesyes");
-        } else {
-            // 如果 text 的第一个字符不是 '+' 也不是 '-'，并且 orNo1 为 false，则返回
-            log.info("ysyesyes");
-            return;
+        if (text.charAt(0) != '+' || text.charAt(0) != '-') {
+            return;// 如果 text 的第一个字符是 '+'，或者 '-'，或者 orNo1 为 true，则继续执行
         }
 
 
@@ -677,22 +669,22 @@ public class accountBot extends TelegramLongPollingBot {
             downing=dowingAccount(rate,downing,total,num);
             updateAccount.setDowning(downing);
             updateAccount.setDown(down.add(num));
-            accService.insertAccount(updateAccount);
-            accService.uodateIssueDown(down.add(num));
+            accountService.insertAccount(updateAccount);
+            issueService.uodateIssueDown(down.add(num));
         }else if (firstChar == '-' && ( callBackName == null||callBackName.equals("zqzs18bot"))&&orNo==false){
             issue.setHandle(userName);
             issue.setDown(down.subtract(num));
             issue.setDowned(downed.add(num));
             log.info("issue--:{}",issue);
             if (issue.getHandle()!=null){
-                accService.insertIssue(issue);
-                accService.updateDown(down.subtract(num));
+                issueService.insertIssue(issue);
+                accountService.updateDown(down.subtract(num));
                 log.info("执行了================");
             }
         }
         //重新获取最新的数据
-        List<Account> accounts = accService.selectAccount();
-        List<Issue> issues = accService.selectIssue();
+        List<Account> accounts = accountService.selectAccount();
+        List<Issue> issues = issueService.selectIssue();
         log.info("issues,,{}",issues);
         //获取时间数据方便后续操作
         List<String> newList = new ArrayList<>();
@@ -764,7 +756,7 @@ public class accountBot extends TelegramLongPollingBot {
             log.info("999999999999");
             return false;
         }
-        Rate rate=accService.selectRate();
+        Rate rate=rateService.selectRate();
         //匹配100*8/9
         Pattern pattern = Pattern.compile("^(\\d+)\\*(\\d+)\\/(\\d+)$");
         //匹配100/9
@@ -803,17 +795,13 @@ public class accountBot extends TelegramLongPollingBot {
             rate.setRate(r);
             rate.setExchange(e);
             downing =dowingAccount(t,rate,downing) ;
-            log.info("downingsssssss:{}", downing);
             total = total.add(t);
             updateAccount.setTotal(total);
-            log.info("total-,,-:{}",total);
             updateAccount.setHandle(userName);
-            log.info("downingaaaaa:{}",downing);
             updateAccount.setDowning(downing);
             updateAccount.setDown(down.add(t));
-            log.info("account/////:{}",updateAccount);
-            accService.insertAccount(updateAccount);
-            accService.uodateIssueDown(down.add(t));
+            accountService.insertAccount(updateAccount);
+            issueService.uodateIssueDown(down.add(t));
             return true;
         } else if (matchFound&&text1.charAt(0)=='-'){
             // 解析数字
@@ -824,9 +812,8 @@ public class accountBot extends TelegramLongPollingBot {
             issue.setDown(down.subtract(t));
             issue.setDowned(downed.add(t));
             if (issue.getHandle()!=null){
-                accService.insertIssue(issue);
-                accService.updateDown(down.subtract(t));
-                log.info("执行了1================");
+                issueService.insertIssue(issue);
+                accountService.updateDown(down.subtract(t));
             }
 
             return true;
@@ -843,8 +830,8 @@ public class accountBot extends TelegramLongPollingBot {
             log.info("downingjjjjj:{}",downing);
             updateAccount.setDowning(downing);
             updateAccount.setDown(down.add(t));
-            accService.insertAccount(updateAccount);
-            accService.uodateIssueDown(down.add(t));
+            accountService.insertAccount(updateAccount);
+            issueService.uodateIssueDown(down.add(t));
             return true;
         }else if (matchFound1&&text1.charAt(0)=='-'){
             log.info("t:{},r:{},e:{}", t, r, e);
@@ -854,9 +841,8 @@ public class accountBot extends TelegramLongPollingBot {
             issue.setDown(down.subtract(t));
             issue.setDowned(downed.add(t));
             if (issue.getHandle()!=null){
-                accService.insertIssue(issue);
-                accService.updateDown(down.subtract(t));
-                log.info("执行了1================");
+                issueService.insertIssue(issue);
+                accountService.updateDown(down.subtract(t));
             }
 
             return true;
@@ -875,8 +861,8 @@ public class accountBot extends TelegramLongPollingBot {
             log.info("downingddddddd:{}", downing);
             updateAccount.setDowning(downing);
             updateAccount.setDown(down.add(t));
-            accService.insertAccount(updateAccount);
-            accService.uodateIssueDown(down.add(t));
+            accountService.insertAccount(updateAccount);
+            issueService.uodateIssueDown(down.add(t));
             return true;
         }else if (matchFound2&&text1.charAt(0)=='-'){
             log.info("t:{},r:{},e:{}", t, r, e);
@@ -885,8 +871,8 @@ public class accountBot extends TelegramLongPollingBot {
             issue.setDown(down.subtract(t));
             issue.setDowned(downed.add(t));
             if (issue.getHandle()!=null){
-                accService.insertIssue(issue);
-                accService.updateDown(down.subtract(t));
+                issueService.insertIssue(issue);
+                accountService.updateDown(down.subtract(t));
                 log.info("执行了1================");
             }
 
@@ -894,7 +880,7 @@ public class accountBot extends TelegramLongPollingBot {
         }
         return false;
     }
-    //是否匹配公式入账
+    //是否匹配公式入账 例:+1000*0.05/7 这种公式
     private boolean isMatcher(String text1) {
         String text = text1.substring(1);
         //匹配100*8/9
@@ -940,7 +926,7 @@ public class accountBot extends TelegramLongPollingBot {
     //判断是否过期
     private List<Account> isOver24Hour(Message message, SendMessage sendMessage) {
 
-        List<Account> list=accService.selectAccount();
+        List<Account> list=accountService.selectAccount();
         //默认日切是8点
         int i=8;
         Date setTime=new Date();
@@ -956,10 +942,10 @@ public class accountBot extends TelegramLongPollingBot {
             LocalDateTime fourAMToday = LocalDate.now().atTime(i, 0);
             setTime = new Date(fourAMToday.toInstant(java.time.ZoneOffset.ofHours(8)).toEpochMilli());
             log.info("setTime2:{}",setTime);
-            accService.updateSetTime(setTime);
+            accountService.updateSetTime(setTime);
             //过期时间是一天
-            accService.updateOverDue((long) (24 * 60 * 60 * 1000));
-            //accService.updateOverDue((long) ( 60 * 1000));
+            rateService.updateOverDue((long) (24 * 60 * 60 * 1000));
+            //AccService.updateOverDue((long) ( 60 * 1000));
             sendMessage.setText("设置成功");
 
             try {
@@ -970,26 +956,26 @@ public class accountBot extends TelegramLongPollingBot {
             }
             return list;
         }
-        if (accService.selectAccount().size()!=0){
-            list=accService.selectAccount();
+        if (accountService.selectAccount().size()!=0){
+            list=accountService.selectAccount();
             //获取设置当天的时间
             long diff =list.get(list.size()-1).getAddTime().getTime()-list.get(list.size()-1).getSetTime().getTime();
             //boolean over24hour=diff > 24 * 60 * 60 * 1000;
-            Rate rate=accService.selectRate();
+            Rate rate=rateService.selectRate();
             log.info("ratesssssssss:{}",rate);
             boolean over24hour=diff >  rate.getOverDue();
             setTime = list.get(list.size()-1).getSetTime();
 
             if (over24hour){
                 Over24Hour=true;
-                accService.updateDataStatus();
+                accountService.updateDataStatus();
                 Rate rate1=new Rate();
-                accService.updateSetTime(setTime);
+                accountService.updateSetTime(setTime);
                 log.info("setTime,,:{}",setTime);
-                accService.updateRate(String.valueOf(rate1.getRate()));
-                accService.updateExchange(rate1.getExchange());
+                rateService.updateRate(String.valueOf(rate1.getRate()));
+                rateService.updateExchange(rate1.getExchange());
                 log.info("over24hour---------:{}",over24hour);
-                list=accService.selectAccount();
+                list=accountService.selectAccount();
                 log.info("listover24:{}",list);
             }
         }
@@ -1005,8 +991,8 @@ public class accountBot extends TelegramLongPollingBot {
         if (text.length()>=4){
             //删除今日账单关键词： 清理今天数据 删除今天数据 清理今天账单 删除今天账单
             if (text.equals("清理今天数据")||text.equals("删除今天数据")||text.equals("清理今天账单")||text.equals("删除今天账单")){
-                accService.deleteTedayData();
-                accService.deleteTedayIusseData();
+                accountService.deleteTedayData();
+                issueService.deleteTedayIusseData();
                 sendMessage.setText("操作成功");
                 try {
                     log.info("发送消息3");
@@ -1017,7 +1003,7 @@ public class accountBot extends TelegramLongPollingBot {
 
             }else if (text.equals("关闭日切")){
                 Long overdue=3153600000000l;
-                accService.updateOverDue(overdue);
+                rateService.updateOverDue(overdue);
                 sendMessage.setText("操作成功,关闭日切");
                 try {
                     log.info("发送消息3");
@@ -1118,16 +1104,16 @@ public class accountBot extends TelegramLongPollingBot {
         //显示操作人/显示明细
         if (list.size()==1){
             //是否隐藏操作人
-            String text1 = rate.getHandlestatus() == 0 ? " @"+list.get(list.size()-1).getHandle()+" "+list.get(list.size()-1).getHandleFirstName() : "";
+            String text1 = rate.getHandlestatus() == 0 ? " @"+list.get(0).getHandle()+" "+list.get(0).getHandleFirstName() : "";
 
             //是否隐藏明细
             String text2 = rate.getDetailStatus() == 0 ? "/"+ rate.getExchange().setScale(2, RoundingMode.HALF_UP)+"*"+ rate.getRate().multiply(BigDecimal.valueOf(100)).setScale(2, RoundingMode.HALF_UP)+"=" +
-                    list.get(list.size()-1).getDowning().setScale(2, RoundingMode.HALF_UP) : "";
+                    list.get(0).getDowning().setScale(2, RoundingMode.HALF_UP) : "";
             //是否显示回复人
-            String text3 = rate.getCallBackStatus() == 0 ? " @"+list.get(list.size()-1).getCall_back()+" "+list.get(list.size()-1).getCallBackFirstName() : "";
+            String text3 = rate.getCallBackStatus() == 0 ? " @"+list.get(0).getCall_back()+" "+list.get(0).getCallBackFirstName() : "";
             return  "\n已入账："+num +"，共"+(list.size())+"笔:\n"+
                     newList.get(newList.size()-1)+" "+
-                    list.get(list.size()-1).getTotal().setScale(2, RoundingMode.HALF_UP)+text2+text1+text3+"\n"+iusseText+"\n"+
+                    list.get(0).getTotal().setScale(2, RoundingMode.HALF_UP)+text2+text1+text3+"\n"+iusseText+"\n"+
                     "\n\n总入账："+ updateAccount.getTotal().setScale(2, RoundingMode.HALF_UP)+
                     "\n汇率："+ rate.getExchange().setScale(2, RoundingMode.HALF_UP)+
                     "\n费率："+ rate.getRate().multiply(BigDecimal.valueOf(100)).setScale(2, RoundingMode.HALF_UP)+
@@ -1137,20 +1123,20 @@ public class accountBot extends TelegramLongPollingBot {
         }else if (list.size()==2){
             //是否隐藏操作人
             String text11 = rate.getHandlestatus() == 0 ? " @"+list.get(list.size()-1).getHandle()+" "+list.get(list.size()-1).getHandleFirstName() : "";
-            String text12 = rate.getHandlestatus() == 0 ? " @"+list.get(list.size()-2).getHandle()+" "+list.get(list.size()-2).getHandleFirstName() : "";
+            String text12 = rate.getHandlestatus() == 0 ? " @"+list.get(0).getHandle()+" "+list.get(0).getHandleFirstName() : "";
             //是否隐藏明细
             String text21 = rate.getDetailStatus() == 0 ? "/"+ rate.getExchange().setScale(2, RoundingMode.HALF_UP)+"*"+ rate.getRate().multiply(BigDecimal.valueOf(100)).setScale(2, RoundingMode.HALF_UP)+"=" +
                     list.get(list.size()-1).getDowning().setScale(2, RoundingMode.HALF_UP) : "";
             String text22 = rate.getDetailStatus() == 0 ? "/"+ rate.getExchange().setScale(2, RoundingMode.HALF_UP)+"*"+ rate.getRate().multiply(BigDecimal.valueOf(100)).setScale(2, RoundingMode.HALF_UP)+"=" +
-                    list.get(list.size()-2).getDowning().setScale(2, RoundingMode.HALF_UP) : "";
+                    list.get(0).getDowning().setScale(2, RoundingMode.HALF_UP) : "";
             //是否显示回复人
             String text31 = rate.getCallBackStatus() == 0 ? " @"+list.get(list.size()-1).getCall_back()+" "+list.get(list.size()-1).getCallBackFirstName() : "";
-            String text32 = rate.getCallBackStatus() == 0 ? " @"+list.get(list.size()-2).getCall_back()+" "+list.get(list.size()-2).getCallBackFirstName() : "";
+            String text32 = rate.getCallBackStatus() == 0 ? " @"+list.get(0).getCall_back()+" "+list.get(0).getCallBackFirstName() : "";
             return "\n已入账："+num +"，:共"+(list.size())+"笔:\n"+
                     newList.get(newList.size()-1)+" "+
                     list.get(list.size()-1).getTotal().setScale(2, RoundingMode.HALF_UP)+text21+text11+text31+"\n"+
                     newList.get(newList.size()-2)+" "+
-                    list.get(list.size()-2).getTotal().setScale(2, RoundingMode.HALF_UP)+text22+text12+text32+"\n"+iusseText+"\n"+
+                    list.get(0).getTotal().setScale(2, RoundingMode.HALF_UP)+text22+text12+text32+"\n"+iusseText+"\n"+
                     "\n\n总入账："+ updateAccount.getTotal().setScale(2, RoundingMode.HALF_UP)+
                     "\n汇率："+ rate.getExchange().setScale(2, RoundingMode.HALF_UP)+
                     "\n费率："+ rate.getRate().multiply(BigDecimal.valueOf(100)).setScale(2, RoundingMode.HALF_UP)+
@@ -1192,8 +1178,18 @@ public class accountBot extends TelegramLongPollingBot {
 
     }
 
-
-    //设置操作人员
+    /**
+     * 设置操作人员
+     * @param split1
+     * @param userName 用户名
+     * @param firstName ????
+     * @param userList 获取操作人列表
+     * @param sendMessage 发生的消息
+     * @param message 消息
+     * @param callBackName 回复人的名称
+     * @param callBackFirstName 回复人的昵称
+     * @param text  消息文本
+     */
     private void setHandle(String[] split1, String userName, String firstName, List<User> userList,
                            SendMessage sendMessage, Message message, String callBackName,
                            String callBackFirstName, String text) {
@@ -1212,7 +1208,7 @@ public class accountBot extends TelegramLongPollingBot {
             if (callBackName!=null){
                 user.setUsername(callBackName);
                 user.setFirstname(callBackFirstName);
-                accService.insertUser(user);
+                userService.insertUser(user);
             }else {
                 Pattern pattern = Pattern.compile("@(\\w+)");
                 Matcher matcher = pattern.matcher(text);
@@ -1225,7 +1221,7 @@ public class accountBot extends TelegramLongPollingBot {
                 // 打印提取到的用户列表
                 for (String users : userLists) {
                     user.setUsername(users);
-                    accService.insertUser(user);
+                    userService.insertUser(user);
                 }
             }
             sendMessage.setText("设置成功");
@@ -1256,7 +1252,7 @@ public class accountBot extends TelegramLongPollingBot {
                 e.printStackTrace();
             }
         }else if (split1[0].equals("将操作员显示")){
-            accService.updateHandleStatus(0);
+            rateService.updateHandleStatus(0);
             sendMessage.setText("操作成功");
             implList(message, sendMessage);
             try {
@@ -1266,7 +1262,7 @@ public class accountBot extends TelegramLongPollingBot {
                 e.printStackTrace();
             }
         }else if (split1[0].equals("关闭显示")){
-            accService.updateHandleStatus(1);
+            rateService.updateHandleStatus(1);
             sendMessage.setText("操作成功");
             implList(message, sendMessage);
             try {
@@ -1276,7 +1272,7 @@ public class accountBot extends TelegramLongPollingBot {
                 e.printStackTrace();
             }
         }else if (split1[0].equals("将回复人显示")){
-            accService.updateCallBackStatus(0);
+            rateService.updateCallBackStatus(0);
             sendMessage.setText("操作成功");
             implList(message, sendMessage);
             try {
@@ -1286,7 +1282,7 @@ public class accountBot extends TelegramLongPollingBot {
                 e.printStackTrace();
             }
         }else if (split1[0].equals("关闭回复人显示")){
-            accService.updateCallBackStatus(1);
+            rateService.updateCallBackStatus(1);
             sendMessage.setText("操作成功");
             implList(message, sendMessage);
             try {
@@ -1296,7 +1292,7 @@ public class accountBot extends TelegramLongPollingBot {
                 e.printStackTrace();
             }
         }else if (split1[0].equals("显示明细")){
-            accService.updateDatilStatus(0);
+            rateService.updateDatilStatus(0);
             sendMessage.setText("操作成功");
             implList(message, sendMessage);
             try {
@@ -1306,7 +1302,7 @@ public class accountBot extends TelegramLongPollingBot {
                 e.printStackTrace();
             }
         }else if (split1[0].equals("隐藏明细")){
-            accService.updateDatilStatus(1);
+            rateService.updateDatilStatus(1);
             sendMessage.setText("操作成功");
             implList(message, sendMessage);
             try {
@@ -1347,9 +1343,6 @@ public class accountBot extends TelegramLongPollingBot {
 
     }
 
-    public void setService(accService accService) {
-        this.accService = accService;
-    }
 }
 
 

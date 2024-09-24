@@ -1,9 +1,7 @@
 package org.example.bot.accountBot;
 
-import org.example.bot.accountBot.botConfig.accountBot;
-import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.example.bot.accountBot.botConfig.AccountBot;
 import org.springframework.context.annotation.ComponentScan;
-import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.bots.DefaultBotOptions;
 import org.telegram.telegrambots.meta.TelegramBotsApi;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
@@ -34,7 +32,7 @@ public class Main {
 //            ExecBot bot = new ExecBot(botOptions);
 //            telegramBotsApi.registerBot(bot);
             //不需代理
-            accountBot bot2 = new accountBot();
+            AccountBot bot2 = new AccountBot();
             telegramBotsApi.registerBot(bot2);
         } catch (TelegramApiException e) {
             e.printStackTrace();

@@ -1,7 +1,11 @@
 package org.example.bot.accountBot.pojo;
 
+import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableId;
 import com.fasterxml.jackson.annotation.JsonFormat;
+import io.swagger.annotations.ApiModel;
 import lombok.Data;
+import lombok.experimental.Accessors;
 
 import java.math.BigDecimal;
 import java.util.Date;
@@ -9,9 +13,12 @@ import java.util.Date;
 /**
  * 操作人记录
  */
+@ApiModel("issue")
+@Accessors(chain = true)
 @Data
 public class Issue {
-
+    @TableId(type= IdType.AUTO)
+    private String id;
     //操作人
     private String handle;
     //操作人昵称

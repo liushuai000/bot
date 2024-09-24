@@ -1,7 +1,12 @@
 package org.example.bot.accountBot.pojo;
 
+import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.generator.config.rules.DateType;
 import com.fasterxml.jackson.annotation.JsonFormat;
+import io.swagger.annotations.ApiModel;
 import lombok.Data;
+import lombok.experimental.Accessors;
 
 import java.math.BigDecimal;
 import java.util.Date;
@@ -9,8 +14,12 @@ import java.util.Date;
 /**
  * 操作汇率和操作人的动作 时间
  */
+@ApiModel("rate")
+@Accessors(chain = true)
 @Data
 public class Rate {
+    @TableId(type=IdType.AUTO)
+    private String id;
     //汇率
     private BigDecimal exchange=BigDecimal.ONE;
     //费率
