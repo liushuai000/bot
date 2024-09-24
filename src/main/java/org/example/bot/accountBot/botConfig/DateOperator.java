@@ -2,10 +2,17 @@ package org.example.bot.accountBot.botConfig;
 
 import lombok.extern.slf4j.Slf4j;
 import org.example.bot.accountBot.pojo.Account;
+import org.example.bot.accountBot.pojo.Issue;
 import org.example.bot.accountBot.pojo.Rate;
+import org.example.bot.accountBot.service.AccountService;
+import org.example.bot.accountBot.service.IssueService;
+import org.example.bot.accountBot.service.RateService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Message;
 
+import javax.xml.ws.soap.Addressing;
 import java.time.*;
 import java.time.format.DateTimeFormatter;
 import java.util.Date;
@@ -16,12 +23,23 @@ import java.util.List;
  */
 
 @Slf4j
-public class DateOperator {
+@Component
+public class DateOperator extends AccountBot{
+    @Addressing
+    AccountService accountService;
+    @Autowired
+    RateService rateService;
+    @Autowired
+    IssueService issueService;
     boolean Over24Hour=false;//是否把accountBot 里的删除
+    public Date oldSetTime;
+    boolean setOver24Hour(boolean over24Hour) {
+        return over24Hour;
+    }
     //判断是否过期
-    private List<Account> isOver24Hour(Message message, SendMessage sendMessage) {
+    public List<Account> isOver24Hour(Message message, SendMessage sendMessage) {
 
-        List<Account> list=accService.selectAccount();
+        List<Account> list=accountService.selectAccount();
         //默认日切是8点
         int i=8;
         Date setTime=new Date();
@@ -37,9 +55,9 @@ public class DateOperator {
             LocalDateTime fourAMToday = LocalDate.now().atTime(i, 0);
             setTime = new Date(fourAMToday.toInstant(java.time.ZoneOffset.ofHours(8)).toEpochMilli());
             log.info("setTime2:{}",setTime);
-            accService.updateSetTime(setTime);
+            accountService.updateSetTime(setTime);
             //过期时间是一天
-            accService.updateOverDue((long) (24 * 60 * 60 * 1000));
+            rateService.updateOverDue((long) (24 * 60 * 60 * 1000));
             //accService.updateOverDue((long) ( 60 * 1000));
             sendMessage.setText("设置成功");
 
@@ -51,26 +69,26 @@ public class DateOperator {
             }
             return list;
         }
-        if (accService.selectAccount().size()!=0){
-            list=accService.selectAccount();
+        if (accountService.selectAccount().size()!=0){
+            list=accountService.selectAccount();
             //获取设置当天的时间
             long diff =list.get(list.size()-1).getAddTime().getTime()-list.get(list.size()-1).getSetTime().getTime();
             //boolean over24hour=diff > 24 * 60 * 60 * 1000;
-            Rate rate=accService.selectRate();
+            Rate rate=rateService.selectRate();
             log.info("ratesssssssss:{}",rate);
             boolean over24hour=diff >  rate.getOverDue();
             setTime = list.get(list.size()-1).getSetTime();
 
             if (over24hour){
                 Over24Hour=true;
-                accService.updateDataStatus();
+                accountService.updateDataStatus();
                 Rate rate1=new Rate();
-                accService.updateSetTime(setTime);
+                accountService.updateSetTime(setTime);
                 log.info("setTime,,:{}",setTime);
-                accService.updateRate(String.valueOf(rate1.getRate()));
-                accService.updateExchange(rate1.getExchange());
+                rateService.updateRate(String.valueOf(rate1.getRate()));
+                rateService.updateExchange(rate1.getExchange());
                 log.info("over24hour---------:{}",over24hour);
-                list=accService.selectAccount();
+                list=accountService.selectAccount();
                 log.info("listover24:{}",list);
             }
         }
@@ -80,11 +98,80 @@ public class DateOperator {
 
         return list;
     }
+    //获取并判断下发订单是否过期
+    public List<Issue> issueIsOver24Hour(Message message, SendMessage sendMessage) {
+        List<Issue> list=issueService.selectIssue();
+        int i=8;
+        Date setTime=new Date();
+        if (list.size()>0){
+            oldSetTime=list.get(list.size()-1).getSetTime();
+            setTime=list.get(list.size()-1).getSetTime();
+        }
+        log.info("setTime;;;{}",setTime);
+        if (issueService.selectIssue().size()!=0){
+            list=issueService.selectIssue();
+            //获取设置当天的时间
+            long diff =list.get(list.size()-1).getAddTime().getTime()-list.get(list.size()-1).getSetTime().getTime();
+            //boolean over24hour=diff > 24 * 60 * 60 * 1000;
+            Rate rate=rateService.selectRate();
+            boolean over24hour=diff >  rate.getOverDue();
+            setTime = list.get(list.size()-1).getSetTime();
+
+            if (over24hour){
+                Over24Hour=true;
+                issueService.updateIssueDataStatus();
+                Rate rate1=new Rate();
+                issueService.updateIssueSetTime(setTime);
+                log.info("setTime,,:{}",setTime);
+                rateService.updateRate(String.valueOf(rate1.getRate()));
+                rateService.updateExchange(rate1.getExchange());
+                log.info("over24hour---------:{}",over24hour);
+                list=issueService.selectIssue();
+                log.info("listover24:{}",list);
+            }
+        }
+        log.info("Over24Hour,,:{}",Over24Hour);
+
+        setOver24Hour(Over24Hour);
+
+        return list;
+
+    }
 
 
+    //删除今日数据/关闭日切
+    public void deleteTodayData(Message message, SendMessage sendMessage, List<Account> list, String replyToText) {
+        String text = message.getText();
+        if (text.length()>=4){
+            //删除今日账单关键词： 清理今天数据 删除今天数据 清理今天账单 删除今天账单
+            if (text.equals("清理今天数据")||text.equals("删除今天数据")||text.equals("清理今天账单")||text.equals("删除今天账单")){
+                accountService.deleteTedayData();
+                issueService.deleteTedayIusseData();
+                sendMessage.setText("操作成功");
+                try {
+                    log.info("发送消息3");
+                    execute(sendMessage);
+                } catch (Exception e) {
+                    log.info("deleteTedayData异常");
+                }
+
+            }else if (text.equals("关闭日切")){
+                Long overdue=3153600000000l;
+                rateService.updateOverDue(overdue);
+                sendMessage.setText("操作成功,关闭日切");
+                try {
+                    log.info("发送消息3");
+                    execute(sendMessage);
+                } catch (Exception e) {
+                    log.info("deleteTedayData异常");
+                }
+            }
+
+        }
+    }
 
     //转换时间
-    private  Date timeExchange(String timeStr) {
+    public  Date timeExchange(String timeStr) {
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm:ss");
         // 将字符串转换为 LocalTime 类型
         LocalTime time = LocalTime.parse(timeStr, formatter);

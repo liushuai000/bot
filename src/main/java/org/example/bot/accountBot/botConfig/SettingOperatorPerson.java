@@ -3,6 +3,10 @@ package org.example.bot.accountBot.botConfig;
 
 import lombok.extern.slf4j.Slf4j;
 import org.example.bot.accountBot.pojo.User;
+import org.example.bot.accountBot.service.RateService;
+import org.example.bot.accountBot.service.UserService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Message;
@@ -13,11 +17,17 @@ import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+@Component
 @Slf4j
-public class SettingOperatorPerson extends accountBot {
+public class SettingOperatorPerson extends AccountBot {
+    @Autowired
+    UserService userService;
+    @Autowired
+    RateService rateService;
+
     ButtonList buttonList=new ButtonList();
     //设置操作人员
-    private void setHandle(String[] split1, String userName, String firstName, List<User> userList,
+    public void setHandle(String[] split1, String userName, String firstName, List<User> userList,
                            SendMessage sendMessage, Message message, String callBackName,
                            String callBackFirstName, String text) {
         if (userList.stream().anyMatch(user -> Objects.equals(user.getUsername(), firstName))){
@@ -35,7 +45,7 @@ public class SettingOperatorPerson extends accountBot {
                 if (callBackName!=null){
                     user.setUsername(callBackName);
                     user.setFirstname(callBackFirstName);
-                    accService.insertUser(user);
+                    userService.insertUser(user);
                 }else {
                     Pattern pattern = Pattern.compile("@(\\w+)");
                     Matcher matcher = pattern.matcher(text);
@@ -48,7 +58,7 @@ public class SettingOperatorPerson extends accountBot {
                     // 打印提取到的用户列表
                     for (String users : userLists) {
                         user.setUsername(users);
-                        accService.insertUser(user);
+                        userService.insertUser(user);
                     }
                 }
                 sendMessage.setText("设置成功");
@@ -79,7 +89,7 @@ public class SettingOperatorPerson extends accountBot {
                 e.printStackTrace();
             }
         }else if (split1[0].equals("将操作员显示")){
-            accService.updateHandleStatus(0);
+            rateService.updateHandleStatus(0);
             sendMessage.setText("操作成功");
             buttonList.implList(message, sendMessage);
             try {
@@ -89,7 +99,7 @@ public class SettingOperatorPerson extends accountBot {
                 e.printStackTrace();
             }
         }else if (split1[0].equals("关闭显示")){
-            accService.updateHandleStatus(1);
+            rateService.updateHandleStatus(1);
             sendMessage.setText("操作成功");
             buttonList.implList(message, sendMessage);
             try {
@@ -99,7 +109,7 @@ public class SettingOperatorPerson extends accountBot {
                 e.printStackTrace();
             }
         }else if (split1[0].equals("将回复人显示")){
-            accService.updateCallBackStatus(0);
+            rateService.updateCallBackStatus(0);
             sendMessage.setText("操作成功");
             buttonList.implList(message, sendMessage);
             try {
@@ -109,7 +119,7 @@ public class SettingOperatorPerson extends accountBot {
                 e.printStackTrace();
             }
         }else if (split1[0].equals("关闭回复人显示")){
-            accService.updateCallBackStatus(1);
+            rateService.updateCallBackStatus(1);
             sendMessage.setText("操作成功");
             buttonList.implList(message, sendMessage);
             try {
@@ -119,7 +129,7 @@ public class SettingOperatorPerson extends accountBot {
                 e.printStackTrace();
             }
         }else if (split1[0].equals("显示明细")){
-            accService.updateDatilStatus(0);
+            rateService.updateDatilStatus(0);
             sendMessage.setText("操作成功");
             buttonList.implList(message, sendMessage);
             try {
@@ -129,7 +139,7 @@ public class SettingOperatorPerson extends accountBot {
                 e.printStackTrace();
             }
         }else if (split1[0].equals("隐藏明细")){
-            accService.updateDatilStatus(1);
+            rateService.updateDatilStatus(1);
             sendMessage.setText("操作成功");
             buttonList.implList(message, sendMessage);
             try {

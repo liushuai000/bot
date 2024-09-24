@@ -4,6 +4,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.example.bot.accountBot.pojo.Account;
 import org.example.bot.accountBot.pojo.Issue;
 import org.example.bot.accountBot.pojo.Rate;
+import org.example.bot.accountBot.service.AccountService;
+import org.example.bot.accountBot.service.IssueService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 
 import java.math.BigDecimal;
@@ -17,7 +21,12 @@ import java.util.Objects;
  * 显示操作人名字
  */
 @Slf4j
+@Component
 public class ShowOperatorName {
+    @Autowired
+    AccountService accountService;
+    @Autowired
+    IssueService issueService;
     //显示操作人名字
     public void  replay(SendMessage sendMessage, Account updateAccount, Rate rate, List<Issue> issuesList, Issue issue, String text) {
         if (!text.equals("显示操作人名字")){
@@ -25,7 +34,7 @@ public class ShowOperatorName {
         }
         String iusseText="";
         //重新获取最新的数据
-        List<Account> accounts = accService.selectAccount();
+        List<Account> accounts = accountService.selectAccount();
         List<String> newList = new ArrayList<>();
         List<String> newIssueList=new ArrayList<>();
         for (Account account : accounts) {
@@ -40,7 +49,7 @@ public class ShowOperatorName {
 //            num=new BigDecimal(text.substring(1));
 //        }
 
-        List<Issue> issues = accService.selectIssue();
+        List<Issue> issues = issueService.selectIssue();
         log.info("issues,,{}",issues);
         //获取时间数据方便后续操作
 
@@ -88,7 +97,7 @@ public class ShowOperatorName {
             iusseText="\n\n" +"已下发：\n"+
                     "暂无下发数据";
         }
-        List<Account> allAccount = accService.selectAccount();
+        List<Account> allAccount = accountService.selectAccount();
         //显示操作人/显示1明细
         if (accounts.size()==1){
             //是否隐藏操作人

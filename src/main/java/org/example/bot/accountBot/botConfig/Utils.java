@@ -1,12 +1,16 @@
-package org.example.bot.base.config;
+package org.example.bot.accountBot.botConfig;
 
 import lombok.extern.slf4j.Slf4j;
 import org.example.bot.accountBot.pojo.Account;
 import org.example.bot.accountBot.pojo.Issue;
 import org.example.bot.accountBot.pojo.Rate;
-import org.example.bot.accountBot.service.accService;
+import org.example.bot.accountBot.service.AccountService;
+import org.example.bot.accountBot.service.IssueService;
+import org.example.bot.accountBot.service.RateService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
+import org.telegram.telegrambots.meta.api.objects.Message;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -25,8 +29,13 @@ import java.util.regex.Pattern;
  **/
 @Slf4j
 @Component
-public class Utils {
-    private accService accService; //匹配+1000*0.05/7
+public class Utils extends AccountBot{
+    @Autowired
+    private AccountService accountService; //匹配+1000*0.05/7
+    @Autowired
+    private RateService rateService;
+    @Autowired
+    private IssueService issueService;
     public static final Pattern pattern = Pattern.compile("^\\+?(?<num1>\\d+)\\*(?<num2>\\d+\\.\\d+)/(?<num3>\\d+)$");
     //匹配+1000/7*0.05
     public static final Pattern pattern1 = Pattern.compile("^\\+?(?<num1>\\d+)/(?<num3>\\d+)\\*(?<num2>\\d+\\.\\d+)$");
@@ -46,17 +55,16 @@ public class Utils {
 //            System.out.println("匹配情况 4");
 //        } else {
 //            System.out.println("没有匹配的情况");
-//        } calc dowingAccount isOrNo（修改为calcRecorded） isMatcher dowingAccount 删除
+//        }
     }
 
     //入账操作2.0，匹配公式
-    public  boolean calcRecorded(accService accService,String text1, String userName, Account updateAccount, BigDecimal total, BigDecimal down, Issue issue, BigDecimal downed, BigDecimal downing) {
+    public  boolean calcRecorded(String text1, String userName, Account updateAccount, BigDecimal total, BigDecimal down, Issue issue, BigDecimal downed, BigDecimal downing) {
         String text = text1.substring(1);
         if (text1.charAt(0)!='+'&&text1.charAt(0)!='-'){
             return false;
         }
-        this.accService=accService;
-        Rate rate=accService.selectRate();
+        Rate rate=rateService.selectRate();
         Matcher matcher = pattern.matcher(text);//+1000*0.05/7
         Matcher matcher1 = pattern1.matcher(text);//+1000/7*0.05
         Matcher matcher2 = pattern2.matcher(text);//+1000/7
@@ -127,8 +135,8 @@ public class Utils {
         updateAccount.setDowning(downing);
         updateAccount.setDown(down.add(t));
         log.info("downing:{},total:{},account:{}", downing, total, updateAccount);
-        accService.insertAccount(updateAccount);
-        accService.uodateIssueDown(down.add(t));
+        accountService.insertAccount(updateAccount);
+        issueService.uodateIssueDown(down.add(t));
         return true;
     }
     //加法2 用于matchFound 2 3
@@ -141,8 +149,8 @@ public class Utils {
         downing=dowingAccount(total,rate,downing);
         updateAccount.setDowning(downing);
         updateAccount.setDown(down.add(t));
-        accService.insertAccount(updateAccount);
-        accService.uodateIssueDown(down.add(t));
+        accountService.insertAccount(updateAccount);
+        issueService.uodateIssueDown(down.add(t));
         return true;
     }
     //减法
@@ -151,8 +159,8 @@ public class Utils {
         issue.setDown(down.subtract(t));
         issue.setDowned(downed.add(t));
         if (issue.getHandle()!=null){
-            accService.insertIssue(issue);
-            accService.updateDown(down.subtract(t));
+            issueService.insertIssue(issue);
+            accountService.updateDown(down.subtract(t));
             log.info("执行了1================");
         }
         return true;
@@ -183,6 +191,22 @@ public class Utils {
         BigDecimal d = totalMinusTotalTimesRate1.divide(exchange, 2, RoundingMode.HALF_UP); // 保留两位小数
         log.info("计算最终结果d:{}", d);
         return downing.add(d);
+    }
+    //计算器功能
+    public void counter(Message message, SendMessage sendMessage) {
+        try {
+            String text = message.getText();
+            String calculate = calculate(text);
+            sendMessage.setText(calculate);
+            try {
+                log.info("发送消息6");
+                execute(sendMessage);
+            } catch (Exception e) {
+                //e.printStackTrace();
+            }
+        }catch (Exception e){
+            log.info("计算器功能异常");
+        }
     }
     //计算器的判断是否符合+-*/
     public  String calculate(String text) {

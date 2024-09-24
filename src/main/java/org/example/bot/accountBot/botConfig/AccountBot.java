@@ -1,5 +1,6 @@
 package org.example.bot.accountBot.botConfig;
 
+import javassist.compiler.ast.Variable;
 import lombok.extern.slf4j.Slf4j;
 import org.example.bot.accountBot.pojo.Account;
 import org.example.bot.accountBot.pojo.Rate;
@@ -46,9 +47,11 @@ public class AccountBot extends TelegramLongPollingBot {
     private IssueService issueService;
     @Autowired
     private AccountService accountService;
-
-    private Date oldSetTime;
-    boolean Over24Hour=false;
+    Utils utils=new Utils();
+    DateOperator dateOperator=new DateOperator();
+    SettingOperatorPerson settingOperatorPerson=new SettingOperatorPerson();
+    ShowOperatorName showOperatorName=new ShowOperatorName();
+    ButtonList buttonList=new ButtonList();
 
 
     @Override
@@ -127,184 +130,20 @@ public class AccountBot extends TelegramLongPollingBot {
         inHandle(split2,message.getText(), updateAccount,  userName, sendMessage, accountList, message,split3,
                 rate,callBackFirstName,callBackName, firstName,issue,issueList);
         //显示操作人名字
-        replay(sendMessage,updateAccount,rate,issueList,issue,message.getText());
+        showOperatorName.replay(sendMessage,updateAccount,rate,issueList,issue,message.getText());
         //删除操作人员
         deleteHandle(message.getText(),sendMessage);
         //删除今日数据/关闭日切/
-        deleteTedayData(message,sendMessage,accountList,replyToText);
+        deleteTodayData(message,sendMessage,accountList,replyToText);
         //计算器功能
-        counter(message,sendMessage);
+        utils.counter(message,sendMessage);
         //通知功能
         inform(message.getText(),sendMessage);
     }
 
 
 
-    //显示操作人名字
-    public void  replay(SendMessage sendMessage,Account updateAccount, Rate rate,  List<Issue> issuesList, Issue issue, String text) {
-        if (!text.equals("显示操作人名字")){
-            return;
-        }
-        String iusseText="";
-        //重新获取最新的数据
-        List<Account> accounts = accountService.selectAccount();
-        List<String> newList = new ArrayList<>();
-        List<String> newIssueList=new ArrayList<>();
-        for (Account account : accounts) {
-            SimpleDateFormat sdf = new SimpleDateFormat("HH:mm:ss");
-            newList.add(sdf.format(account.getAddTime()));
-        }
-        //已出账
-        BigDecimal num = issuesList.stream().filter(Objects::nonNull).map(Issue::getDowned).reduce(BigDecimal.ZERO, BigDecimal::add);
-//        BigDecimal num = new BigDecimal(0);
-//        if (!isOrNo(text)){
-//            //当不是公式入账时才赋值
-//            num=new BigDecimal(text.substring(1));
-//        }
-
-        List<Issue> issues = issueService.selectIssue();
-        log.info("issues,,{}",issues);
-        //获取时间数据方便后续操作
-
-        for (Account account : accounts) {
-            SimpleDateFormat sdf = new SimpleDateFormat("HH:mm:ss");
-            newList.add(sdf.format(account.getAddTime()));
-        }
-        for (Issue issue1 : issues) {
-            SimpleDateFormat sdf = new SimpleDateFormat("HH:mm:ss");
-            newIssueList.add(sdf.format(issue1.getAddTime()));
-        }
-        //显示操作人
-        if (issuesList.size()==1){
-            //显示操作人 rate.getHandlestatus() == 0 ? " @"+issuesList.get(issuesList.size()-1).getHandle()+" "+
-            String text1 = issuesList.get(0).getHandleFirstName();
-            //显示明细
-            String text2 = rate.getDetailStatus() == 0 ? "/"+ rate.getExchange().setScale(2, RoundingMode.HALF_UP)+"*"+ rate.getRate().multiply(BigDecimal.valueOf(100)).setScale(2, RoundingMode.HALF_UP)+"=" +
-                    issuesList.get(0).getDowned().subtract(issuesList.get(issuesList.size()-1).getDowned().multiply(rate.getRate())).divide(rate.getExchange(), 2, BigDecimal.ROUND_HALF_UP) : "";
-            //显示回复人
-            String callBackFirstName= rate.getCallBackStatus() ==0 ? " @"+issuesList.get(issuesList.size()-1).getCall_back()+" "+issuesList.get(issuesList.size()-1).getCallBackFirstName() : "";
-            iusseText="\n已出账："+num +"，:共"+(issuesList.size())+"笔:\n"+
-                    newIssueList.get(newIssueList.size()-1)+"  "+
-                    issuesList.get(issuesList.size()-1).getDowned().setScale(2, RoundingMode.HALF_UP)+text2+text1+" "+callBackFirstName+accounts.get(0).getHandleFirstName();
-        }else if (issuesList.size()==2){
-            //操作人的显示状态，1表示不显示，0表示显示    操作人昵称
-            String handleFirstName = issuesList.get(issuesList.size()-1).getHandleFirstName();
-            //handleFirstName rate.getHandlestatus() == 0 ? " @"+issuesList.get(issuesList.size()-1).getHandle()+" "+
-            String handleFirstName2 = issuesList.get(issuesList.size()-1).getHandleFirstName();
-            String text21 = rate.getDetailStatus() == 0 ? "/"+ rate.getExchange().setScale(2, RoundingMode.HALF_UP)+"*"+ rate.getRate().multiply(BigDecimal.valueOf(100)).setScale(2, RoundingMode.HALF_UP)+"=" +
-                    issuesList.get(issuesList.size()-1).getDowned().subtract(issuesList.get(issuesList.size()-1).getDowned().multiply(rate.getRate())).divide(rate.getExchange(), 2, BigDecimal.ROUND_HALF_UP) : "";
-            String text22 = rate.getDetailStatus() == 0 ? "/"+ rate.getExchange().setScale(2, RoundingMode.HALF_UP)+"*"+ rate.getRate().multiply(BigDecimal.valueOf(100)).setScale(2, RoundingMode.HALF_UP)+"=" +
-                    issuesList.get(issuesList.size()-2).getDowned().subtract(issuesList.get(issuesList.size()-2).getDowned().multiply(rate.getRate())).divide(rate.getExchange(), 2, BigDecimal.ROUND_HALF_UP) : "";
-            String text31= rate.getCallBackStatus() ==0 ? " @"+issuesList.get(issuesList.size()-1).getCall_back()+" "+issuesList.get(issuesList.size()-1).getCallBackFirstName() : "";
-            String text32= rate.getCallBackStatus() ==0 ? " @"+issuesList.get(issuesList.size()-2).getCall_back()+" "+issuesList.get(issuesList.size()-2).getCallBackFirstName() : "";
-            iusseText="\n已出账："+num +"，:共"+(issuesList.size())+"笔:\n"+
-                    newIssueList.get(newIssueList.size()-1)+"  "+
-                    issuesList.get(issuesList.size()-1).getDowned().setScale(2, RoundingMode.HALF_UP)+text21+handleFirstName+text31+"\n"+
-                    newIssueList.get(newIssueList.size()-2)+"  "+
-                    issuesList.get(issuesList.size()-2).getDowned().setScale(2, RoundingMode.HALF_UP)+text22+handleFirstName2+text32;
-        } else {
-            if (updateAccount.getDown()!=null){
-                issue.setDown(updateAccount.getDown());
-            }
-            issue.setDown(BigDecimal.ZERO);
-            iusseText="\n\n" +"已下发：\n"+
-                    "暂无下发数据";
-        }
-        List<Account> allAccount = accountService.selectAccount();
-        //显示操作人/显示1明细
-        if (accounts.size()==1){
-            //是否隐藏操作人
-            String text1 = rate.getHandlestatus() == 0 ? " @"+accounts.get(0).getHandle()+" "+accounts.get(0).getHandleFirstName() : "";
-            updateAccount=allAccount.get(0);
-            //是否隐藏明细
-            String text2 = rate.getDetailStatus() == 0 ? "/"+ rate.getExchange().setScale(2, RoundingMode.HALF_UP)+"*"+ rate.getRate().multiply(BigDecimal.valueOf(100)).setScale(2, RoundingMode.HALF_UP)+"=" +
-                    accounts.get(0).getDowning().setScale(2, RoundingMode.HALF_UP) : "";
-            //是否显示回复人
-            String text3 = rate.getCallBackStatus() == 0 ? " @"+accounts.get(0).getCall_back()+" "+accounts.get(0).getCallBackFirstName() : "";
-            iusseText="\n已入账："+num +"，共"+(accounts.size())+"笔:\n"+
-                    newList.get(newList.size()-1)+" "+
-                    accounts.get(0).getTotal().setScale(2, RoundingMode.HALF_UP)+text2+text1+text3+"\n"+iusseText+"\n"+
-                    "\n\n总入账："+ updateAccount.getTotal().setScale(2, RoundingMode.HALF_UP)+
-                    "\n汇率："+ rate.getExchange().setScale(2, RoundingMode.HALF_UP)+
-                    "\n费率："+ rate.getRate().multiply(BigDecimal.valueOf(100)).setScale(2, RoundingMode.HALF_UP)+
-                    "\n应下发："+ updateAccount.getDowning().setScale(2, RoundingMode.HALF_UP)+
-                    "\n已下发："+ issue.getDowned().setScale(2, RoundingMode.HALF_UP)+
-                    "\n未下发："+ updateAccount.getDown().setScale(2, RoundingMode.HALF_UP);
-        }else if (accounts.size()==2){
-            updateAccount=allAccount.get(1);
-            Account accountFirsit = allAccount.get(0);
-            //是否隐藏操作人
-            String text11 = rate.getHandlestatus() == 0 ? " @"+accounts.get(accounts.size()-1).getHandle()+" "+accounts.get(accounts.size()-1).getHandleFirstName() : "";
-            String text12 = rate.getHandlestatus() == 0 ? " @"+accounts.get(0).getHandle()+" "+accounts.get(accounts.size()-2).getHandleFirstName() : "";
-            //是否隐藏明细
-            String text21 = rate.getDetailStatus() == 0 ? "/"+ rate.getExchange().setScale(2, RoundingMode.HALF_UP)+"*"+ rate.getRate().multiply(BigDecimal.valueOf(100)).setScale(2, RoundingMode.HALF_UP)+"=" +
-                    accounts.get(accounts.size()-1).getDowning().setScale(2, RoundingMode.HALF_UP) : "";
-            String text22 = rate.getDetailStatus() == 0 ? "/"+ rate.getExchange().setScale(2, RoundingMode.HALF_UP)+"*"+ rate.getRate().multiply(BigDecimal.valueOf(100)).setScale(2, RoundingMode.HALF_UP)+"=" +
-                    accounts.get(accounts.size()-2).getDowning().setScale(2, RoundingMode.HALF_UP) : "";
-            //是否显示回复人
-            String text31 = rate.getCallBackStatus() == 0 ? " @"+accounts.get(accounts.size()-1).getCall_back()+" "+accounts.get(accounts.size()-1).getCallBackFirstName() : "";
-            String text32 = rate.getCallBackStatus() == 0 ? " @"+accounts.get(accounts.size()-2).getCall_back()+" "+accounts.get(accounts.size()-2).getCallBackFirstName() : "";
-            iusseText="\n已入账："+num +"，:共"+(accounts.size())+"笔:\n"+
-                    newList.get(newList.size()-1)+" "+
-                    accounts.get(accounts.size()-1).getTotal().setScale(2, RoundingMode.HALF_UP)+text21+text11+text31+"\n"+
-                    newList.get(newList.size()-2)+" "+
-                    accounts.get(accounts.size()-2).getTotal().setScale(2, RoundingMode.HALF_UP)+text22+text12+text32+"\n"+iusseText+"\n"+
-                    "\n\n总入账："+ updateAccount.getTotal().setScale(2, RoundingMode.HALF_UP)+
-                    "\n汇率："+ rate.getExchange().setScale(2, RoundingMode.HALF_UP)+
-                    "\n费率："+ rate.getRate().multiply(BigDecimal.valueOf(100)).setScale(2, RoundingMode.HALF_UP)+
-                    "\n应下发："+ updateAccount.getDowning().setScale(2, RoundingMode.HALF_UP)+
-                    "\n已下发："+ issue.getDowned().setScale(2, RoundingMode.HALF_UP)+
-                    "\n未下发："+ updateAccount.getDown().setScale(2, RoundingMode.HALF_UP);
-        }else if (accounts.size()>2){
-            //取所有账户总和
-            BigDecimal total =  allAccount.stream().filter(Objects::nonNull).map(Account::getTotal).reduce(BigDecimal.ZERO, BigDecimal::add);
-            BigDecimal downing =  allAccount.stream().filter(Objects::nonNull).map(Account::getDowning).reduce(BigDecimal.ZERO, BigDecimal::add);
-            BigDecimal down =  allAccount.stream().filter(Objects::nonNull).map(Account::getDown).reduce(BigDecimal.ZERO, BigDecimal::add);
-            BigDecimal issuesDown = issuesList.stream().filter(Objects::nonNull).map(Issue::getDown).reduce(BigDecimal.ZERO, BigDecimal::add);
-            //是否隐藏操作人
-            String text11 = rate.getHandlestatus() == 0 ? " @"+accounts.get(accounts.size()-1).getHandle()+" "+accounts.get(accounts.size()-1).getHandleFirstName() : "";
-            String text12 = rate.getHandlestatus() == 0 ? " @"+accounts.get(accounts.size()-2).getHandle()+" "+accounts.get(accounts.size()-2).getHandleFirstName() : "";
-            String text13 = rate.getHandlestatus() == 0 ? " @"+accounts.get(accounts.size()-3).getHandle()+" "+accounts.get(accounts.size()-3).getHandleFirstName() : "";
-            //是否隐藏明细
-            String text21 = rate.getDetailStatus() == 0 ? "/"+ rate.getExchange().setScale(2, RoundingMode.HALF_UP)+"*"+ rate.getRate().multiply(BigDecimal.valueOf(100)).setScale(2, RoundingMode.HALF_UP)+"=" +
-                    accounts.get(accounts.size()-1).getDowning().setScale(2, RoundingMode.HALF_UP) : "";
-            String text22 = rate.getDetailStatus() == 0 ? "/"+ rate.getExchange().setScale(2, RoundingMode.HALF_UP)+"*"+ rate.getRate().multiply(BigDecimal.valueOf(100)).setScale(2, RoundingMode.HALF_UP)+"=" +
-                    accounts.get(accounts.size()-2).getDowning().setScale(2, RoundingMode.HALF_UP) : "";
-            String text23 = rate.getDetailStatus() == 0 ? "/"+ rate.getExchange().setScale(2, RoundingMode.HALF_UP)+"*"+ rate.getRate().multiply(BigDecimal.valueOf(100)).setScale(2, RoundingMode.HALF_UP)+"=" +
-                    accounts.get(accounts.size()-3).getDowning().setScale(2, RoundingMode.HALF_UP) : "";
-            //是否显示回复人
-            String text31 = rate.getCallBackStatus() == 0 ? " @"+accounts.get(accounts.size()-1).getCall_back()+" "+accounts.get(accounts.size()-1).getCallBackFirstName() : "";
-            String text32 = rate.getCallBackStatus() == 0 ? " @"+accounts.get(accounts.size()-2).getCall_back()+" "+accounts.get(accounts.size()-2).getCallBackFirstName() : "";
-            String text33 = rate.getCallBackStatus() == 0 ? " @"+accounts.get(accounts.size()-3).getCall_back()+" "+accounts.get(accounts.size()-3).getCallBackFirstName() : "";
-            iusseText="\n已入账："+num +"，:共"+(accounts.size())+"笔:\n"+
-                    newList.get(newList.size()-1)+" "+
-                    accounts.get(accounts.size()-1).getTotal().setScale(2, RoundingMode.HALF_UP)+text21+text11+text31+"\n"+
-                    newList.get(newList.size()-2)+" "+
-                    accounts.get(accounts.size()-2).getTotal().setScale(2, RoundingMode.HALF_UP)+text22+text12+text32+"\n"+
-                    newList.get(newList.size()-3)+" "+
-                    accounts.get(accounts.size()-3).getTotal().setScale(2, RoundingMode.HALF_UP)+text23+text13+text33+"\n"+iusseText+"\n"+
-                    "\n\n总入账："+ total.setScale(2, RoundingMode.HALF_UP)+
-                    "\n汇率："+ rate.getExchange().setScale(2, RoundingMode.HALF_UP)+
-                    "\n费率："+ rate.getRate().multiply(BigDecimal.valueOf(100)).setScale(2, RoundingMode.HALF_UP)+
-                    "\n应下发："+ downing.setScale(2, RoundingMode.HALF_UP)+
-                    "\n已下发："+ issuesDown.setScale(2, RoundingMode.HALF_UP)+
-                    "\n未下发："+ down.setScale(2, RoundingMode.HALF_UP);
-        } else {
-            iusseText="入账："+ num ;
-        }
-
-
-
-        sendMessage.setText(iusseText);
-        //        String sendText1 = getSendText(updateAccount, accounts,rate, num, newList,newIssueList,issues,issue,text);
-        try {
-            log.info("发送消息1");
-            execute(sendMessage);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
-    //通知功能实现/48 小时内在群组发言过的所有人
+     //通知功能实现/48 小时内在群组发言过的所有人
     private void inform(String text, SendMessage sendMessage) {
         if (text.equals("通知")){
             List<String> users=accountService.inform(new Date());
@@ -331,104 +170,10 @@ public class AccountBot extends TelegramLongPollingBot {
     }
     //获取并判断下发订单是否过期
     private List<Issue> issueIsOver24Hour(Message message, SendMessage sendMessage) {
-        List<Issue> list=issueService.selectIssue();
-        int i=8;
-        Date setTime=new Date();
-        if (list.size()>0){
-            oldSetTime=list.get(list.size()-1).getSetTime();
-            setTime=list.get(list.size()-1).getSetTime();
-        }
-        log.info("setTime;;;{}",setTime);
-        if (issueService.selectIssue().size()!=0){
-            list=issueService.selectIssue();
-            //获取设置当天的时间
-            long diff =list.get(list.size()-1).getAddTime().getTime()-list.get(list.size()-1).getSetTime().getTime();
-            //boolean over24hour=diff > 24 * 60 * 60 * 1000;
-            Rate rate=rateService.selectRate();
-            boolean over24hour=diff >  rate.getOverDue();
-            setTime = list.get(list.size()-1).getSetTime();
-
-            if (over24hour){
-                Over24Hour=true;
-                issueService.updateIssueDataStatus();
-                Rate rate1=new Rate();
-                issueService.updateIssueSetTime(setTime);
-                log.info("setTime,,:{}",setTime);
-                rateService.updateRate(String.valueOf(rate1.getRate()));
-                rateService.updateExchange(rate1.getExchange());
-                log.info("over24hour---------:{}",over24hour);
-                list=issueService.selectIssue();
-                log.info("listover24:{}",list);
-            }
-        }
-        log.info("Over24Hour,,:{}",Over24Hour);
-
-        setOver24Hour(Over24Hour);
-
-        return list;
-
+        return dateOperator.issueIsOver24Hour(message,sendMessage);
     }
 
-    //计算器功能
-    private void counter(Message message, SendMessage sendMessage) {
-        try {
-            String text = message.getText();
-            String calculate = calculate(text);
-            sendMessage.setText(calculate);
-            try {
-                log.info("发送消息6");
-                execute(sendMessage);
-            } catch (Exception e) {
-                //e.printStackTrace();
-            }
-        }catch (Exception e){
-            log.info("计算器功能异常");
-        }
 
-
-    }
-    //计算器的判断是否符合+-*/
-    private String calculate(String text) {
-        // 正则表达式匹配形如 "数字 运算符 数字" 的模式
-        Pattern pattern = Pattern.compile("^(\\d+)([+\\-*/])(\\d+)$");
-        Matcher matcher = pattern.matcher(text);
-
-        if (matcher.find()) {
-            // 解析数字
-            int number1 = Integer.parseInt(matcher.group(1));
-            int number2 = Integer.parseInt(matcher.group(3));
-            char operator = matcher.group(2).charAt(0);
-
-            // 计算结果
-            int result = 0;
-            switch (operator) {
-                case '+':
-                    result = number1 + number2;
-                    break;
-                case '-':
-                    result = number1 - number2;
-                    break;
-                case '*':
-                    result = number1 * number2;
-                    break;
-                case '/':
-                    if (number2 != 0) {
-                        result = number1 / number2;
-                    } else {
-                        return "Error: Division by zero";
-                    }
-                    break;
-                default:
-                    return "Invalid operator";
-            }
-
-            // 返回结果字符串
-            return text + "=" + result;
-        } else {
-            // 如果不匹配，返回 null
-            return null;
-        }
-    }
 
     //撤销入款
     private void repeal(Message message, SendMessage sendMessage, List<Account> list, String replyToText, String callBackName, List<Issue> issueList) {
@@ -508,15 +253,11 @@ public class AccountBot extends TelegramLongPollingBot {
     //设置费/汇率
     private void setRate(Message message,SendMessage sendMessage,Rate rates) {
         String text = message.getText();
-        if (text.length()<4){
-            return;
-        }
-
+        if (text.length()<4){return;}
         if (text.substring(0,4).equals("设置费率")){
             String rate = text.substring(4);
             BigDecimal bigDecimal = new BigDecimal(rate);
             bigDecimal=bigDecimal.multiply(BigDecimal.valueOf(0.01));
-            log.info("bigDecimal:{}",bigDecimal);
             rates.setRate(bigDecimal);
             rates.setAddTime(new Date());
             log.info("rates:{}",rates);
@@ -606,25 +347,25 @@ public class AccountBot extends TelegramLongPollingBot {
             updateAccount.setCallBackFirstName(callBackFirstName);
         }
         //设置account的过期时间
-        if(list.size()>0){
+        if(!list.isEmpty()){
             if (list.get(list.size()-1).getSetTime()!=null){
                 updateAccount.setSetTime(list.get(list.size()-1).getSetTime());
             }else {
-                if (oldSetTime!=null){
-                    updateAccount.setSetTime(oldSetTime);
+                if (dateOperator.oldSetTime!=null){
+                    updateAccount.setSetTime(dateOperator.oldSetTime);
                 }else {
                     LocalDateTime fourAMToday = LocalDate.now().atTime(8, 0);
                     Date setTime = new Date(fourAMToday.toInstant(java.time.ZoneOffset.ofHours(8)).toEpochMilli());
                     updateAccount.setSetTime(setTime);
                     log.info("setTime:{}",setTime);
                 }
-                log.info("oldSetTime,{}",oldSetTime);
+                log.info("oldSetTime,{}",dateOperator.oldSetTime);
 
             }
             updateAccount.setSetTime(list.get(list.size()-1).getSetTime());
         }else {
-            if (oldSetTime!=null){
-                updateAccount.setSetTime(oldSetTime);
+            if (dateOperator.oldSetTime!=null){
+                updateAccount.setSetTime(dateOperator.oldSetTime);
             }else {
                 LocalDateTime fourAMToday = LocalDate.now().atTime(8, 0);
                 Date setTime = new Date(fourAMToday.toInstant(java.time.ZoneOffset.ofHours(8)).toEpochMilli());
@@ -636,21 +377,21 @@ public class AccountBot extends TelegramLongPollingBot {
             if (issueList.get(issueList.size()-1).getSetTime()!=null){
                 issue.setSetTime(issueList.get(issueList.size()-1).getSetTime());
             }else {
-                if (oldSetTime!=null){
-                    issue.setSetTime(oldSetTime);
+                if (dateOperator.oldSetTime!=null){
+                    issue.setSetTime(dateOperator.oldSetTime);
                 }else {
                     LocalDateTime fourAMToday = LocalDate.now().atTime(8, 0);
                     Date setTime = new Date(fourAMToday.toInstant(java.time.ZoneOffset.ofHours(8)).toEpochMilli());
                     issue.setSetTime(setTime);
                     log.info("setTime:{}",setTime);
                 }
-                log.info("oldSetTime,{}",oldSetTime);
+                log.info("oldSetTime,{}",dateOperator.oldSetTime);
 
             }
             issue.setSetTime(issueList.get(issueList.size()-1).getSetTime());
         }else {
-            if (oldSetTime!=null){
-                issue.setSetTime(oldSetTime);
+            if (dateOperator.oldSetTime!=null){
+                issue.setSetTime(dateOperator.oldSetTime);
             }else {
                 LocalDateTime fourAMToday = LocalDate.now().atTime(8, 0);
                 Date setTime = new Date(fourAMToday.toInstant(java.time.ZoneOffset.ofHours(8)).toEpochMilli());
@@ -659,14 +400,14 @@ public class AccountBot extends TelegramLongPollingBot {
         }
         char firstChar = text.charAt(0);
         //公式入账（重写了isOrNo方法）
-        boolean orNo = isOrNo(text, userName, updateAccount, total, down,issue,downed,downing);
+        boolean orNo = utils.calcRecorded(text, userName, updateAccount, total, down,issue,downed,downing);
         //判断是+还是-
         if (firstChar == '+' && ( callBackName == null||callBackName.equals("zqzs18bot"))&&orNo==false){
             total=total.add(num);
             updateAccount.setTotal(total);
             updateAccount.setHandle(userName);
             //计算应下发
-            downing=dowingAccount(rate,downing,total,num);
+            downing=utils.dowingAccount(num,rate,downing);
             updateAccount.setDowning(downing);
             updateAccount.setDown(down.add(num));
             accountService.insertAccount(updateAccount);
@@ -711,329 +452,22 @@ public class AccountBot extends TelegramLongPollingBot {
             e.printStackTrace();
         }
     }
-    //计算应下发：(t-t*r)/c     +1000（金额）*0.05（费率）/7（汇率）= （单位结果）
-    private BigDecimal calc(Rate rate, BigDecimal downing, BigDecimal total, BigDecimal num) {
-        BigDecimal divide = num.multiply(rate.getRate()).divide(rate.getExchange());
-        String input = "+1000/7*0.05";
-        // 正则表达式匹配数字（包括负数和小数）
-        String regex = "[-+]?\\d*\\.\\d+|[-+]?\\d+";
 
-        Pattern pattern = Pattern.compile(regex);
-        Matcher matcher = pattern.matcher(input);
-        List<String> numbers = new ArrayList<>();
-
-        while (matcher.find()) {
-            numbers.add(matcher.group());
-        }
-        return downing;
-    }
-
-    //计算应下发：(t-t*r)/c     +1000（金额）*0.05（费率）/7（汇率）= （单位结果）
-    private BigDecimal dowingAccount(Rate rate, BigDecimal downing, BigDecimal total, BigDecimal num) {
-        log.info("numsssssss:{}",num);
-        BigDecimal rate1 = rate.getRate();
-        rate1=rate1.multiply(BigDecimal.valueOf(0.01));
-        log.info("rate1:{}", rate1);
-        BigDecimal exchange = rate.getExchange();
-        log.info("exchange:{}", exchange);
-        BigDecimal totalTimesRate1 = num.multiply(rate1);
-        log.info("totalTimesRate1:{}", totalTimesRate1);
-        // 计算 total - (total * rate1)
-        BigDecimal totalMinusTotalTimesRate1 = num.subtract(totalTimesRate1);
-        log.info("totalMinusTotalTimesRate1:{}", totalMinusTotalTimesRate1);
-        // 计算最终结果 d = (total - (total * rate1)) / exchange
-        BigDecimal d = totalMinusTotalTimesRate1.divide(exchange, 2, RoundingMode.HALF_UP); // 保留两位小数
-        log.info("d:{}", d);
-        downing=downing.add(d);
-        log.info("downing:{}", downing);
-        return downing;
-    }
-
-    //入账操作2.0，匹配公式
-    private boolean isOrNo(String text1, String userName, Account updateAccount, BigDecimal total, BigDecimal down, Issue issue, BigDecimal downed, BigDecimal downing) {
-        String text = text1.substring(1);
-        if (text1.charAt(0)!='+'&&text1.charAt(0)!='-'){
-            log.info("999999999999");
-            return false;
-        }
-        Rate rate=rateService.selectRate();
-        //匹配100*8/9
-        Pattern pattern = Pattern.compile("^(\\d+)\\*(\\d+)\\/(\\d+)$");
-        //匹配100/9
-        Pattern pattern1 = Pattern.compile("^(\\d+)\\/(\\d+)$");
-        //匹配100*8
-        Pattern pattern2 = Pattern.compile("^(\\d+)\\*(\\d+)$");
-        Matcher matcher = pattern.matcher(text);
-        Matcher matcher1 = pattern1.matcher(text);
-        Matcher matcher2 = pattern2.matcher(text);
-        boolean matchFound = matcher.find();
-        log.info("matchFound:{}",matchFound);
-        boolean matchFound1 = matcher1.find();
-        log.info("matchFound1:{}",matchFound1);
-        boolean matchFound2 = matcher2.find();
-        log.info("matchFound2",matchFound2);
-        BigDecimal t = new BigDecimal(0);
-        BigDecimal r = new BigDecimal(0);
-        BigDecimal e = new BigDecimal(0);
-        log.info("matchFound:{},matchFound1:{},matchFound2:{}",matchFound,matchFound1,matchFound2);
-        //获取匹配到的数字
-        if (matchFound){
-            t = BigDecimal.valueOf(Long.parseLong(matcher.group(1)));
-            r = BigDecimal.valueOf(Long.parseLong(matcher.group(2)));
-            e = BigDecimal.valueOf(Long.parseLong(matcher.group(3)));
-        }else if (matchFound1){
-            t = BigDecimal.valueOf(Long.parseLong(matcher1.group(1)));
-            e = BigDecimal.valueOf(Long.parseLong(matcher1.group(2)));
-        }else if (matchFound2){
-            t = BigDecimal.valueOf(Long.parseLong(matcher2.group(1)));
-            r = BigDecimal.valueOf(Long.parseLong(matcher2.group(2)));
-        }
-        log.info(".....t:{},r:{},e:{}", t, r, e);
-        //按照公式进行计算
-        if (matchFound&&text1.charAt(0)=='+') {
-            log.info("t:{},r:{},e:{}", t, r, e);
-            rate.setRate(r);
-            rate.setExchange(e);
-            downing =dowingAccount(t,rate,downing) ;
-            total = total.add(t);
-            updateAccount.setTotal(total);
-            updateAccount.setHandle(userName);
-            updateAccount.setDowning(downing);
-            updateAccount.setDown(down.add(t));
-            accountService.insertAccount(updateAccount);
-            issueService.uodateIssueDown(down.add(t));
-            return true;
-        } else if (matchFound&&text1.charAt(0)=='-'){
-            // 解析数字
-            log.info("t:{},r:{},e:{}", t, r, e);
-            rate.setRate(r);
-            rate.setExchange(e);
-            issue.setHandle(userName);
-            issue.setDown(down.subtract(t));
-            issue.setDowned(downed.add(t));
-            if (issue.getHandle()!=null){
-                issueService.insertIssue(issue);
-                accountService.updateDown(down.subtract(t));
-            }
-
-            return true;
-        }else if (matchFound1&&text1.charAt(0)=='+'){
-            //匹配100/9
-            log.info("t:{},r:{},e:{}", t, r, e);
-            rate.setExchange(e);
-            downing =dowingAccount(t,rate,downing) ;
-            log.info("downing:{}", downing);
-            total = total.add(t);
-            updateAccount.setTotal(total);
-            log.info("total-....-:{}",total);
-            updateAccount.setHandle(userName);
-            log.info("downingjjjjj:{}",downing);
-            updateAccount.setDowning(downing);
-            updateAccount.setDown(down.add(t));
-            accountService.insertAccount(updateAccount);
-            issueService.uodateIssueDown(down.add(t));
-            return true;
-        }else if (matchFound1&&text1.charAt(0)=='-'){
-            log.info("t:{},r:{},e:{}", t, r, e);
-            rate.setExchange(e);
-            log.info("rate111:{}",rate);
-            issue.setHandle(userName);
-            issue.setDown(down.subtract(t));
-            issue.setDowned(downed.add(t));
-            if (issue.getHandle()!=null){
-                issueService.insertIssue(issue);
-                accountService.updateDown(down.subtract(t));
-            }
-
-            return true;
-        }else if (matchFound2&&text1.charAt(0)=='+'){
-            //匹配100*9
-            log.info("t:{},r:{},e:{}", t, r, e);
-            rate.setRate(r);
-            downing =dowingAccount(t,rate,downing) ;
-            log.info("downing:{}", downing);
-            total = total.add(t);
-            updateAccount.setTotal(total);
-            log.info("total--:{}",total);
-            updateAccount.setHandle(userName);
-            //计算应下发
-            downing=dowingAccount(total,rate,downing);
-            log.info("downingddddddd:{}", downing);
-            updateAccount.setDowning(downing);
-            updateAccount.setDown(down.add(t));
-            accountService.insertAccount(updateAccount);
-            issueService.uodateIssueDown(down.add(t));
-            return true;
-        }else if (matchFound2&&text1.charAt(0)=='-'){
-            log.info("t:{},r:{},e:{}", t, r, e);
-            rate.setRate(r);
-            issue.setHandle(userName);
-            issue.setDown(down.subtract(t));
-            issue.setDowned(downed.add(t));
-            if (issue.getHandle()!=null){
-                issueService.insertIssue(issue);
-                accountService.updateDown(down.subtract(t));
-                log.info("执行了1================");
-            }
-
-            return true;
-        }
-        return false;
-    }
     //是否匹配公式入账 例:+1000*0.05/7 这种公式
     private boolean isMatcher(String text1) {
-        String text = text1.substring(1);
-        //匹配100*8/9
-        Pattern pattern = Pattern.compile("^(\\d+)\\*(\\d+)\\/(\\d+)$");
-        //匹配100/9
-        Pattern pattern1 = Pattern.compile("^(\\d+)\\/(\\d+)$");
-        //匹配100*8
-        Pattern pattern2 = Pattern.compile("^(\\d+)\\*(\\d+)$");
-        Matcher matcher = pattern.matcher(text);
-        Matcher matcher1 = pattern1.matcher(text);
-        Matcher matcher2 = pattern2.matcher(text);
-        boolean matchFound = matcher.find();
-        log.info("matchFound:{}",matchFound);
-        boolean matchFound1 = matcher1.find();
-        log.info("matchFound1:{}",matchFound1);
-        boolean matchFound2 = matcher2.find();
-        log.info("matchFound2",matchFound2);
-        if (matchFound||matchFound1||matchFound2) {
-            return true;
-        }
-        return false;
-    }
-
-    //应下发计算公式：d=(total-(total*rate1))/exchange
-    private BigDecimal dowingAccount(BigDecimal tatol, Rate rate,BigDecimal downing) {
-        BigDecimal rate1 = rate.getRate();
-        rate1=rate1.multiply(BigDecimal.valueOf(0.01));
-        log.info("rate1:{}", rate1);
-        BigDecimal exchange = rate.getExchange();
-        log.info("exchange:{}", exchange);
-        BigDecimal totalTimesRate1 = tatol.multiply(rate1);
-        log.info("totalTimesRate1:{}", totalTimesRate1);
-        // 计算 total - (total * rate1)
-        BigDecimal totalMinusTotalTimesRate1 = tatol.subtract(totalTimesRate1);
-        log.info("totalMinusTotalTimesRate1:{}", totalMinusTotalTimesRate1);
-        // 计算最终结果 d = (total - (total * rate1)) / exchange
-        BigDecimal d = totalMinusTotalTimesRate1.divide(exchange, 2, RoundingMode.HALF_UP); // 保留两位小数
-        log.info("d:{}", d);
-        downing=downing.add(d);
-        return downing;
+        return utils.isMatcher(text1);
     }
 
     //判断是否过期
     private List<Account> isOver24Hour(Message message, SendMessage sendMessage) {
-
-        List<Account> list=accountService.selectAccount();
-        //默认日切是8点
-        int i=8;
-        Date setTime=new Date();
-        if (list.size()>0){
-            oldSetTime=list.get(list.size()-1).getSetTime();
-            setTime=list.get(list.size()-1).getSetTime();
-        }
-        log.info("setTime;;;{}",setTime);
-
-        if (message.getText().length()>=4&&message.getText().substring(0,4).equals("设置日切")){
-            i = Integer.parseInt(message.getText().substring(4));
-            log.info("i:{}",i);
-            LocalDateTime fourAMToday = LocalDate.now().atTime(i, 0);
-            setTime = new Date(fourAMToday.toInstant(java.time.ZoneOffset.ofHours(8)).toEpochMilli());
-            log.info("setTime2:{}",setTime);
-            accountService.updateSetTime(setTime);
-            //过期时间是一天
-            rateService.updateOverDue((long) (24 * 60 * 60 * 1000));
-            //AccService.updateOverDue((long) ( 60 * 1000));
-            sendMessage.setText("设置成功");
-
-            try {
-                log.info("发送消息2");
-                execute(sendMessage);
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-            return list;
-        }
-        if (accountService.selectAccount().size()!=0){
-            list=accountService.selectAccount();
-            //获取设置当天的时间
-            long diff =list.get(list.size()-1).getAddTime().getTime()-list.get(list.size()-1).getSetTime().getTime();
-            //boolean over24hour=diff > 24 * 60 * 60 * 1000;
-            Rate rate=rateService.selectRate();
-            log.info("ratesssssssss:{}",rate);
-            boolean over24hour=diff >  rate.getOverDue();
-            setTime = list.get(list.size()-1).getSetTime();
-
-            if (over24hour){
-                Over24Hour=true;
-                accountService.updateDataStatus();
-                Rate rate1=new Rate();
-                accountService.updateSetTime(setTime);
-                log.info("setTime,,:{}",setTime);
-                rateService.updateRate(String.valueOf(rate1.getRate()));
-                rateService.updateExchange(rate1.getExchange());
-                log.info("over24hour---------:{}",over24hour);
-                list=accountService.selectAccount();
-                log.info("listover24:{}",list);
-            }
-        }
-        log.info("Over24Hour,,:{}",Over24Hour);
-
-        setOver24Hour(Over24Hour);
-
-        return list;
+        return dateOperator.isOver24Hour(message,sendMessage);
     }
     //删除今日数据/关闭日切
-    private void deleteTedayData(Message message, SendMessage sendMessage, List<Account> list, String replyToText) {
-        String text = message.getText();
-        if (text.length()>=4){
-            //删除今日账单关键词： 清理今天数据 删除今天数据 清理今天账单 删除今天账单
-            if (text.equals("清理今天数据")||text.equals("删除今天数据")||text.equals("清理今天账单")||text.equals("删除今天账单")){
-                accountService.deleteTedayData();
-                issueService.deleteTedayIusseData();
-                sendMessage.setText("操作成功");
-                try {
-                    log.info("发送消息3");
-                    execute(sendMessage);
-                } catch (Exception e) {
-                    log.info("deleteTedayData异常");
-                }
-
-            }else if (text.equals("关闭日切")){
-                Long overdue=3153600000000l;
-                rateService.updateOverDue(overdue);
-                sendMessage.setText("操作成功,关闭日切");
-                try {
-                    log.info("发送消息3");
-                    execute(sendMessage);
-                } catch (Exception e) {
-                    log.info("deleteTedayData异常");
-                }
-            }
-
-        }
+    private void deleteTodayData(Message message, SendMessage sendMessage, List<Account> accountList, String replyToText) {
+        dateOperator.deleteTodayData(message,sendMessage,accountList,replyToText);
     }
 
-    private boolean setOver24Hour(boolean over24Hour) {
-        return over24Hour;
-    }
-    //转换时间
-    private static Date timeExchange(String timeStr) {
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm:ss");
-        // 将字符串转换为 LocalTime 类型
-        LocalTime time = LocalTime.parse(timeStr, formatter);
-        // 获取当前日期
-        LocalDateTime localDateTime = LocalDateTime.now().with(time);
-        // 转换为指定时区的日期时间
-        ZonedDateTime zonedDateTime = localDateTime.atZone(ZoneId.of("GMT+8"));
-        // 转换为 Date 类型
-        Date addTime = Date.from(zonedDateTime.toInstant());
-        // 输出转换后的日期
-        log.info("Converted date: " + addTime);
-        return addTime;
-    }
+
     //入账时发送的消息
     private static String getSendText(Account updateAccount, List<Account> list, Rate rate, BigDecimal num, List<String> newList, List<String> newIssueList,
                                       List<Issue> issuesList, Issue issue, String text) {
@@ -1193,154 +627,12 @@ public class AccountBot extends TelegramLongPollingBot {
     private void setHandle(String[] split1, String userName, String firstName, List<User> userList,
                            SendMessage sendMessage, Message message, String callBackName,
                            String callBackFirstName, String text) {
-        if (userList.stream().anyMatch(user -> Objects.equals(user.getUsername(), firstName))){
-            sendMessage.setText("已设置该操作员无需重复设置");
-            implList(message, sendMessage);
-            try {
-                log.info("发送消息4");
-                execute(sendMessage);
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }else if (split1[0].equals("设置操作员")||split1[0].equals("设置操作人")){
-//            if (!userList.isEmpty()&&userName.equals(userList.get(0).getUsername())){
-            User user = new User();
-            if (callBackName!=null){
-                user.setUsername(callBackName);
-                user.setFirstname(callBackFirstName);
-                userService.insertUser(user);
-            }else {
-                Pattern pattern = Pattern.compile("@(\\w+)");
-                Matcher matcher = pattern.matcher(text);
-                List<String> userLists = new ArrayList<>();
-                while (matcher.find()) {
-                    // 将匹配到的用户名添加到列表中
-                    userLists.add(matcher.group(1));
-                }
-
-                // 打印提取到的用户列表
-                for (String users : userLists) {
-                    user.setUsername(users);
-                    userService.insertUser(user);
-                }
-            }
-            sendMessage.setText("设置成功");
-            implList(message, sendMessage);
-            try {
-                log.info("发送消息5");
-                execute(sendMessage);
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-//            }
-        }else if (split1[0].equals("显示操作人")||split1[0].equals("显示操作员")){
-            int size = userList.size();
-            StringBuilder sb = new StringBuilder("当前操作人: ");
-            sb.append(" @");
-            for (int i = 0; i < userList.size(); i++) {
-                sb.append(userList.get(i).getUsername());
-                if (i < userList.size() - 1) {
-                    sb.append(" @");
-                }
-            }
-            sendMessage.setText(sb.toString());
-            implList(message, sendMessage);
-            try {
-                log.info("发送消息11");
-                execute(sendMessage);
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }else if (split1[0].equals("将操作员显示")){
-            rateService.updateHandleStatus(0);
-            sendMessage.setText("操作成功");
-            implList(message, sendMessage);
-            try {
-                log.info("发送消息5");
-                execute(sendMessage);
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }else if (split1[0].equals("关闭显示")){
-            rateService.updateHandleStatus(1);
-            sendMessage.setText("操作成功");
-            implList(message, sendMessage);
-            try {
-                log.info("发送消息5");
-                execute(sendMessage);
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }else if (split1[0].equals("将回复人显示")){
-            rateService.updateCallBackStatus(0);
-            sendMessage.setText("操作成功");
-            implList(message, sendMessage);
-            try {
-                log.info("发送消息5");
-                execute(sendMessage);
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }else if (split1[0].equals("关闭回复人显示")){
-            rateService.updateCallBackStatus(1);
-            sendMessage.setText("操作成功");
-            implList(message, sendMessage);
-            try {
-                log.info("发送消息5");
-                execute(sendMessage);
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }else if (split1[0].equals("显示明细")){
-            rateService.updateDatilStatus(0);
-            sendMessage.setText("操作成功");
-            implList(message, sendMessage);
-            try {
-                log.info("发送消息5");
-                execute(sendMessage);
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }else if (split1[0].equals("隐藏明细")){
-            rateService.updateDatilStatus(1);
-            sendMessage.setText("操作成功");
-            implList(message, sendMessage);
-            try {
-                log.info("发送消息5");
-                execute(sendMessage);
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }
+        settingOperatorPerson.setHandle(split1, userName,firstName, userService.selectAll(), sendMessage, message,callBackName,callBackFirstName,text);
     }
 
     //实现list按钮
     private void implList(Message message, SendMessage sendMessage) {
-        InlineKeyboardMarkup markup = new InlineKeyboardMarkup();
-        List<List<InlineKeyboardButton>> rowsInline = new ArrayList<>();
-        List<InlineKeyboardButton> rowInline = new ArrayList<>();
-        //11111111111
-//        Long chatId = message.getChatId();
-//
-//        String text = message.getText();
-//        sendMsg(text,chatId);
-        // 创建第一个按钮
-        InlineKeyboardButton button1 = new InlineKeyboardButton();
-        button1.setText("按钮一名称");
-        button1.setUrl("https://mbd.baidu.com/newspage/data/landingsuper?context=%7B%22nid%22%3A%22news_8595438888645751841%22%7D&n_type=-1&p_from=-1");
-
-        // 创建第二个按钮
-        InlineKeyboardButton button2 = new InlineKeyboardButton();
-        button2.setText("按钮二名称");
-        button2.setUrl("https://your-url-for-button-two.com");
-
-        rowInline.add(button1);
-        rowInline.add(button2);
-        rowsInline.add(rowInline);
-
-        markup.setKeyboard(rowsInline);
-        sendMessage.setReplyMarkup(markup);
-
+        buttonList.implList(message,sendMessage);
     }
 
 }
