@@ -1,5 +1,6 @@
 package org.example.bot.accountBot.service;
 
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import lombok.extern.slf4j.Slf4j;
 import org.example.bot.accountBot.mapper.UserMapper;
 
@@ -23,15 +24,16 @@ public class UserService {
 
 
     public List selectAll() {
-        System.out.println("selectAll");
-       return mapper.selectAll();
+       return mapper.selectList(null);
     }
 
     public void insertUser(User user) {
-        mapper.insertUser(user);
+        mapper.insert(user);
     }
 
-    public void deleteHandele(String deleteName) {
-        mapper.deleteHandle(deleteName);
+    public void deleteHandler(String deleteName) {
+        QueryWrapper<User> queryWrapper = new QueryWrapper<>();
+        queryWrapper.eq("username", deleteName);
+        mapper.delete(queryWrapper);
     }
 }

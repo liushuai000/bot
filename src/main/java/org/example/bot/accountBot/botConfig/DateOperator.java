@@ -12,6 +12,7 @@ import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Message;
 
+import javax.annotation.Resource;
 import javax.xml.ws.soap.Addressing;
 import java.time.*;
 import java.time.format.DateTimeFormatter;
@@ -23,18 +24,17 @@ import java.util.List;
  */
 
 @Slf4j
-@Component
+
 public class DateOperator extends AccountBot{
-    @Addressing
+    @Resource
     AccountService accountService;
-    @Autowired
+    @Resource
     RateService rateService;
-    @Autowired
+    @Resource
     IssueService issueService;
     boolean Over24Hour=false;//是否把accountBot 里的删除
     public Date oldSetTime;
-    boolean setOver24Hour(boolean over24Hour) {
-        return over24Hour;
+    void setOver24Hour(boolean over24Hour) {
     }
     //判断是否过期
     public List<Account> isOver24Hour(Message message, SendMessage sendMessage) {
@@ -101,21 +101,15 @@ public class DateOperator extends AccountBot{
     //获取并判断下发订单是否过期
     public List<Issue> issueIsOver24Hour(Message message, SendMessage sendMessage) {
         List<Issue> list=issueService.selectIssue();
-        int i=8;
-        Date setTime=new Date();
-        if (list.size()>0){
+        if (!list.isEmpty()){
             oldSetTime=list.get(list.size()-1).getSetTime();
-            setTime=list.get(list.size()-1).getSetTime();
-        }
-        log.info("setTime;;;{}",setTime);
-        if (issueService.selectIssue().size()!=0){
-            list=issueService.selectIssue();
+//            list=issueService.selectIssue();
             //获取设置当天的时间
             long diff =list.get(list.size()-1).getAddTime().getTime()-list.get(list.size()-1).getSetTime().getTime();
             //boolean over24hour=diff > 24 * 60 * 60 * 1000;
             Rate rate=rateService.selectRate();
-            boolean over24hour=diff >  rate.getOverDue();
-            setTime = list.get(list.size()-1).getSetTime();
+            boolean over24hour=diff >  rate.getOverDue();//如果当天的时间大于设置的逾期时间
+            Date setTime = list.get(list.size()-1).getSetTime();
 
             if (over24hour){
                 Over24Hour=true;
@@ -139,14 +133,14 @@ public class DateOperator extends AccountBot{
     }
 
 
-    //删除今日数据/关闭日切
+    // 操作人跟最高权限人都可以删除。 删除今日数据/关闭日切 到时间后账单数据自动保存为历史数据，软件界面内数据全部自动清空，操作员权限保留。
     public void deleteTodayData(Message message, SendMessage sendMessage, List<Account> list, String replyToText) {
         String text = message.getText();
         if (text.length()>=4){
-            //删除今日账单关键词： 清理今天数据 删除今天数据 清理今天账单 删除今天账单
+            //删除今日账单关键词： 清理今天数据 删除今天数据 清理今天账单 删除今天账单 是否判断操作员权限？ TODO
             if (text.equals("清理今天数据")||text.equals("删除今天数据")||text.equals("清理今天账单")||text.equals("删除今天账单")){
-                accountService.deleteTedayData();
-                issueService.deleteTedayIusseData();
+                accountService.deleteTodayData();
+                issueService.deleteTodayIssueData();
                 sendMessage.setText("操作成功");
                 try {
                     log.info("发送消息3");

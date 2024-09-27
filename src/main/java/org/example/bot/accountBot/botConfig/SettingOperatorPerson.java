@@ -7,22 +7,25 @@ import org.example.bot.accountBot.service.RateService;
 import org.example.bot.accountBot.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
-import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Message;
 
+import javax.annotation.Resource;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-@Component
+/**
+ * 设置操作人员
+ */
+
 @Slf4j
 public class SettingOperatorPerson extends AccountBot {
-    @Autowired
+    @Resource
     UserService userService;
-    @Autowired
+    @Resource
     RateService rateService;
 
     ButtonList buttonList=new ButtonList();
@@ -44,7 +47,7 @@ public class SettingOperatorPerson extends AccountBot {
                 User user = new User();
                 if (callBackName!=null){
                     user.setUsername(callBackName);
-                    user.setFirstname(callBackFirstName);
+                    user.setFirstName(callBackFirstName);
                     userService.insertUser(user);
                 }else {
                     Pattern pattern = Pattern.compile("@(\\w+)");
@@ -129,7 +132,7 @@ public class SettingOperatorPerson extends AccountBot {
                 e.printStackTrace();
             }
         }else if (split1[0].equals("显示明细")){
-            rateService.updateDatilStatus(0);
+            rateService.updateDetailStatus(0);
             sendMessage.setText("操作成功");
             buttonList.implList(message, sendMessage);
             try {
@@ -139,7 +142,7 @@ public class SettingOperatorPerson extends AccountBot {
                 e.printStackTrace();
             }
         }else if (split1[0].equals("隐藏明细")){
-            rateService.updateDatilStatus(1);
+            rateService.updateDetailStatus(1);
             sendMessage.setText("操作成功");
             buttonList.implList(message, sendMessage);
             try {

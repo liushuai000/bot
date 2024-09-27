@@ -8,7 +8,7 @@ spring:
     driver-class-name: com.mysql.cj.jdbc.Driver
     url: jdbc:mysql://localhost:3306/bot?useUnicode=true&characterEncoding=UTF-8&autoReconnect=true&useSSL=false&zeroDateTimeBehavior=convertToNull&useTimezone=true&serverTimezone=GMT%2B8&allowMultiQueries=true
     username: root
-    password: root
+    password: 123456
 # mybatis??
 mybatis-plus:
   mapper-locations: classpath*:mapper/*.xml
@@ -22,5 +22,5 @@ logging:
 
 telegram:
   bot:
-    token: 7289843845:AAF9T1pmEHXZtwWVRloIXzqof1Jdxyg9Iqo
+    token: 7203617407:AAGq9fe9aZSEanFkOa3oa219bEnJI_4RKY4
     username: niu

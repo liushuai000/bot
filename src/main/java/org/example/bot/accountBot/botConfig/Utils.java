@@ -12,6 +12,7 @@ import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Message;
 
+import javax.annotation.Resource;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.regex.Matcher;
@@ -28,13 +29,13 @@ import java.util.regex.Pattern;
  *
  **/
 @Slf4j
-@Component
+
 public class Utils extends AccountBot{
-    @Autowired
+    @Resource
     private AccountService accountService; //匹配+1000*0.05/7
-    @Autowired
+    @Resource
     private RateService rateService;
-    @Autowired
+    @Resource
     private IssueService issueService;
     public static final Pattern pattern = Pattern.compile("^\\+?(?<num1>\\d+)\\*(?<num2>\\d+\\.\\d+)/(?<num3>\\d+)$");
     //匹配+1000/7*0.05
@@ -136,7 +137,7 @@ public class Utils extends AccountBot{
         updateAccount.setDown(down.add(t));
         log.info("downing:{},total:{},account:{}", downing, total, updateAccount);
         accountService.insertAccount(updateAccount);
-        issueService.uodateIssueDown(down.add(t));
+        issueService.updateIssueDown(down.add(t));
         return true;
     }
     //加法2 用于matchFound 2 3
@@ -150,7 +151,7 @@ public class Utils extends AccountBot{
         updateAccount.setDowning(downing);
         updateAccount.setDown(down.add(t));
         accountService.insertAccount(updateAccount);
-        issueService.uodateIssueDown(down.add(t));
+        issueService.updateIssueDown(down.add(t));
         return true;
     }
     //减法

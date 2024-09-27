@@ -10,14 +10,14 @@ import java.util.List;
 
 @Mapper
 public interface UserMapper extends BaseMapper<User> {
-    @Select("select username, firstname from user")
-    List<User> selectAll();
-
-    @Insert("insert into user(username,firstname) values(#{username},#{firstname})")
-    void insertUser(User username);
-
-
-    @Delete("delete from user where username=#{deleteName}")
-    void deleteHandle(String deleteName);
+//    @Select("select username, firstname from user")
+//    List<User> selectAll();
+//
+//    @Insert("insert into user(username,firstname) values(#{username},#{firstname})")
+//    void insertUser(User username);
+//
+//
+//    @Delete("delete from user where username=#{deleteName}")
+//    void deleteHandle(String deleteName);
 
 }

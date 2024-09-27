@@ -15,25 +15,25 @@ import java.util.List;
 public interface IssueMapper extends BaseMapper<Issue> {
 
 
-    @Select("select handle,handleFirstName,addTime, call_back, downed, down, dataStatus,setTime from issue where dataStatus=0")
-    List<Issue> selectIssue();
-    @Update("update issue set dataStatus=1")
-    void updateIssueDataStatus();
-    @Update("update issue set setTime=#{setTime}")
-    void updateIssueSetTime(Date setTime);
-
-    @Insert("INSERT INTO issue(handle, handleFirstName, call_back, callBackFirstName, downed, down, addTime, dataStatus, setTime) " +
-            "VALUES (#{handle}, #{handleFirstName}, #{call_back}, #{callBackFirstName}, #{downed}, #{down}, #{addTime}, #{dataStatus}, #{setTime})")
-    void insertIssue(Issue issue);
-
-    @Update("update issue set down=#{add}")
-    void uodateIssueDown(BigDecimal add);
-    @Delete("delete from issue where dataStatus=0")
-    void deleteTedayIusseData();
-    @Update("update issue set down=#{down}")
-    void updateissueDown(BigDecimal down);
-    @Delete("delete from issue where addTime=#{addTime}")
-    void deleteNewestIssue(Date addTime);
+//    @Select("select handle,handleFirstName,addTime, call_back, downed, down, dataStatus,setTime from issue where dataStatus=0")
+//    List<Issue> selectIssue();
+//    @Update("update issue set dataStatus=1")
+//    void updateIssueDataStatus();
+//    @Update("update issue set setTime=#{setTime}")
+//    void updateIssueSetTime(Date setTime);
+//
+//    @Insert("INSERT INTO issue(handle, handleFirstName, call_back, callBackFirstName, downed, down, addTime, dataStatus, setTime) " +
+//            "VALUES (#{handle}, #{handleFirstName}, #{call_back}, #{callBackFirstName}, #{downed}, #{down}, #{addTime}, #{dataStatus}, #{setTime})")
+//    void insertIssue(Issue issue);
+//
+//    @Update("update issue set down=#{add}")
+//    void uodateIssueDown(BigDecimal add);
+//    @Delete("delete from issue where dataStatus=0")
+//    void deleteTodayIusseData();
+//    @Update("update issue set down=#{down}")
+//    void updateissueDown(BigDecimal down);
+//    @Delete("delete from issue where addTime=#{addTime}")
+//    void deleteNewestIssue(Date addTime);
 
 
 }

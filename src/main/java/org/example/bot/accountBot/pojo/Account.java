@@ -1,6 +1,7 @@
 package org.example.bot.accountBot.pojo;
 
 import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import io.swagger.annotations.ApiModel;
@@ -20,30 +21,33 @@ import java.util.Date;
 public class Account {
     @TableId(type= IdType.AUTO)
     private String id;
-    //操作人
-    private String handle;
-    //操作人昵称
-    private String handleFirstName;
-    //操作人显示状态:1表示不显示，0表示显示
-    private int handlestatus;
-    //回复人
-    private String call_back;
-    //回复人昵称
-    private String callBackFirstName;
-    //回复人显示状态:1表示不显示，0表示显示
-    private int callBackStatus;
+    @TableField("handle")
+    private String handle;//操作人
+
+    @TableField("handle_first_name")
+    private String handleFirstName;  //操作人昵称e
+
+    @TableField("handle_status")
+    private int handleStatus; //操作人显示状态:1表示不显示，0表示显示
+    @TableField("call_back")
+    private String callBack;    //回复人
+    @TableField("call_back_first_name")
+    private String callBackFirstName;    //回复人昵称
+    @TableField("call_back_status")
+    private int callBackStatus; //回复人显示状态:1表示不显示，0表示显示
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
+    @TableField("add_time")
     private Date addTime;
-    //总入账
-    private BigDecimal total;
-    //应下发
-    private BigDecimal downing;
-    //未下发
-    private BigDecimal down;
-    //时间状态:1表示过期，0表示未过期
-    private int dataStatus;
-    //设置的过期时间
-    private Date setTime;
+    @TableField("total")
+    private BigDecimal total;    //总入账
+    @TableField("downing")
+    private BigDecimal downing;    //应下发
+    @TableField("down")
+    private BigDecimal down;    //未下发
+    @TableField("data_status")
+    private int dataStatus; //时间状态:1表示过期，0表示未过期
+    @TableField("set_time")
+    private Date setTime;   //设置的过期时间
 
 
 }

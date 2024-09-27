@@ -1,12 +1,16 @@
 package org.example.bot.accountBot.service;
 
 
+import com.baomidou.mybatisplus.core.conditions.Wrapper;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import lombok.extern.slf4j.Slf4j;
 import org.example.bot.accountBot.mapper.IssueMapper;
 import org.example.bot.accountBot.pojo.Issue;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.Date;
@@ -15,42 +19,50 @@ import java.util.List;
 @Component
 @Service
 @Slf4j
+@Transactional("")
 public class IssueService {
 
     @Autowired
     IssueMapper mapper;
 
     public List<Issue> selectIssue() {
-        return mapper.selectIssue();
+        QueryWrapper<Issue> queryWrapper = new QueryWrapper<>();
+        queryWrapper.eq("data_status", 0);
+        return mapper.selectList(queryWrapper);
     }
 
     public void updateIssueDataStatus() {
-        mapper.updateIssueDataStatus();
+        UpdateWrapper<Issue> updateWrapper = new UpdateWrapper<>();
+        updateWrapper.set("data_status", 1);
+        mapper.update(null,updateWrapper);
     }
 
     public void updateIssueSetTime(Date setTime) {
-        mapper.updateIssueSetTime(setTime);
+        UpdateWrapper<Issue> updateWrapper = new UpdateWrapper<>();
+        updateWrapper.set("set_time", setTime);
+        mapper.update(null,updateWrapper);
     }
 
     public void insertIssue(Issue issue) {
-        mapper.insertIssue(issue);
+        mapper.insert(issue);
+    }
+    //添加 减少 有添加或者减少的 down
+    public void updateIssueDown(BigDecimal down) {
+        UpdateWrapper<Issue> updateWrapper = new UpdateWrapper<>();
+        updateWrapper.set("down", down);
+        mapper.update(null,updateWrapper);
+    }
+    public void deleteTodayIssueData() {
+        QueryWrapper<Issue> wrapper = new QueryWrapper<>();
+        wrapper.eq("data_status", 0);
+        mapper.delete(wrapper);
     }
 
-
-    public void uodateIssueDown(BigDecimal add) {
-        mapper.uodateIssueDown(add);
-    }
-
-    public void deleteTedayIusseData() {
-        mapper.deleteTedayIusseData();
-    }
-
-    public void updateissueDown(BigDecimal down) {
-        mapper.updateissueDown(down);
-    }
 
     public void deleteNewestIssue(Date addTime) {
-        mapper.deleteNewestIssue(addTime);
+        UpdateWrapper<Issue> updateWrapper = new UpdateWrapper<>();
+        updateWrapper.eq("add_time", addTime);
+        mapper.delete(updateWrapper);
     }
 
 }

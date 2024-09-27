@@ -1,6 +1,7 @@
 package org.example.bot.accountBot.pojo;
 
 import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.generator.config.rules.DateType;
 import com.fasterxml.jackson.annotation.JsonFormat;
@@ -20,19 +21,20 @@ import java.util.Date;
 public class Rate {
     @TableId(type=IdType.AUTO)
     private String id;
-    //汇率
-    private BigDecimal exchange=BigDecimal.ONE;
-    //费率
-    private BigDecimal rate=BigDecimal.ZERO;
+    @TableField("exchange")
+    private BigDecimal exchange=BigDecimal.ONE;    //汇率
+    @TableField("rate")
+    private BigDecimal rate=BigDecimal.ZERO;    //费率
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
-    private Date addTime;
-
-    private Long overDue;
-    //操作人的显示状态，1表示不显示，0表示显示
-    private int handlestatus;
-    //回复人的显示状态，1表示不显示，0表示显示
-    private int callBackStatus;
-    //明细显示状态：1表示不显示，0表示显示
-    private int detailStatus;
+    @TableField("add_time")
+    private Date addTime;//添加的时间
+    @TableField("over_due")
+    private Long overDue;    //逾期  超时
+    @TableField("handle_status")
+    private int handleStatus;    //操作人的显示状态，1表示不显示，0表示显示
+    @TableField("call_back_status")
+    private int callBackStatus;    //回复人的显示状态，1表示不显示，0表示显示
+    @TableField("detail_status")
+    private int detailStatus;    //明细显示状态：1表示不显示，0表示显示
 
 }

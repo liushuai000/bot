@@ -1,6 +1,7 @@
 package org.example.bot.accountBot.service;
 
 
+import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import lombok.extern.slf4j.Slf4j;
 import org.example.bot.accountBot.mapper.RateMapper;
 import org.example.bot.accountBot.pojo.Rate;
@@ -20,52 +21,65 @@ public class RateService {
     @Autowired
     RateMapper mapper;
 
-    public void updateRate(String updateAccount) {
-        mapper.updateRate(updateAccount);
+    public void updateRate(String rate) {
+        UpdateWrapper<Rate> wrapper = new UpdateWrapper();
+        wrapper.set("rate", rate);
+        mapper.update(null, wrapper);
     }
 
-    public void updateExchange(BigDecimal updateAccount) {
-        mapper.updateExchange(updateAccount);
+    public void updateExchange(BigDecimal exchange) {
+        UpdateWrapper<Rate> wrapper = new UpdateWrapper();
+        wrapper.set("exchange", exchange);
+        mapper.update(null, wrapper);
+
     }
 
     public Rate selectRate() {
-        return mapper.selectRate();
+        return mapper.selectOne(null);
     }
 
-    public void insertRate(Rate rates) {
-        mapper.insertRate(rates);
+    public void insertRate(Rate rate) {
+        mapper.insert(rate);
     }
 
     public void updateOverDue(Long overdue) {
-        mapper.updateOverDue(overdue);
+        UpdateWrapper<Rate> wrapper = new UpdateWrapper();
+        wrapper.set("over_due", overdue);
+        mapper.update(null, wrapper);
     }
 
-    public void updateHandleStatus(int i) {
-        mapper.updateHandleStatus(i);
+    public void updateHandleStatus(int handleStatus) {
+        UpdateWrapper<Rate> wrapper = new UpdateWrapper();
+        wrapper.set("handle_status", handleStatus);
+        mapper.update(null, wrapper);
     }
 
-    public void updateCallBackStatus(int i) {
-        mapper.updateCallBackStatus(i);
+    public void updateCallBackStatus(int callBackStatus) {
+        UpdateWrapper<Rate> wrapper = new UpdateWrapper();
+        wrapper.set("call_back_status", callBackStatus);
+        mapper.update(null, wrapper);
     }
 
-    public void updateDatilStatus(int i) {
-        mapper.updateDatilStatus(i);
+    public void updateDetailStatus(int detailStatus) {
+        UpdateWrapper<Rate> wrapper = new UpdateWrapper();
+        wrapper.set("detail_status", detailStatus);
+        mapper.update(null, wrapper);
     }
 
     public Rate getInitRate() {
         Rate rate=new Rate();
         rate.setAddTime(new Date());
         //查询Rate
-        if (mapper.selectRate()!=null){
-            rate=mapper.selectRate();
+        if (mapper.selectOne(null)!=null){
+            rate=mapper.selectOne(null);
             log.info("rates:{}",rate);
         }else {
             Long overdue=3153600000000l;
             rate.setOverDue(overdue);
-            rate.setHandlestatus(1);
+            rate.setHandleStatus(1);
             rate.setCallBackStatus(1);
             rate.setDetailStatus(1);
-            mapper.insertRate(rate);
+            this.insertRate(rate);
         }
         return rate;
     }
