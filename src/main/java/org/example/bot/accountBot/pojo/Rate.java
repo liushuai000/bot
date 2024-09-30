@@ -13,7 +13,7 @@ import java.math.BigDecimal;
 import java.util.Date;
 
 /**
- * 操作汇率和操作人的动作 时间
+ * 操作汇率||费率
  */
 @ApiModel("rate")
 @Accessors(chain = true)

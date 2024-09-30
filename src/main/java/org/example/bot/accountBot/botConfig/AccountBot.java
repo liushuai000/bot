@@ -50,7 +50,6 @@ public class AccountBot extends TelegramLongPollingBot {
      * 应下发计算公式：d=(total-(total*rate1))/exchange
      * 计算器的判断是否符合
      **/
-
     //初始化
     Utils utils;
     //操作时间
@@ -75,13 +74,10 @@ public class AccountBot extends TelegramLongPollingBot {
     public String getBotUsername() {
         return username;
     }
-
     @Override
     public String getBotToken() {
         return botToken;
     }
-
-
     @Override
     public void onUpdateReceived(Update update) {
         this.init();
@@ -116,8 +112,6 @@ public class AccountBot extends TelegramLongPollingBot {
     }
 
 
-
-    //业务处理
     public void BusinessHandler(Message message,SendMessage sendMessage,String callBackName,String callBackFirstName,String replyToText) {
         String firstName = message.getFrom().getFirstName();
         String userName = message.getFrom().getUserName();
@@ -143,7 +137,7 @@ public class AccountBot extends TelegramLongPollingBot {
         //撤销入款
         repeal(message,sendMessage,accountList,replyToText,callBackName,issueList);
         //入账操作
-        inHandle(split2,message.getText(), updateAccount,  userName, sendMessage, accountList, message,split3,
+        inHandle(split2, updateAccount,  userName, sendMessage, accountList, message,split3,
                 rate,callBackFirstName,callBackName, firstName,issue,issueList);
         //显示操作人名字
         showOperatorName.replay(sendMessage,updateAccount,rate,issueList,issue,message.getText());
@@ -270,7 +264,7 @@ public class AccountBot extends TelegramLongPollingBot {
     private void setRate(Message message,SendMessage sendMessage,Rate rates) {
         String text = message.getText();
         if (text.length()<4){return;}
-        if (text.substring(0,4).equals("设置费率")){
+        if (text.startsWith("设置费率")){
             String rate = text.substring(4);
             BigDecimal bigDecimal = new BigDecimal(rate);
             bigDecimal=bigDecimal.multiply(BigDecimal.valueOf(0.01));
@@ -285,7 +279,7 @@ public class AccountBot extends TelegramLongPollingBot {
             } catch (Exception e) {
                 e.printStackTrace();
             }
-        }else if (text.substring(0,4).equals("设置汇率")){
+        }else if (text.startsWith("设置汇率")){
             rates.setExchange(new BigDecimal(text.substring(4)));
             rateService.updateExchange(rates.getExchange());
             sendMessage.setText("设置成功,当前汇率为："+text.substring(4));
@@ -295,11 +289,16 @@ public class AccountBot extends TelegramLongPollingBot {
             } catch (Exception e) {
                 e.printStackTrace();
             }
+        }else if (text.startsWith("设置入款单笔手续费")){
+
         }
+
+
+
     }
 
     //入账操作
-    private void inHandle(String[] split2, String text, Account updateAccount,  String userName, SendMessage sendMessage,
+    private void inHandle(String[] split2,Account updateAccount,  String userName, SendMessage sendMessage,
                           List<Account> accountList, Message message, String[] split3, Rate rate, String callBackFirstName, String callBackName,
                           String firstName, Issue issue, List<Issue> issueList) {
         ruzhangOperations.inHandle(split2,message.getText(), updateAccount,  userName, sendMessage, accountList, message,split3,
@@ -317,7 +316,7 @@ public class AccountBot extends TelegramLongPollingBot {
 
     /**
      * 设置操作人员
-     * @param split1
+     * @param split1 传输的文本 是否是 设置操作员
      * @param userName 用户名
      * @param firstName ????
      * @param userList 获取操作人列表
