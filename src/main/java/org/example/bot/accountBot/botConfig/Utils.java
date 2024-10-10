@@ -1,6 +1,7 @@
 package org.example.bot.accountBot.botConfig;
 
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 import org.example.bot.accountBot.pojo.Account;
 import org.example.bot.accountBot.pojo.Issue;
 import org.example.bot.accountBot.pojo.Rate;
@@ -9,6 +10,7 @@ import org.example.bot.accountBot.service.IssueService;
 import org.example.bot.accountBot.service.RateService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Service;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Message;
 
@@ -29,14 +31,16 @@ import java.util.regex.Pattern;
  *
  **/
 @Slf4j
-
-public class Utils extends AccountBot{
-    @Resource
+@Service
+public class Utils{
+    @Autowired
     private AccountService accountService; //匹配+1000*0.05/7
-    @Resource
+    @Autowired
     private RateService rateService;
-    @Resource
+    @Autowired
     private IssueService issueService;
+    @Autowired
+    AccountBot accountBot;
     public static final Pattern pattern = Pattern.compile("^\\+?(?<num1>\\d+)\\*(?<num2>\\d+\\.\\d+)/(?<num3>\\d+)$");
     //匹配+1000/7*0.05
     public static final Pattern pattern1 = Pattern.compile("^\\+?(?<num1>\\d+)/(?<num3>\\d+)\\*(?<num2>\\d+\\.\\d+)$");
@@ -44,20 +48,7 @@ public class Utils extends AccountBot{
     public static final Pattern pattern2 = Pattern.compile("^^\\+?(?<num1>\\d+)/(?<num3>\\d+)$");
     //匹配+1000*0.05
     public static final Pattern pattern3 = Pattern.compile("^\\+?(?<num1>\\d+)\\*(?<num2>\\d+\\.\\d+)$");
-    public static void main(String[] args) {
-        String input = "+1000*0.05"; // 示例输入
-//        if (Pattern.matches(regex1, input)) {
-//            System.out.println("匹配情况 1");
-//        } else if (Pattern.matches(regex2, input)) {
-//            System.out.println("匹配情况 2");
-//        } else if (Pattern.matches(regex3, input)) {
-//            System.out.println("匹配情况 3");
-//        } else if (Pattern.matches(regex4, input)) {
-//            System.out.println("匹配情况 4");
-//        } else {
-//            System.out.println("没有匹配的情况");
-//        }
-    }
+
 
     //入账操作2.0，匹配公式
     public  boolean calcRecorded(String text1, String userName, Account updateAccount, BigDecimal total, BigDecimal down, Issue issue, BigDecimal downed, BigDecimal downing) {
@@ -135,7 +126,7 @@ public class Utils extends AccountBot{
         updateAccount.setHandle(userName);
         updateAccount.setDowning(downing);
         updateAccount.setDown(down.add(t));
-        log.info("downing:{},total:{},account:{}", downing, total, updateAccount);
+        log.info("应下发:{},总入账:{},account:{}", downing, total, updateAccount);
         accountService.insertAccount(updateAccount);
         issueService.updateIssueDown(down.add(t));
         return true;
@@ -145,7 +136,7 @@ public class Utils extends AccountBot{
         downing =dowingAccount(t,rate,downing) ;
         total = total.add(t);
         updateAccount.setTotal(total);
-        updateAccount.setHandle(userName);
+        updateAccount.setHandle(userName);//操作人
         //计算应下发
         downing=dowingAccount(total,rate,downing);
         updateAccount.setDowning(downing);
@@ -180,31 +171,27 @@ public class Utils extends AccountBot{
         boolean matchFound3 = matcher3.find();
         return matchFound || matchFound1 || matchFound2 || matchFound3;
     }
-    //应下发计算公式：d=(total-(total*rate1))/exchange
+    //应下发计算公式：d=(total-(total*rate1))/exchange  用加已下发吗downed  因为未下发减去已下发=应下发
     public  BigDecimal dowingAccount(BigDecimal total, Rate rate, BigDecimal downing) {
-        BigDecimal rate1 = rate.getRate();
+        BigDecimal rate1 = rate.getRate();//费率
         rate1=rate1.multiply(BigDecimal.valueOf(0.01));
-        BigDecimal exchange = rate.getExchange();
+        BigDecimal exchange = rate.getExchange();//汇率 不知道用不用
         BigDecimal totalTimesRate1 = total.multiply(rate1);
         // 计算 total - (total * rate1)
         BigDecimal totalMinusTotalTimesRate1 = total.subtract(totalTimesRate1);
         // 计算最终结果 d = (total - (total * rate1)) / exchange
-        BigDecimal d = totalMinusTotalTimesRate1.divide(exchange, 2, RoundingMode.HALF_UP); // 保留两位小数
-        log.info("计算最终结果d:{}", d);
+        BigDecimal d = totalMinusTotalTimesRate1.divide(exchange, 2, RoundingMode.HALF_UP);
+//        BigDecimal d = totalMinusTotalTimesRate1.setScale(2, RoundingMode.HALF_UP); // 保留两位小数
+        log.info("计算最终结果d:{},总入帐*费率: {},应下发历史金额:{} ", d,totalTimesRate1,downing);
         return downing.add(d);
     }
+
     //计算器功能
     public void counter(Message message, SendMessage sendMessage) {
         try {
-            String text = message.getText();
-            String calculate = calculate(text);
-            sendMessage.setText(calculate);
-            try {
-                log.info("发送消息6");
-                execute(sendMessage);
-            } catch (Exception e) {
-                //e.printStackTrace();
-            }
+            String calculate = calculate(message.getText());
+            if (StringUtils.isEmpty(calculate)) return;
+            accountBot.sendMessage(sendMessage,calculate);
         }catch (Exception e){
             log.info("计算器功能异常");
         }

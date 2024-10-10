@@ -3,6 +3,7 @@ package org.example.bot.accountBot.pojo;
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableName;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import io.swagger.annotations.ApiModel;
 import lombok.Data;
@@ -17,9 +18,10 @@ import java.util.Date;
 @ApiModel("issue")
 @Accessors(chain = true)
 @Data
+@TableName(value = "issue", schema = "bot", autoResultMap = true)
 public class Issue {
-    @TableId(type= IdType.AUTO)
-    private String id;
+    @TableId(type= IdType.AUTO,value = "account_id")
+    private int accountId;
     @TableField("handle")
     private String handle;//操作人
     @TableField("handle_first_name")

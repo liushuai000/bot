@@ -9,6 +9,7 @@ import org.example.bot.accountBot.service.IssueService;
 import org.example.bot.accountBot.service.RateService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Service;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Message;
 
@@ -24,17 +25,21 @@ import java.util.List;
  */
 
 @Slf4j
-
-public class DateOperator extends AccountBot{
-    @Resource
+@Service
+public class DateOperator{
+    @Autowired
     AccountService accountService;
-    @Resource
+    @Autowired
     RateService rateService;
-    @Resource
+    @Autowired
     IssueService issueService;
+    @Autowired
+    AccountBot accountBot;
+
     boolean Over24Hour=false;//是否把accountBot 里的删除
     public Date oldSetTime;
     void setOver24Hour(boolean over24Hour) {
+        this.Over24Hour = over24Hour;
     }
     //判断是否过期
     public List<Account> isOver24Hour(Message message, SendMessage sendMessage) {
@@ -58,15 +63,7 @@ public class DateOperator extends AccountBot{
             accountService.updateSetTime(setTime);
             //过期时间是一天
             rateService.updateOverDue((long) (24 * 60 * 60 * 1000));
-            //accService.updateOverDue((long) ( 60 * 1000));
-            sendMessage.setText("设置成功");
-
-            try {
-                log.info("发送消息2");
-                execute(sendMessage);
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
+            accountBot.sendMessage(sendMessage,"设置成功");
             return list;
         }
         if (accountService.selectAccount().size()!=0){
@@ -141,24 +138,11 @@ public class DateOperator extends AccountBot{
             if (text.equals("清理今天数据")||text.equals("删除今天数据")||text.equals("清理今天账单")||text.equals("删除今天账单")){
                 accountService.deleteTodayData();
                 issueService.deleteTodayIssueData();
-                sendMessage.setText("操作成功");
-                try {
-                    log.info("发送消息3");
-                    execute(sendMessage);
-                } catch (Exception e) {
-                    log.info("deleteTedayData异常");
-                }
-
+                accountBot.sendMessage(sendMessage,"操作成功");
             }else if (text.equals("关闭日切")){
                 Long overdue=3153600000000l;
                 rateService.updateOverDue(overdue);
-                sendMessage.setText("操作成功,关闭日切");
-                try {
-                    log.info("发送消息3");
-                    execute(sendMessage);
-                } catch (Exception e) {
-                    log.info("deleteTedayData异常");
-                }
+                accountBot.sendMessage(sendMessage,"操作成功,关闭日切");
             }
 
         }

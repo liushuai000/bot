@@ -23,7 +23,7 @@ public class UserService {
 
 
 
-    public List selectAll() {
+    public List<User> selectAll() {
        return mapper.selectList(null);
     }
 

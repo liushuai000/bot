@@ -3,6 +3,7 @@ package org.example.bot.accountBot.pojo;
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableName;
 import com.baomidou.mybatisplus.generator.config.rules.DateType;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import io.swagger.annotations.ApiModel;
@@ -18,9 +19,10 @@ import java.util.Date;
 @ApiModel("rate")
 @Accessors(chain = true)
 @Data
+@TableName(value = "rate", schema = "bot", autoResultMap = true)
 public class Rate {
-    @TableId(type=IdType.AUTO)
-    private String id;
+    @TableId(type= IdType.AUTO,value = "account_id")
+    private int accountId;
     @TableField("exchange")
     private BigDecimal exchange=BigDecimal.ONE;    //汇率
     @TableField("rate")

@@ -3,6 +3,7 @@ package org.example.bot.accountBot.pojo;
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableName;
 import io.swagger.annotations.ApiModel;
 import lombok.Data;
 import lombok.experimental.Accessors;
@@ -13,13 +14,12 @@ import lombok.experimental.Accessors;
 @ApiModel("user")
 @Accessors(chain = true)
 @Data
+@TableName(value = "user", schema = "bot", autoResultMap = true)
 public class User {
-    @TableId(type= IdType.AUTO)
-    private String id;
-    @TableField("user_id")
-    private int userId; //主键id
+    @TableId(type= IdType.AUTO,value = "user_id")
+    public int userId; //主键id
     @TableField("username")
-    private String username;  //用户名
+    public String username;  //用户名
     @TableField("first_name")
-    private String firstName;    //昵称
+    public String firstName;    //昵称
 }
