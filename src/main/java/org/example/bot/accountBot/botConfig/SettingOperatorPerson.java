@@ -5,12 +5,11 @@ import org.example.bot.accountBot.pojo.User;
 import org.example.bot.accountBot.service.RateService;
 import org.example.bot.accountBot.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Component;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Message;
 
-import javax.annotation.Resource;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -30,14 +29,14 @@ public class SettingOperatorPerson{
     RateService rateService;
     @Autowired
     AccountBot accountBot;
-    @Autowired
-    ShowOperatorName showOperatorName;
+    @Value("${telegram.bot.username}")
+    protected String username;
     //删除操作人员
     public void deleteHandle(String text,SendMessage sendMessage) {
-        log.info("text:{}",text);
         if (text.length()<4){
             return;
         }
+        log.info("text:{}",text);
         String[] split = text.split(" ");
         if (split[0].equals("删除操作员")||split[0].equals("删除操作人")){
             String deleteName = split[1].substring(1);
@@ -119,13 +118,16 @@ public class SettingOperatorPerson{
             accountBot.sendMessage(sendMessage,"操作成功");
         }else if (split1[0].equals("显示明细")){
             rateService.updateDetailStatus(0);
-            sendMessage.setText("操作成功");
             buttonList.implList(message, sendMessage);
             accountBot.sendMessage(sendMessage,"操作成功");
         }else if (split1[0].equals("隐藏明细")){
             rateService.updateDetailStatus(1);
             buttonList.implList(message, sendMessage);
             accountBot.sendMessage(sendMessage,"操作成功");
+        }else if (split1[0].equals("显示操作人名称")||split1[0].equals("显示操作人名字")){
+            rateService.updateHandleStatus(1);
+        }else if (split1[0].equals("隐藏操作人名称")||split1[0].equals("隐藏操作人名字")){
+            rateService.updateHandleStatus(0);
         }
     }
 }

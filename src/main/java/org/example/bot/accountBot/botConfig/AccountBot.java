@@ -18,7 +18,6 @@ import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Message;
 import org.telegram.telegrambots.meta.api.objects.Update;
 
-import java.math.BigDecimal;
 import java.util.*;
 
 @Slf4j
@@ -93,10 +92,10 @@ public class AccountBot extends TelegramLongPollingBot {
         String userName = message.getFrom().getUserName();
         //判断是否为管理员
         List<User> userList = userService.selectAll();
-//        if (!userList.stream().anyMatch(user -> Objects.equals(user.getUsername(), userName))){
-//            this.sendMessage(sendMessage,"不是管理 请联系管理员!");
-//            return;
-//        }
+        if (!userList.stream().anyMatch(user -> Objects.equals(user.getUsername(), userName))){
+            this.sendMessage(sendMessage,"不是管理 请联系管理员!");
+            return;
+        }
         String[] split1 = message.getText().split(" ");
         String[] split2 = message.getText().split("\\+");
         String[] split3 = message.getText().split("-");
