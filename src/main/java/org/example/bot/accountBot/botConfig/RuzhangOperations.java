@@ -9,6 +9,7 @@ import org.example.bot.accountBot.service.IssueService;
 import org.example.bot.accountBot.service.RateService;
 import org.example.bot.accountBot.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.stereotype.Service;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
@@ -46,7 +47,8 @@ public class RuzhangOperations{
     protected IssueService issueService;
     @Autowired
     protected AccountService accountService;
-
+    @Value("${telegram.bot.username}")
+    protected String username;
     //设置费/汇率
     protected void setRate(Message message,SendMessage sendMessage,Rate rates) {
         String text = message.getText();
@@ -165,10 +167,9 @@ public class RuzhangOperations{
                 if (dateOperator.oldSetTime!=null){
                     updateAccount.setSetTime(dateOperator.oldSetTime);
                 }else {
-                    LocalDateTime fourAMToday = LocalDate.now().atTime(8, 0);
-                    Date setTime = new Date(fourAMToday.toInstant(ZoneOffset.ofHours(8)).toEpochMilli());
-                    updateAccount.setSetTime(setTime);
-                    log.info("setTime:{}",setTime);
+//                    LocalDateTime fourAMToday = LocalDate.now().atTime(8, 0);
+//                    Date setTime = new Date(fourAMToday.toInstant(ZoneOffset.ofHours(8)).toEpochMilli());
+                    updateAccount.setSetTime(new Date());
                 }
                 log.info("oldSetTime,{}",dateOperator.oldSetTime);
             }
@@ -177,9 +178,7 @@ public class RuzhangOperations{
             if (dateOperator.oldSetTime!=null){
                 updateAccount.setSetTime(dateOperator.oldSetTime);
             }else {
-                LocalDateTime fourAMToday = LocalDate.now().atTime(8, 0);
-                Date setTime = new Date(fourAMToday.toInstant(ZoneOffset.ofHours(8)).toEpochMilli());
-                updateAccount.setSetTime(setTime);
+                updateAccount.setSetTime(new Date());
             }
         }
         //设置issue的过期时间
@@ -190,10 +189,7 @@ public class RuzhangOperations{
                 if (dateOperator.oldSetTime!=null){
                     issue.setSetTime(dateOperator.oldSetTime);
                 }else {
-                    LocalDateTime fourAMToday = LocalDate.now().atTime(8, 0);
-                    Date setTime = new Date(fourAMToday.toInstant(ZoneOffset.ofHours(8)).toEpochMilli());
-                    issue.setSetTime(setTime);
-                    log.info("setTime:{}",setTime);
+                    issue.setSetTime(new Date());
                 }
                 log.info("oldSetTime,{}",dateOperator.oldSetTime);
             }
@@ -202,16 +198,14 @@ public class RuzhangOperations{
             if (dateOperator.oldSetTime!=null){
                 issue.setSetTime(dateOperator.oldSetTime);
             }else {
-                LocalDateTime fourAMToday = LocalDate.now().atTime(8, 0);
-                Date setTime = new Date(fourAMToday.toInstant(ZoneOffset.ofHours(8)).toEpochMilli());
-                issue.setSetTime(setTime);
+                issue.setSetTime(new Date());
             }
         }
         char firstChar = text.charAt(0);
         //公式入账
         boolean orNo = utils.calcRecorded(text, userName, updateAccount, total, down,issue,downed,downing);
         //判断是+还是-
-        if (firstChar == '+' && ( callBackName == null||callBackName.equals("zqzs18bot"))&&orNo==false){
+        if (firstChar == '+' && ( callBackName == null||callBackName.equals(username))&&orNo==false){
             total=total.add(num);
             updateAccount.setTotal(total);
             updateAccount.setHandle(userName);
@@ -221,7 +215,7 @@ public class RuzhangOperations{
             updateAccount.setDown(downing.subtract(downed));//总入帐-(总入帐*费率)/汇率=应下发- 已下发= 未下发
             accountService.insertAccount(updateAccount);
             issueService.updateIssueDown(down.add(num));
-        }else if (firstChar == '-' && ( callBackName == null||callBackName.equals("zqzs18bot"))&&orNo==false){
+        }else if (firstChar == '-' && ( callBackName == null||callBackName.equals(username))&&orNo==false){
             issue.setHandle(userName);
             issue.setDown(down.subtract(num));
             issue.setDowned(downed.add(num));
@@ -229,7 +223,7 @@ public class RuzhangOperations{
             if (issue.getHandle()!=null){
                 issueService.insertIssue(issue);
                 accountService.updateDown(down.subtract(num));
-                log.info("执行了================");
+                log.info("执行了issue.getHandle()!=null");
             }
         }
         //重新获取最新的数据

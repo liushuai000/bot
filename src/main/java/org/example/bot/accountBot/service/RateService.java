@@ -42,7 +42,7 @@ public class RateService {
         mapper.insert(rate);
     }
 
-    public void updateOverDue(Long overdue) {
+    public void updateOverDue(Date overdue) {
         UpdateWrapper<Rate> wrapper = new UpdateWrapper();
         wrapper.set("over_due", overdue);
         mapper.update(null, wrapper);
@@ -74,7 +74,7 @@ public class RateService {
             rate=mapper.selectOne(null);
             log.info("rates:{}",rate);
         }else {
-            Long overdue=3153600000000l;
+            Date overdue=new Date();
             rate.setOverDue(overdue);
             rate.setHandleStatus(1);
             rate.setCallBackStatus(1);

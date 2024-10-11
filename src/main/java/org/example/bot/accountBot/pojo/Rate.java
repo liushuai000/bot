@@ -14,7 +14,7 @@ import java.math.BigDecimal;
 import java.util.Date;
 
 /**
- * 操作汇率||费率
+ * 操作汇率||费率||账单过期时间显示
  */
 @ApiModel("rate")
 @Accessors(chain = true)
@@ -31,7 +31,7 @@ public class Rate {
     @TableField("add_time")
     private Date addTime;//添加的时间
     @TableField("over_due")
-    private Long overDue;    //逾期  超时
+    private Date overDue;    //逾期  超时
     @TableField("handle_status")
     private int handleStatus;    //操作人的显示状态，1表示不显示，0表示显示
     @TableField("call_back_status")

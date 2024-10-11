@@ -31,6 +31,8 @@ public class SettingOperatorPerson{
     AccountBot accountBot;
     @Value("${telegram.bot.username}")
     protected String username;
+    @Value("${adminUserName}")
+    protected String adminUserName;
     //删除操作人员
     public void deleteHandle(String text,SendMessage sendMessage) {
         if (text.length()<4){
@@ -48,8 +50,8 @@ public class SettingOperatorPerson{
     /**
      * 设置操作人员
      * @param split1 传输的文本 是否是 设置操作员
-     * @param userName 用户名
-     * @param firstName ????
+     * @param userName 用户名 chishui_id 这玩意是用户id
+     * @param firstName 赤水 是用户名
      * @param userList 获取操作人列表
      * @param sendMessage 发生的消息
      * @param message 消息
@@ -65,27 +67,30 @@ public class SettingOperatorPerson{
             buttonList.implList(message, sendMessage);
             accountBot.sendMessage(sendMessage,"已设置该操作员无需重复设置");
         }else if (split1[0].equals("设置操作员")||split1[0].equals("设置操作人")){
-            if (!userList.isEmpty()&&userName.equals(userList.get(0).getUsername())){//群内最高权限人发送：显示操作人后，机器人会统计出此群组内的操作员
+            if (!userList.isEmpty()&&userName.equals(userList.get(0).getUsername())||userName.equals(adminUserName)){//群内最高权限人发送：显示操作人后，机器人会统计出此群组内的操作员
                 User user = new User();
                 if (callBackName!=null){
                     user.setUsername(callBackName);
                     user.setFirstName(callBackFirstName);
-                    userService.insertUser(user);
+                    if (null==userService.findByUsername(userName)){
+                        userService.insertUser(user);
+                    }
                 }else {
                     Pattern pattern = Pattern.compile("@(\\w+)");
                     Matcher matcher = pattern.matcher(text);
-                    List<String> userLists = new ArrayList<>();
+                    List<String> usernames = new ArrayList<>();
                     while (matcher.find()) {
                         // 将匹配到的用户名添加到列表中
-                        userLists.add(matcher.group(1));
+                        usernames.add(matcher.group(1));
                     }
-                    // 打印提取到的用户列表
-                    for (String users : userLists) {
-                        user.setUsername(users);
-                        userService.insertUser(user);
+                    if (userService.findByUsernames(usernames).isEmpty()){
+                        for (String users : usernames) {
+                            user.setUsername(users);
+                            userService.insertUser(user);
+                        }
                     }
                 }
-                buttonList.implList(message, sendMessage);
+//                buttonList.implList(message, sendMessage);
                 accountBot.sendMessage(sendMessage,"设置成功");
             }
         }else if (split1[0].equals("显示操作人")||split1[0].equals("显示操作员")){

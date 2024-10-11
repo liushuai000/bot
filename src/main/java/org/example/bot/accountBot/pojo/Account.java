@@ -49,7 +49,7 @@ public class Account {
     @TableField("data_status")
     private int dataStatus; //时间状态:1表示过期，0表示未过期
     @TableField("set_time")
-    private Date setTime;   //设置的过期时间
+    private Date setTime;   //账单 设置的过期时间
 
 
 }

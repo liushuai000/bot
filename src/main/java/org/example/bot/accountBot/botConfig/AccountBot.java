@@ -28,6 +28,8 @@ public class AccountBot extends TelegramLongPollingBot {
     protected String botToken;
     @Value("${telegram.bot.username}")
     protected String username;
+    @Value("${adminUserName}")
+    protected String adminUserName;
     @Autowired
     protected RateService rateService;
     @Autowired
@@ -92,7 +94,7 @@ public class AccountBot extends TelegramLongPollingBot {
         String userName = message.getFrom().getUserName();
         //判断是否为管理员
         List<User> userList = userService.selectAll();
-        if (!userList.stream().anyMatch(user -> Objects.equals(user.getUsername(), userName))){
+        if (!userList.stream().anyMatch(user -> Objects.equals(user.getUsername(), userName)) && !userName.equals(adminUserName)){
             this.sendMessage(sendMessage,"不是管理 请联系管理员!");
             return;
         }
