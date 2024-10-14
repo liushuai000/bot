@@ -12,7 +12,7 @@ import java.util.List;
 public interface AccountMapper extends BaseMapper<Account> {
 //
 //    @Select("select handle, handleFirstName,handleStatus,call_back,callBackFirstName,callBackStatus, total, downing, down, addTime, dataStatus,setTime from accounts where dataStatus = 0")
-//    List<Account> selectAccount();
+//    List<Account> selectAccountDataStatus0();
 
 //    @Insert("insert into accounts(handle,handleFirstName,handleStatus,call_back,callBackFirstName,callBackStatus,total,downing,down,addTime,dataStatus,setTime)" +
 //            "values (#{handle},#{handleFirstName},#{handleStatus},#{call_back},#{callBackFirstName},#{callBackStatus},#{total},#{downing},#{down},#{addTime},#{dataStatus},#{setTime})")

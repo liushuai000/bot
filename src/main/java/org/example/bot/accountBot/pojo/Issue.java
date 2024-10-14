@@ -31,7 +31,7 @@ public class Issue {
     @TableField("call_back_first_name")
     private String callBackFirstName;    //回复人昵称
     @TableField("downed")
-    private BigDecimal downed;    //已下发
+    private BigDecimal downed;    //已下发 已出帐
     @TableField("down")
     private BigDecimal down;    //未下发
     @TableField("add_time")

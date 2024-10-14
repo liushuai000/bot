@@ -13,6 +13,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.Date;
 import java.util.List;
 
@@ -53,11 +55,19 @@ public class IssueService {
         mapper.update(null,updateWrapper);
     }
     public void deleteTodayIssueData() {
+        LocalDateTime startOfDay = LocalDateTime.now().withHour(0).withMinute(0).withSecond(0);
+        LocalDateTime endOfDay = LocalDateTime.now().withHour(23).withMinute(59).withSecond(59);
+        QueryWrapper<Issue> wrapper = new QueryWrapper<>();
+        wrapper.eq("data_status", 0);
+        wrapper.ge("add_time", Date.from(startOfDay.atZone(ZoneId.systemDefault()).toInstant()))
+                .le("add_time", Date.from(endOfDay.atZone(ZoneId.systemDefault()).toInstant()));
+        mapper.delete(wrapper);
+    }
+    public void deleteHistoryIssueData() {
         QueryWrapper<Issue> wrapper = new QueryWrapper<>();
         wrapper.eq("data_status", 0);
         mapper.delete(wrapper);
     }
-
 
     public void deleteNewestIssue(Date addTime) {
         UpdateWrapper<Issue> updateWrapper = new UpdateWrapper<>();

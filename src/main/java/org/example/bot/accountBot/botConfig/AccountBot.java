@@ -1,6 +1,7 @@
 package org.example.bot.accountBot.botConfig;
 
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 import org.example.bot.accountBot.pojo.Account;
 import org.example.bot.accountBot.pojo.Rate;
 import org.example.bot.accountBot.pojo.Issue;
@@ -28,8 +29,8 @@ public class AccountBot extends TelegramLongPollingBot {
     protected String botToken;
     @Value("${telegram.bot.username}")
     protected String username;
-    @Value("${adminUserName}")
-    protected String adminUserName;
+    @Value("${adminUserId}")
+    protected String adminUserId;
     @Autowired
     protected RateService rateService;
     @Autowired
@@ -75,26 +76,26 @@ public class AccountBot extends TelegramLongPollingBot {
         String callBackName = null;
         //回复人的昵称
         String callBackFirstName=null;
+        String replyUserId=null;
         if (update.getMessage() != null && update.getMessage().getFrom() != null &&
                 update.getMessage().getReplyToMessage() != null && update.getMessage().getReplyToMessage().getFrom() != null) {
             callBackName = update.getMessage().getReplyToMessage().getFrom().getUserName();  // 确保 userName 不为 null
             callBackFirstName = update.getMessage().getReplyToMessage().getFrom().getFirstName();  // 确保 userName 不为 null
-            if (callBackName == null) {
-                callBackName = "No username"; // 或其他适当的默认值
-            }
+            replyUserId = update.getMessage().getReplyToMessage().getFrom().getId()+"";
         }
-        log.info("callBackName,callBackFirstName: {},{}", callBackName,callBackFirstName);
+        log.info("callBackName,callBackFirstName,userId: {},{}.{}", callBackName,callBackFirstName,replyUserId);
         SendMessage sendMessage = new SendMessage();
         sendMessage.setChatId(String.valueOf(message.getChatId()));
-        if (update.hasMessage() && update.getMessage().hasText()) this.BusinessHandler(message,sendMessage,callBackName,callBackFirstName,replyToText);
+        if (update.hasMessage() && update.getMessage().hasText()) this.BusinessHandler(message,replyUserId,sendMessage,callBackName,callBackFirstName,replyToText);
     }
 
-    public void BusinessHandler(Message message,SendMessage sendMessage,String callBackName,String callBackFirstName,String replyToText) {
+    public void BusinessHandler(Message message,String replyUserId,SendMessage sendMessage,String callBackName,String callBackFirstName,String replyToText) {
         String firstName = message.getFrom().getFirstName();
         String userName = message.getFrom().getUserName();
+        String messageUserId = message.getFrom().getId()+"";
         //判断是否为管理员
         List<User> userList = userService.selectAll();
-        if (!userList.stream().anyMatch(user -> Objects.equals(user.getUsername(), userName)) && !userName.equals(adminUserName)){
+        if (!userList.stream().anyMatch(user -> Objects.equals(user.getUserId(), messageUserId)) && !messageUserId.equals(adminUserId)){
             this.sendMessage(sendMessage,"不是管理 请联系管理员!");
             return;
         }
@@ -105,12 +106,14 @@ public class AccountBot extends TelegramLongPollingBot {
         Rate rate=rateService.getInitRate();
         Account updateAccount = new Account();
         Issue issue=new Issue();
+        //没有用户名的情况下
+        if (StringUtils.isEmpty(userName))userName="";
         //搜索出历史账单/判断是否过期
         List<Account> accountList=dateOperator.isOver24Hour(message,sendMessage);
         //搜索出历史下发订单/判断是否过期
         List<Issue> issueList =dateOperator.issueIsOver24Hour(message,sendMessage);
         //设置操作人员
-        settingOperatorPerson.setHandle(split1, userName,firstName, userService.selectAll(), sendMessage, message,callBackName,callBackFirstName,message.getText());
+        settingOperatorPerson.setHandle(split1, replyUserId,messageUserId,firstName, userService.selectAll(), sendMessage, message,callBackName,callBackFirstName,message.getText());
         //设置费率/汇率
         ruzhangOperations.setRate(message,sendMessage,rate);
         //撤销入款
@@ -118,13 +121,13 @@ public class AccountBot extends TelegramLongPollingBot {
         //入账操作
         ruzhangOperations.inHandle(split2,message.getText(),  updateAccount,  userName, sendMessage, accountList, message,split3,
                 rate,callBackFirstName,callBackName, firstName,issue,issueList);
-        //显示操作人名字
-        showOperatorName.replay(sendMessage,updateAccount,rate,issueList,issue,message.getText());
+        //入账时候已经调用过 +0显示账单用
+        if (!showOperatorName.isEmptyMoney(message.getText())){
+            //显示操作人名字 && 显示明细
+            showOperatorName.replay(sendMessage,updateAccount,rate,issueList,issue,message.getText());
+        }
         //删除操作人员
         settingOperatorPerson.deleteHandle(message.getText(),sendMessage);
-        //设置记账时间 24小时制  设置13
-
-//TODO
 
         //删除今日数据/关闭日切/
         dateOperator.deleteTodayData(message,sendMessage,accountList,replyToText);

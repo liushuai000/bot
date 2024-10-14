@@ -18,10 +18,14 @@ import java.util.Date;
 @Data
 @TableName(value = "user", schema = "bot", autoResultMap = true)
 public class User {
-    @TableId(type= IdType.AUTO,value = "user_id")
-    public int userId; //主键id
+    @TableId(type= IdType.AUTO,value = "id")
+    public int id; //主键id
+    @TableField("user_id")
+    public String userId; //主键id update.getMessage().getReplyToMessage().getFrom().id 是纸飞机生成的id
     @TableField("username")
-    public String username;  //用户名
+    public String username;  //用户名 liuxiaolon
     @TableField("first_name")
-    public String firstName;    //昵称
+    public String firstName;    //昵称 刘
+    @TableField("last_name")
+    public String lastName;    //昵称 小帅
 }

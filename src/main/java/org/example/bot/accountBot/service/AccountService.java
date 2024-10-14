@@ -2,7 +2,6 @@ package org.example.bot.accountBot.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
-import com.baomidou.mybatisplus.extension.service.IService;
 import lombok.extern.slf4j.Slf4j;
 import org.example.bot.accountBot.mapper.AccountMapper;
 import org.example.bot.accountBot.pojo.Account;
@@ -25,7 +24,7 @@ public class AccountService {
     AccountMapper mapper;
 
 
-    public List<Account> selectAccount() {
+    public List<Account> selectAccountDataStatus0() {
         QueryWrapper<Account> queryWrapper = new QueryWrapper<>();
         queryWrapper.eq("data_status",0);
         return mapper.selectList(queryWrapper);
@@ -46,7 +45,11 @@ public class AccountService {
         updateWrapper.set("set_time",setTime);
         mapper.update(null,updateWrapper);
     }
-
+    public void deleteHistoryData() {
+        UpdateWrapper<Account> updateWrapper = new UpdateWrapper<>();
+        updateWrapper.eq("data_status",0);
+        mapper.delete(updateWrapper);
+    }
     public void deleteTodayData() {
         UpdateWrapper<Account> updateWrapper = new UpdateWrapper<>();
         updateWrapper.eq("data_status",0);

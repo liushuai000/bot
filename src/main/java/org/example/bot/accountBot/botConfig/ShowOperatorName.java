@@ -7,11 +7,9 @@ import org.example.bot.accountBot.pojo.Rate;
 import org.example.bot.accountBot.service.AccountService;
 import org.example.bot.accountBot.service.IssueService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Component;
 import org.springframework.stereotype.Service;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 
-import javax.annotation.Resource;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.text.SimpleDateFormat;
@@ -34,16 +32,16 @@ public class ShowOperatorName {
     @Autowired
     RuzhangOperations ruzhangOperations;
 
-    //显示操作人名字
+    //显示操作人名字  显示账单用
     public void  replay(SendMessage sendMessage, Account updateAccount, Rate rate, List<Issue> issuesList, Issue issue, String text) {
-        if (!text.equals("显示操作人名字") && !text.equals("显示操作人名称")){
+        if (!text.equals("显示操作人名字") && !text.equals("显示操作人名称") && !text.equals("显示明细") && !isEmptyMoney(text)){
             return;
         }
         //TODO message 先给null
         new ButtonList().implList(null, sendMessage);
         String iusseText="";
         //重新获取最新的数据
-        List<Account> accounts = accountService.selectAccount();
+        List<Account> accounts = accountService.selectAccountDataStatus0();
         List<String> newList = new ArrayList<>();
         List<String> newIssueList=new ArrayList<>();
         for (Account account : accounts) {
@@ -69,9 +67,32 @@ public class ShowOperatorName {
             SimpleDateFormat sdf = new SimpleDateFormat("HH:mm:ss");
             newIssueList.add(sdf.format(issue1.getAddTime()));
         }
+        if (accounts.size()>=1){
+            updateAccount=accounts.get(accounts.size()-1);;
+        }
+        if (issues.size()>=1){
+            issue=issues.get(issues.size()-1);;
+        }
         //显示操作人
         iusseText = ruzhangOperations.getSendText(updateAccount, accounts, rate, num, newList, newIssueList, issuesList, issue);
         accountBot.sendMessage(sendMessage,iusseText);
     }
-
+    //true 是0 显示账单
+    public boolean isEmptyMoney(String text) {
+        if (text.startsWith("+0")){
+            return true;
+        } else if (text.startsWith("-0")) {
+            return true;
+        } else if (text.startsWith("+0u")) {
+            return true;
+        } else if (text.startsWith("-0u")) {
+            return true;
+        } else if (text.startsWith("+0U")) {
+            return true;
+        } else if (text.startsWith("-0U")) {
+            return true;
+        }else {
+            return false;
+        }
+    }
 }

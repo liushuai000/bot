@@ -31,8 +31,8 @@ public class SettingOperatorPerson{
     AccountBot accountBot;
     @Value("${telegram.bot.username}")
     protected String username;
-    @Value("${adminUserName}")
-    protected String adminUserName;
+    @Value("${adminUserId}")
+    protected String adminUserId;
     //删除操作人员
     public void deleteHandle(String text,SendMessage sendMessage) {
         if (text.length()<4){
@@ -50,7 +50,7 @@ public class SettingOperatorPerson{
     /**
      * 设置操作人员
      * @param split1 传输的文本 是否是 设置操作员
-     * @param userName 用户名 chishui_id 这玩意是用户id
+     * @param messageUserId 用户名 chishui_id 这玩意是用户id
      * @param firstName 赤水 是用户名
      * @param userList 获取操作人列表
      * @param sendMessage 发生的消息
@@ -59,7 +59,7 @@ public class SettingOperatorPerson{
      * @param callBackFirstName 回复人的昵称
      * @param text  消息文本
      */
-    public void setHandle(String[] split1, String userName, String firstName, List<User> userList,
+    public void setHandle(String[] split1, String replyUserId,String messageUserId ,String firstName, List<User> userList,
                            SendMessage sendMessage, Message message, String callBackName,
                            String callBackFirstName, String text) {
         ButtonList buttonList = new ButtonList();
@@ -67,25 +67,27 @@ public class SettingOperatorPerson{
             buttonList.implList(message, sendMessage);
             accountBot.sendMessage(sendMessage,"已设置该操作员无需重复设置");
         }else if (split1[0].equals("设置操作员")||split1[0].equals("设置操作人")){
-            if (!userList.isEmpty()&&userName.equals(userList.get(0).getUsername())||userName.equals(adminUserName)){//群内最高权限人发送：显示操作人后，机器人会统计出此群组内的操作员
+            //userList.stream().filter() 应该是循环判断是否包含
+            if (!userList.isEmpty()&&replyUserId.equals(userList.get(0).getUserId())||messageUserId.equals(adminUserId)){//群内最高权限人发送：显示操作人后，机器人会统计出此群组内的操作员
                 User user = new User();
-                if (callBackName!=null){
-                    user.setUsername(callBackName);
+                if (callBackName==null){
+                    user.setUserId(replyUserId);
+                    user.setUsername("");
                     user.setFirstName(callBackFirstName);
-                    if (null==userService.findByUsername(userName)){
+                    if (null==userService.findByUserId(replyUserId)){
                         userService.insertUser(user);
                     }
                 }else {
                     Pattern pattern = Pattern.compile("@(\\w+)");
-                    Matcher matcher = pattern.matcher(text);
-                    List<String> usernames = new ArrayList<>();
+                    Matcher matcher = pattern.matcher(text);//应该循环添加id
+                    List<String> userIds = new ArrayList<>();
                     while (matcher.find()) {
                         // 将匹配到的用户名添加到列表中
-                        usernames.add(matcher.group(1));
+                        userIds.add(matcher.group(1));
                     }
-                    if (userService.findByUsernames(usernames).isEmpty()){
-                        for (String users : usernames) {
-                            user.setUsername(users);
+                    if (userService.findByUserIds(userIds).isEmpty()){
+                        for (String userIdTemp : userIds) {
+                            user.setUserId(userIdTemp);
                             userService.insertUser(user);
                         }
                     }
@@ -123,16 +125,16 @@ public class SettingOperatorPerson{
             accountBot.sendMessage(sendMessage,"操作成功");
         }else if (split1[0].equals("显示明细")){
             rateService.updateDetailStatus(0);
-            buttonList.implList(message, sendMessage);
+//            buttonList.implList(message, sendMessage);
             accountBot.sendMessage(sendMessage,"操作成功");
         }else if (split1[0].equals("隐藏明细")){
             rateService.updateDetailStatus(1);
             buttonList.implList(message, sendMessage);
             accountBot.sendMessage(sendMessage,"操作成功");
         }else if (split1[0].equals("显示操作人名称")||split1[0].equals("显示操作人名字")){
-            rateService.updateHandleStatus(1);
-        }else if (split1[0].equals("隐藏操作人名称")||split1[0].equals("隐藏操作人名字")){
             rateService.updateHandleStatus(0);
+        }else if (split1[0].equals("隐藏操作人名称")||split1[0].equals("隐藏操作人名字")){
+            rateService.updateHandleStatus(1);
         }
     }
 }

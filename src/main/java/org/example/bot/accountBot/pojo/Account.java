@@ -47,7 +47,7 @@ public class Account {
     @TableField("down")
     private BigDecimal down;    //未下发
     @TableField("data_status")
-    private int dataStatus; //时间状态:1表示过期，0表示未过期
+    private int dataStatus; //清理今天数据也需要用状态改过期 时间状态:1表示过期，0表示未过期
     @TableField("set_time")
     private Date setTime;   //账单 设置的过期时间
 

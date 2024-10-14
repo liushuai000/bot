@@ -5,13 +5,14 @@ USE bot;
 
 # 用户表
 DROP TABLE IF EXISTS user;
-CREATE TABLE user
-(      id VARCHAR(255) NOT NULL,
-    user_id INT AUTO_INCREMENT PRIMARY KEY COMMENT '用户id',
-    username VARCHAR(255)   COMMENT '用户名',
-    first_name VARCHAR(255)   COMMENT '用户名'
-#     create_time  datetime     null comment '创建时间'
-);
+CREATE TABLE `user` (
+                        `id` int NOT NULL AUTO_INCREMENT COMMENT '主键',
+                        `user_id` varchar(255) DEFAULT NULL COMMENT '纸飞机生成的用户id',
+                        `username` varchar(255) DEFAULT NULL COMMENT 'liuxiaolon  这样的用户名',
+                        `first_name` varchar(255) DEFAULT NULL COMMENT '刘 ',
+                        `last_name` varchar(255) DEFAULT NULL COMMENT 'lastName 是小帅',
+                        PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb3;
 DROP TABLE IF EXISTS Accounts;
 CREATE TABLE Accounts (
                         id VARCHAR(255) NOT NULL,

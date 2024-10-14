@@ -38,15 +38,15 @@ public class UserService {
         mapper.delete(queryWrapper);
     }
     //查询是否已经在数据库的操作员
-    public User findByUsername(String userName) {
+    public User findByUserId(String UserId) {
         QueryWrapper<User> queryWrapper = new QueryWrapper<>();
-        queryWrapper.eq("username", userName);
+        queryWrapper.eq("user_id", UserId);
         return mapper.selectOne(queryWrapper);
     }
 
-    public List<User> findByUsernames(List<String> userNames) {
+    public List<User> findByUserIds(List<String> userIds) {
         QueryWrapper<User> queryWrapper = new QueryWrapper<>();
-        queryWrapper.in("username", userNames);
+        queryWrapper.in("user_id", userIds);
         return mapper.selectList(queryWrapper);
     }
 }
