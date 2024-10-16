@@ -28,4 +28,6 @@ public class User {
     public String firstName;    //昵称 刘
     @TableField("last_name")
     public String lastName;    //昵称 小帅
+    @TableField("is_normal")
+    public boolean isNormal=true; //是普通(1) 否(0)
 }

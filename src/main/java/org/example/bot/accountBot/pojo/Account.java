@@ -25,23 +25,27 @@ public class Account {
     private int accountId;
     @TableField("handle")
     private String handle;//操作人
-
+    @TableField("user_id")
+    private String userId;//这个是发送消息的那个人的id
     @TableField("handle_first_name")
     private String handleFirstName;  //操作人昵称e
-
+    @TableField("handle_last_name")
+    private String handleLastName;  //操作人昵称e
     @TableField("handle_status")
     private int handleStatus; //操作人显示状态:1表示不显示，0表示显示
     @TableField("call_back")
     private String callBack;    //回复人
     @TableField("call_back_first_name")
     private String callBackFirstName;    //回复人昵称
+    @TableField("call_back_last_name")
+    private String callBackLastName;    //回复人昵称
     @TableField("call_back_status")
     private int callBackStatus; //回复人显示状态:1表示不显示，0表示显示
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
     @TableField("add_time")
     private Date addTime;
     @TableField("total")
-    private BigDecimal total;    //总入账
+    private BigDecimal total;    //总入账 这个是每笔要入款的金额
     @TableField("downing")
     private BigDecimal downing;    //应下发
     @TableField("down")

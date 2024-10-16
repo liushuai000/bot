@@ -34,7 +34,9 @@ public class ShowOperatorName {
 
     //显示操作人名字  显示账单用
     public void  replay(SendMessage sendMessage, Account updateAccount, Rate rate, List<Issue> issuesList, Issue issue, String text) {
-        if (!text.equals("显示操作人名字") && !text.equals("显示操作人名称") && !text.equals("显示明细") && !isEmptyMoney(text)){
+        if (!text.equals("显示操作人名字") && !text.equals("显示操作人名称") && !text.equals("显示明细")
+                && !text.equals("显示回复人名称")
+                && !isEmptyMoney(text)){
             return;
         }
         //TODO message 先给null
@@ -50,11 +52,6 @@ public class ShowOperatorName {
         }
         //已出账
         BigDecimal num = issuesList.stream().filter(Objects::nonNull).map(Issue::getDowned).reduce(BigDecimal.ZERO, BigDecimal::add);
-//        BigDecimal num = new BigDecimal(0);
-//        if (!isOrNo(text)){
-//            //当不是公式入账时才赋值
-//            num=new BigDecimal(text.substring(1));
-//        }
         List<Issue> issues = issueService.selectIssue();
         log.info("issues,,{}",issues);
         //获取时间数据方便后续操作

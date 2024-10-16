@@ -42,7 +42,7 @@ public class Utils{
     @Autowired
     AccountBot accountBot;
     //匹配+1000/7*0.05
-    public static final Pattern pattern = Pattern.compile("([+-]?\\d+)[/\\*]([+-]?\\d+)[/\\*]([+-]?(\\d*\\.\\d+|\\d+))");
+    public static final Pattern pattern = Pattern.compile("([+-]?\\d+)[/]([+-]?\\d+)[/\\*]([+-]?(\\d*\\.\\d+|\\d+))");
     //匹配+1000*0.05/7
     public static final Pattern pattern1 = Pattern.compile("([+-]?\\d+(\\.\\d+)?)\\*(\\d+(\\.\\d+)?)/(\\d+)");
     //匹配+1000*0.05
@@ -51,14 +51,11 @@ public class Utils{
     public static final Pattern pattern3 = Pattern.compile("([+-]?\\d+)/([+-]?\\d+)");
 
     public static void main(String[] args) {
-        String input = "-1000/7*0.05"; // 示例输入
-
+        String input = "+1000*5/7"; // 示例输入
         // 正则表达式
-        String regex = "([+-]?\\d+)[/\\*]([+-]?\\d+)[/\\*]([+-]?(\\d*\\.\\d+|\\d+))";
-
+        String regex = "([+-]?\\d+)[/]([+-]?\\d+)[/\\*]([+-]?(\\d*\\.\\d+|\\d+))";
         Pattern pattern = Pattern.compile(regex);
         Matcher matcher = pattern.matcher(input);
-
         while (matcher.find()) {
             // 输出提取的数字
             System.out.println("第一位 (整数): " + matcher.group(1).replaceAll("[+]", "")); // 去掉符号，获取的数：1000
@@ -67,7 +64,7 @@ public class Utils{
         }
     }
     //入账操作2.0，匹配公式
-    public  boolean calcRecorded(String text1, String userName, Account updateAccount, BigDecimal total, BigDecimal down, Issue issue,
+    public  boolean calcRecorded(String text1,String messageUserId, String userName, Account updateAccount, BigDecimal total, BigDecimal down, Issue issue,
                                  BigDecimal downed, BigDecimal downing,Rate rate) {
         String text = text1.substring(1);
         if (text1.charAt(0)!='+'&&text1.charAt(0)!='-'){
@@ -93,8 +90,8 @@ public class Utils{
             r = new BigDecimal(matcher.group(3));
         }else if (matchFound1){
             t = BigDecimal.valueOf(Long.parseLong(matcher1.group(1).replaceAll("[+-]", "")));
-            r = new BigDecimal(matcher1.group(3));
-            e = new BigDecimal(matcher1.group(5));
+            r = new BigDecimal(matcher1.group(3));//0.05
+            e = new BigDecimal(matcher1.group(5));//7
         }else if (matchFound2){
             t = BigDecimal.valueOf(Long.parseLong(matcher2.group(1).replaceAll("[+-]", "")));
             r = new BigDecimal(matcher2.group(3));
@@ -105,22 +102,22 @@ public class Utils{
         log.info(".....t:{},r:{},e:{}", t, r, e);
         //按照公式进行计算
         if (matchFound&&text1.charAt(0)=='+') {
-            return calcAdd(userName, updateAccount, total, down, downing, rate, t, r, e,downed);
+            return calcAdd(messageUserId,userName, updateAccount, total, down, downing, rate, t, r, e,downed);
         } else if (matchFound&&text1.charAt(0)=='-'){
             // 解析数字
             rate.setRate(r);
             rate.setExchange(e);
             rateService.updateRate(String.valueOf(r));
             rateService.updateExchange(e);
-            return calcSubtraction(userName, down, issue, downed, t);
+            return calcSubtraction(messageUserId,userName, down, issue, downed, t);
         }else if (matchFound1&&text1.charAt(0)=='+'){
-            return calcAdd(userName, updateAccount, total, down, downing, rate, t, r, e,downed);
+            return calcAdd(messageUserId,userName, updateAccount, total, down, downing, rate, t, r, e,downed);
         }else if (matchFound1&&text1.charAt(0)=='-'){
             rate.setRate(r);
             rate.setExchange(e);
             rateService.updateRate(String.valueOf(r));
             rateService.updateExchange(e);
-            return calcSubtraction(userName, down, issue, downed, t);
+            return calcSubtraction(messageUserId,userName, down, issue, downed, t);
         }else if (matchFound2&&text1.charAt(0)=='+'){
             rate.setRate(r);
             rateService.updateRate(String.valueOf(r));
@@ -128,7 +125,7 @@ public class Utils{
         }else if (matchFound2&&text1.charAt(0)=='-'){
             rate.setRate(r);
             rateService.updateRate(String.valueOf(r));
-            return calcSubtraction(userName, down, issue, downed, t);
+            return calcSubtraction(messageUserId,userName, down, issue, downed, t);
         } else if (matchFound3&&text1.charAt(0)=='+') {
             rate.setExchange(e);
             rateService.updateExchange(e);
@@ -136,12 +133,12 @@ public class Utils{
         }else if (matchFound3&&text1.charAt(0)=='-'){
             rate.setExchange(e);
             rateService.updateExchange(e);
-            return calcSubtraction(userName, down, issue, downed, t);
+            return calcSubtraction(messageUserId,userName, down, issue, downed, t);
         }
         return false;
     }
     //加法  用于matchFound 0 1
-    private  boolean calcAdd(String userName, Account updateAccount, BigDecimal total, BigDecimal down, BigDecimal downing,
+    private  boolean calcAdd(String messageUserId,String userName, Account updateAccount, BigDecimal total, BigDecimal down, BigDecimal downing,
                              Rate rate, BigDecimal t, BigDecimal r, BigDecimal e,BigDecimal downed) {
         rate.setRate(r);
         rate.setExchange(e);
@@ -152,6 +149,7 @@ public class Utils{
         downing =dowingAccount(t,rate,downing) ;
 //        total = total.add(t);
         updateAccount.setTotal(t);
+        updateAccount.setUserId(messageUserId);
         updateAccount.setHandle(userName);
         updateAccount.setDowning(downing.setScale(2, RoundingMode.HALF_UP));
         updateAccount.setDown(downing.subtract(downed));
@@ -172,12 +170,15 @@ public class Utils{
         updateAccount.setDowning(downing.setScale(2, RoundingMode.HALF_UP));
         updateAccount.setDown(downing.subtract(downed));
         accountService.insertAccount(updateAccount);
+        //应该是新增加一条 已出帐记录吧!issueService.insert();
         issueService.updateIssueDown(down.add(t));
         return true;
     }
     //减法
-    private  boolean calcSubtraction(String userName, BigDecimal down, Issue issue, BigDecimal downed, BigDecimal t) {
+    private  boolean calcSubtraction(String messageUserId,String userName, BigDecimal down, Issue issue, BigDecimal downed, BigDecimal t) {
         issue.setHandle(userName);
+        issue.setUserId(messageUserId);
+        //应该减去未下发-issue里的已下发
         issue.setDown(down.subtract(t));
         issue.setDowned(downed.add(t));
         if (issue.getHandle()!=null){
