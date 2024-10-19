@@ -62,7 +62,7 @@ public class DateOperator{
         List<Account> accounts = accountService.selectAccountDataStatus0();
         if (accounts.size()!=0){
             accountList=accounts;
-            Rate rate=rateService.selectRate();
+            Rate rate=rateService.selectRateByID(accountList.get(accountList.size()-1).getRateId());
             setTime = accountList.get(accountList.size()-1).getSetTime();
             //true 已过期  -1表示已过期
             if (-1==accountList.get(accountList.size()-1).getAddTime().compareTo(rate.getOverDue())){
@@ -85,7 +85,7 @@ public class DateOperator{
         List<Issue> list=issueService.selectIssue();
         if (!list.isEmpty()){
             oldSetTime=list.get(list.size()-1).getSetTime();
-            Rate rate=rateService.selectRate();
+            Rate rate=rateService.selectRateByID(list.get(list.size()-1).getRateId());
             Date setTime = list.get(list.size()-1).getSetTime();
             //如果当天的时间大于设置的逾期时间
             if (-1==list.get(list.size()-1).getAddTime().compareTo(rate.getOverDue())){

@@ -27,6 +27,7 @@ public class AccountService {
     public List<Account> selectAccountDataStatus0() {
         QueryWrapper<Account> queryWrapper = new QueryWrapper<>();
         queryWrapper.eq("data_status",0);
+        queryWrapper.orderByAsc("add_time");
         return mapper.selectList(queryWrapper);
     }
 
@@ -75,14 +76,5 @@ public class AccountService {
         mapper.update(null,updateWrapper);
     }
 
-    public List<String> inform(Date date) {
-        // 计算 48 小时之前的时间
-        Calendar calendar = Calendar.getInstance();
-        calendar.add(Calendar.HOUR, -48);
-        Date dateThreshold = calendar.getTime();
-        QueryWrapper<Account> queryWrapper = new QueryWrapper<>();
-        queryWrapper.select("handle").gt("add_time",dateThreshold);
-        return mapper.selectObjs(queryWrapper).stream().map(Object::toString).collect(Collectors.toList());
-    }
 
 }

@@ -9,6 +9,7 @@ import org.example.bot.accountBot.pojo.Issue;
 
 import org.example.bot.accountBot.pojo.User;
 import org.example.bot.accountBot.service.AccountService;
+import org.example.bot.accountBot.service.NotificationService;
 import org.example.bot.accountBot.service.RateService;
 import org.example.bot.accountBot.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -47,7 +48,8 @@ public class AccountBot extends TelegramLongPollingBot {
     protected ShowOperatorName showOperatorName;   //显示操作人名字
     @Autowired
     protected RuzhangOperations ruzhangOperations;    //入账和入账时发送的消息
-
+    @Autowired
+    NotificationService notificationService;
     @Override
     public String getBotUsername() {
         return username;
@@ -90,7 +92,11 @@ public class AccountBot extends TelegramLongPollingBot {
         this.setIsAdminUser(userDTO,user,user2);
         //计算器功能
         utils.counter(message,sendMessage);
-//        if (!settingOperatorPerson.getMessageContentIsContain(message.getText()) ) return;//|| message.getText().charAt(0)!='+'||message.getText().charAt(0)!='-'
+        notificationService.initNotification(userDTO);
+        if (message.getText().charAt(0)!='+' && message.getText().charAt(0)!='-' &&
+                !settingOperatorPerson.getMessageContentIsContain(message.getText()) ) {
+            return ;
+        }
         boolean present=true;
         if (user!=null){
             present = user.isNormal();
@@ -108,6 +114,7 @@ public class AccountBot extends TelegramLongPollingBot {
         //初始化
         Rate rate=rateService.getInitRate();
         Account updateAccount = new Account();
+        updateAccount.setGroupId(userDTO.getUserId());
         Issue issue=new Issue();
         //没有用户名的情况下
         if (StringUtils.isEmpty(userDTO.getUsername()))userDTO.setUsername("");
@@ -131,15 +138,14 @@ public class AccountBot extends TelegramLongPollingBot {
         }
         //删除操作人员
         settingOperatorPerson.deleteHandle(message.getText(),sendMessage);
-
         //删除今日数据/关闭日切/
         dateOperator.deleteTodayData(message,sendMessage,accountList,replyToText);
         //通知功能
-        inform(message.getText(),sendMessage);
+        notificationService.inform(message.getText(),sendMessage);
     }
     //判断消息是否是普通用户发送的消息 如果是就保存
     public void setIsAdminUser(UserDTO userDTO,User user,User byUsername){
-        if (userDTO.getUserId().equals(adminUserId))return;
+//        if (userDTO.getUserId().equals(adminUserId))return;
         //能发送消息userid就不为空 因为有一种空的用户名情况 但是没有空的userId情况
         if (byUsername!=null ){
             if (byUsername.getUsername()!=null){
@@ -160,37 +166,18 @@ public class AccountBot extends TelegramLongPollingBot {
             userNew.setUsername(userDTO.getUsername()==null?"":userDTO.getUsername());
             userNew.setLastName(userDTO.getLastName()==null?"":userDTO.getLastName());
             userNew.setFirstName(userDTO.getFirstName()==null?"":userDTO.getFirstName());
-            userNew.setNormal(true);
+            if (userDTO.getUserId().equals(adminUserId)){
+                userNew.setNormal(false);
+            }else {
+                userNew.setNormal(true);
+            }
             userService.insertUser(userNew);
         }
     }
 
-     //通知功能实现/48 小时内在群组发言过的所有人
-    private void inform(String text, SendMessage sendMessage) {
-        if (text.equals("通知")){
-            List<String> users=accountService.inform(new Date());
-            Set<String> set = new HashSet<>(users);
-            List<String> uniqueUsers = new ArrayList<>(set);
-            StringBuilder sb = new StringBuilder();
-            sb.append("48 小时内在群组发言过的所有人: @");
-            for (int i = 0; i < uniqueUsers.size(); i++) {
-                sb.append(uniqueUsers.get(i));
-                if (i < uniqueUsers.size() - 1) {
-                    sb.append(" @");
-                }
-            }
-            String usertest = sb.toString();
-            sendMessage.setText(usertest);
-            try {
-                log.info("发送消息66");
-                execute(sendMessage);
-            } catch (Exception e) {
-                //e.printStackTrace();
-            }
-        }
-    }
 
-    protected void sendMessage(SendMessage sendMessage,String text) {
+
+    public void sendMessage(SendMessage sendMessage,String text) {
         sendMessage.setText(text);
         sendMessage.enableHtml(true);
 //        sendMessage.enableMarkdown(true);

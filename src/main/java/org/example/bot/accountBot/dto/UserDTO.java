@@ -33,12 +33,20 @@ public class UserDTO {
 
     public String text;
 
+    public String groupId;//群组id 和account 里的groupid Issue里的groupid 赋值
+
     public  void  setInfo(Message message){
-        this.firstName=message.getFrom().getFirstName()+"";
-        this.lastName=message.getFrom().getLastName()+"";
-        this.username=message.getFrom().getUserName()+"";
+        this.firstName=message.getFrom().getFirstName();
+        this.lastName=message.getFrom().getLastName();
+        this.username=message.getFrom().getUserName();
         this.userId=message.getFrom().getId()+"";
         this.text=message.getText();
+        // 检查是否为群组消息
+        if (message.getChat().isGroupChat()) {
+            long groupId = message.getChat().getId(); // 获取群组 ID
+            System.out.println("群组 ID: " + groupId);
+            this.groupId=groupId+"";
+        }
     }
 
 

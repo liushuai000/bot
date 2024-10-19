@@ -21,8 +21,12 @@ import java.util.Date;
 @TableName(value = "issue", schema = "bot", autoResultMap = true)
 public class Issue {
     //应该加userid ???然后时间倒序查
-    @TableId(type= IdType.AUTO,value = "account_id")
-    private int accountId;
+    @TableId(type= IdType.AUTO,value = "id")
+    private int id;
+    @TableField("rate_id")
+    private int rateId;//外键id rate的因为是多个账单 一对多 (+1000/7*0.05)单笔的就是一对一汇率
+    @TableField("group_id")
+    private String groupId;//群组id
     @TableField("handle")
     private String handle;//操作人
     @TableField("user_id")

@@ -137,7 +137,15 @@ public class SettingOperatorPerson{
             List<User> userNormalList =userService.selectByNormal(flag);
             for (int i = 0; i < userNormalList.size(); i++) {
                 String lastName = userNormalList.get(i).getLastName()==null?"":userNormalList.get(i).getLastName();
-                sb.append(userNormalList.get(i).getFirstName()==null?"":userNormalList.get(i).getFirstName()+lastName+"   ");
+                String callBackName=userNormalList.get(i).getFirstName()==null?"":userNormalList.get(i).getFirstName()+lastName+ "   ";
+                String format;
+                //如果没有用户id就显示用户名
+                if (userNormalList.get(i).getUserId()!=null){
+                    format = String.format("<a href=\"tg://user?id=%d\">%s</a>", Long.parseLong(userNormalList.get(i).getUserId()), callBackName);
+                }else {
+                    format=callBackName;
+                }
+                sb.append(format);
             }
             buttonList.implList(message, sendMessage);
             accountBot.sendMessage(sendMessage,sb.toString());
@@ -151,8 +159,6 @@ public class SettingOperatorPerson{
             accountBot.sendMessage(sendMessage,"操作成功");
         }else if (split1[0].equals("将回复人显示")||split1[0].equals("显示回复人名称")){
             rateService.updateCallBackStatus(0);
-//            buttonList.implList(message, sendMessage);
-//            accountBot.sendMessage(sendMessage,"操作成功");
         }else if (split1[0].equals("关闭回复人显示")){
             rateService.updateCallBackStatus(1);
             buttonList.implList(message, sendMessage);
@@ -167,7 +173,8 @@ public class SettingOperatorPerson{
             accountBot.sendMessage(sendMessage,"操作成功");
         }else if (split1[0].equals("显示操作人名称")||split1[0].equals("显示操作人名字")){
             rateService.updateHandleStatus(0);
-        }else if (split1[0].equals("隐藏操作人名称")||split1[0].equals("隐藏操作人名字")){
+        }else if (split1[0].equals("隐藏操作人名称")||split1[0].equals("隐藏操作人名字")
+                    ||split1[0].equals("隐藏名字")||split1[0].equals("隐藏名称")){
             rateService.updateHandleStatus(1);
         }
     }
@@ -188,7 +195,15 @@ public class SettingOperatorPerson{
                 "将操作员显示","关闭显示",   "将回复人显示",
                 "关闭回复人显示", "显示明细", "隐藏明细", "显示操作人名称","显示操作人名字","隐藏操作人名称","隐藏操作人名字"
         };
-        boolean flag = Arrays.asList(array).contains(text);
-        return flag;
+        boolean matches = containsAny(array, text);
+        return matches;
+    }
+    public static boolean containsAny(String[] array, String input) {
+        for (String str : array) {
+            if (input.contains(str)) {
+                return true; // 如果input包含array中的某个元素，则返回true
+            }
+        }
+        return false; // 如果没有任何元素匹配，返回false
     }
 }

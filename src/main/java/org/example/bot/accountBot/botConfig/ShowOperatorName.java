@@ -35,7 +35,8 @@ public class ShowOperatorName {
     //显示操作人名字  显示账单用
     public void  replay(SendMessage sendMessage, Account updateAccount, Rate rate, List<Issue> issuesList, Issue issue, String text) {
         if (!text.equals("显示操作人名字") && !text.equals("显示操作人名称") && !text.equals("显示明细")
-                && !text.equals("显示回复人名称")
+                && !text.equals("显示回复人名称")     && !text.equals("隐藏操作人名称")    && !text.equals("隐藏操作人名字")
+                && !text.equals("隐藏名字") && !text.equals("隐藏名称")&& !text.equals("显示回复人名称")&& !text.equals("将回复人显示")
                 && !isEmptyMoney(text)){
             return;
         }

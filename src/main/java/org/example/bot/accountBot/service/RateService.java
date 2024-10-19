@@ -1,6 +1,7 @@
 package org.example.bot.accountBot.service;
 
 
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import lombok.extern.slf4j.Slf4j;
 import org.example.bot.accountBot.mapper.RateMapper;
@@ -33,9 +34,24 @@ public class RateService {
         mapper.update(null, wrapper);
 
     }
-
-    public Rate selectRate() {
-        return mapper.selectOne(null);
+    public Rate selectRateByID(int rateId) {
+        return mapper.selectById(rateId);//需要order by addTime 吗
+    }
+    public List<Rate> selectRateList() {
+        QueryWrapper<Rate> queryWrapper = new QueryWrapper();
+        //只查询不是公式入账的的rate 因为要获取最新的并且不是公式入账的汇率和费率计算
+        queryWrapper.eq("is_matcher", false);
+        queryWrapper.orderByDesc("add_time");
+        queryWrapper.last("LIMIT 2");
+        return mapper.selectList(queryWrapper);
+    }
+    public List<Rate> selectNewTimeRateList() {
+        QueryWrapper<Rate> queryWrapper = new QueryWrapper();
+        //只查询不是公式入账的的rate 因为要获取最新的并且不是公式入账的汇率和费率计算
+//        queryWrapper.eq("is_matcher", false);
+        queryWrapper.orderByDesc("add_time");
+        queryWrapper.last("LIMIT 1");
+        return mapper.selectList(queryWrapper);
     }
 
     public void insertRate(Rate rate) {
@@ -69,9 +85,9 @@ public class RateService {
     public Rate getInitRate() {
         Rate rate=new Rate();
         rate.setAddTime(new Date());
-        //查询Rate
-        if (mapper.selectOne(null)!=null){
-            rate=mapper.selectOne(null);
+        //查询Rate 不是公式入账的
+        if (!selectRateList().isEmpty()){
+            rate=selectRateList().get(0);
             log.info("rates:{}",rate);
         }else {
             Date overdue=new Date();
@@ -83,4 +99,14 @@ public class RateService {
         }
         return rate;
     }
+    public void setInitRate(Rate rate) {
+        rate.setAddTime(new Date());
+        Date overdue=new Date();
+        rate.setOverDue(overdue);
+        rate.setHandleStatus(1);
+        rate.setCallBackStatus(1);
+        rate.setDetailStatus(1);
+    }
+
+
 }

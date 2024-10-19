@@ -70,18 +70,18 @@ public class UserService {
 
     public void updateUsername(User user) {
         UpdateWrapper<User> wrapper= new UpdateWrapper<>();
-        wrapper.set(user.getUserId()!=null,"user_id", user.getUserId());
-        wrapper.set(user.getLastName()!=null,"last_name", user.getLastName());
-        wrapper.set(user.getFirstName()!=null,"first_name", user.getFirstName());
+        wrapper.set("user_id", user.getUserId());
+        wrapper.set("last_name", user.getLastName());
+        wrapper.set("first_name", user.getFirstName());
         wrapper.eq("username", user.getUsername());
         mapper.update(user,wrapper);
     }
 
     public void updateUserid(User user) {
         UpdateWrapper<User> wrapper= new UpdateWrapper<>();
-        wrapper.set(user.getUsername()!=null,"username", user.getUsername());
-        wrapper.set(user.getLastName()!=null,"last_name", user.getLastName());
-        wrapper.set(user.getFirstName()!=null,"first_name", user.getFirstName());
+        wrapper.set("username", user.getUsername());
+        wrapper.set("last_name", user.getLastName());
+        wrapper.set("first_name", user.getFirstName());
         wrapper.eq("user_id", user.getUserId());
         mapper.update(user,wrapper);
     }

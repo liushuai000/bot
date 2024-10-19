@@ -1,11 +1,18 @@
 package org.example.bot;
 
+import org.apache.commons.lang3.time.DateUtils;
+import org.example.bot.accountBot.pojo.User;
+import org.example.bot.accountBot.service.UserService;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+
+import java.util.Date;
 
 @SpringBootTest
 class BotApplicationTests {
-
+    @Autowired
+    protected UserService userService;
     @Test
     void contextLoads() {
         //    public static void main(String[] args) {
@@ -22,6 +29,9 @@ class BotApplicationTests {
 //            System.out.println("没有匹配的情况");
 //        }
 //    }
+        Date date = new Date();
+        Date date1 = DateUtils.addDays(date, 1);
+        System.err.println(date.compareTo(date1));
     }
 
 }

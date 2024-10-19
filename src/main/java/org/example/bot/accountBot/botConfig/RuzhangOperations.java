@@ -1,6 +1,7 @@
 package org.example.bot.accountBot.botConfig;
 
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 import org.example.bot.accountBot.dto.UserDTO;
 import org.example.bot.accountBot.pojo.Account;
 import org.example.bot.accountBot.pojo.Issue;
@@ -19,10 +20,7 @@ import javax.annotation.Resource;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
 
 /**
  * 入账操作  ||  入账时发送的消息   isMatcher: 是否匹配公式入账 例:+1000*0.05/7 这种公式
@@ -62,16 +60,23 @@ public class RuzhangOperations{
             rates.setRate(bigDecimal);
             rates.setAddTime(new Date());
             log.info("rates:{}",rates);
-            rateService.updateRate(String.valueOf(bigDecimal));
+            rateService.insertRate(rates);
             accountBot.sendMessage(sendMessage,"设置成功,当前费率为："+rate);
         }else if (text.startsWith("设置汇率")){
             if (text.substring(4).startsWith("-")){
+                rates.setAddTime(new Date());
                 rates.setExchange(new BigDecimal(1));
-                rateService.updateExchange(rates.getExchange());
+                rateService.insertRate(rates);
                 accountBot.sendMessage(sendMessage,"当前汇率已设置为默认汇率：1");
             }else {
-                rates.setExchange(new BigDecimal(text.substring(4)));
-                rateService.updateExchange(rates.getExchange());
+                //如果设置汇率为0 就设置成1
+                if (text.substring(4).equals("0")){
+                    rates.setExchange(new BigDecimal(1));
+                }else {
+                    rates.setExchange(new BigDecimal(text.substring(4)));
+                }
+                rates.setAddTime(new Date());
+                rateService.insertRate(rates);
                 accountBot.sendMessage(sendMessage,"设置成功,当前汇率为："+text.substring(4));
             }
         }else if (text.startsWith("设置入款单笔手续费")){
@@ -126,10 +131,11 @@ public class RuzhangOperations{
         }
         BigDecimal num = new BigDecimal(0);
         //当不是公式入账时才赋值
-        if (!utils.isMatcher(text)) {
+        if (!isMatcher) {
             if (text.substring(1).endsWith("u")||text.substring(1).endsWith("U")){
                 String numberPart = text.substring(0, text.length() - 1);
                 num=new BigDecimal(numberPart.substring(1)).multiply(rate.getExchange());
+                rate.setCalcU(true);//是+30U 的不计算费率
             }else {
                 num=new BigDecimal(text.substring(1));
             }
@@ -171,20 +177,19 @@ public class RuzhangOperations{
             downed =new BigDecimal(0);
         }
         updateAccount.setTotal(total);
-        issue.setDowned(downed);
         updateAccount.setDowning(downing);
         updateAccount.setHandleFirstName(userDTO.getFirstName());
         updateAccount.setHandleLastName(userDTO.getLastName());
+//        updateAccount.setRateId(rate.getId());//设置汇率费率的id
+        issue.setDowned(downed);
         issue.setHandle(userDTO.getUsername());
         issue.setUserId(userDTO.getUserId());
         issue.setHandleFirstName(userDTO.getFirstName());
         issue.setHandleLastName(userDTO.getLastName());
         //如果是回复消息，设置回复人的相关消息
-//        if (userDTO.getCallBackName()!=null){
-            updateAccount.setCallBack(userDTO.getCallBackName()==null?"":userDTO.getCallBackName());
-            updateAccount.setCallBackFirstName(userDTO.getCallBackFirstName()==null?"":userDTO.getCallBackFirstName());
-            updateAccount.setCallBackLastName(userDTO.getCallBackLastName()==null?"":userDTO.getCallBackLastName());
-//        }
+        updateAccount.setCallBack(userDTO.getCallBackName()==null?"":userDTO.getCallBackName());
+        updateAccount.setCallBackFirstName(userDTO.getCallBackFirstName()==null?"":userDTO.getCallBackFirstName());
+        updateAccount.setCallBackLastName(userDTO.getCallBackLastName()==null?"":userDTO.getCallBackLastName());
         //设置account的过期时间
         if(!accountList.isEmpty()){
             if (accountList.get(accountList.size()-1).getSetTime()!=null){
@@ -193,8 +198,6 @@ public class RuzhangOperations{
                 if (dateOperator.oldSetTime!=null){
                     updateAccount.setSetTime(dateOperator.oldSetTime);
                 }else {
-//                    LocalDateTime fourAMToday = LocalDate.now().atTime(8, 0);
-//                    Date setTime = new Date(fourAMToday.toInstant(ZoneOffset.ofHours(8)).toEpochMilli());
                     updateAccount.setSetTime(new Date());
                 }
                 log.info("oldSetTime,{}",dateOperator.oldSetTime);
@@ -228,11 +231,11 @@ public class RuzhangOperations{
             }
         }
         char firstChar = text.charAt(0);
-
-        //公式入账 isMatch
-        utils.calcRecorded(text, userDTO.getUserId(),userDTO.getUsername(), updateAccount, total, down,issue,downed,downing,rate);
-        if (isMatcher==false){
-            //判断是+还是-  ||callBackName.equals(username)
+        if (isMatcher){
+            //公式入账 isMatch
+            utils.calcRecorded(text, userDTO.getUserId(),userDTO.getUsername(), updateAccount, total, down,issue,downed,downing);
+        }
+       if (isMatcher==false){
             if (firstChar == '+' ){
                 //+10u
                 updateAccount.setTotal(num);
@@ -242,13 +245,12 @@ public class RuzhangOperations{
                 downing=utils.dowingAccount(num,rate,downing);
                 updateAccount.setDowning(downing.setScale(2, RoundingMode.HALF_UP));
                 updateAccount.setDown(downing.subtract(downed));//总入帐-(总入帐*费率)/汇率=应下发- 已下发= 未下发
+                updateAccount.setRateId(rate.getId());
                 accountService.insertAccount(updateAccount);
-//            issueService.insertIssue(issue);
-//            issueService.updateIssueDown(down.add(num));
-                //||callBackName.equals("zqzs18bot")
             }else if (firstChar == '-' ){
                 issue.setHandle(userDTO.getUsername());
                 issue.setUserId(userDTO.getUserId());
+                issue.setRateId(rate.getId());
                 issue.setDown(updateAccount.getDowning().subtract(num));
                 issue.setDowned(num);
                 if (issue.getHandle()!=null){
@@ -288,35 +290,31 @@ public class RuzhangOperations{
 
 
     //入账时发送的消息  显示操作人也用这个
-    public String getSendText(Account updateAccount, List<Account> accounts, Rate rate1, BigDecimal num, List<String> newList, List<String> newIssueList,
+    public String getSendText(Account updateAccount, List<Account> accounts, Rate rate, BigDecimal num, List<String> newList, List<String> newIssueList,
                               List<Issue> issuesList, Issue issue) {
         String iusseText="";
-        log.info("newIssueList:{}",newIssueList);
-        log.info("issuesList:{}",issuesList);
-        log.info("发行issue:{}",issue);
         //这里用查询不用rate 是以后多群组更新应该需要根据id 用户更新getDetailStatus 现在这个rate是全局的没有根据id
         //例如现在显示明细 是所有的数据都更新 没有根据具体的群组 group id更新现在先这么写
-        Rate rate = rateService.selectRate();
-        List<String> operatorNameList = this.forOperatorName(issuesList,rate);
-        List<String> showDetailList = this.forShowDetail(issuesList, rate);
-        List<String> callBackNames = this.forCallBackName(issuesList, rate);
+        List<String> operatorNameList = this.forOperatorName(issuesList);
+        List<String> showDetailList = this.forShowDetail(issuesList);
+        List<String> callBackNames = this.forCallBackName(issuesList);
         if (issuesList.size()==1){
             iusseText="\n已出账："+issuesList.get(0).getDowned() +"，:共"+(issuesList.size())+"笔:\n"+ newIssueList.get(newIssueList.size()-1)+"  "+
-                    issuesList.get(issuesList.size()-1).getDowned().setScale(2, RoundingMode.HALF_UP)+showDetailList+operatorNameList.get(0)+callBackNames.get(0);
+                    issuesList.get(issuesList.size()-1).getDowned().setScale(2, RoundingMode.HALF_UP)+(showDetailList.isEmpty()? "" : showDetailList.get(0))+operatorNameList.get(0)+callBackNames.get(0);
         }else if (issuesList.size()==2){
             iusseText="\n已出账："+issuesList.get(1).getDowned() +"，:共"+(issuesList.size())+"笔:\n"+
                     newIssueList.get(newIssueList.size()-1)+"  "+
-                    issuesList.get(1).getDowned().setScale(2, RoundingMode.HALF_UP)+showDetailList.get(1)+operatorNameList.get(1)+callBackNames.get(1)+"\n"+
+                    issuesList.get(1).getDowned().setScale(2, RoundingMode.HALF_UP)+(showDetailList.isEmpty()? "" : showDetailList.get(1))+operatorNameList.get(1)+callBackNames.get(1)+"\n"+
                     newIssueList.get(newIssueList.size()-2)+"  "+
-                    issuesList.get(0).getDowned().setScale(2, RoundingMode.HALF_UP)+showDetailList.get(0)+operatorNameList.get(0)+callBackNames.get(0);
+                    issuesList.get(0).getDowned().setScale(2, RoundingMode.HALF_UP)+(showDetailList.isEmpty()? "" : showDetailList.get(0))+operatorNameList.get(0)+callBackNames.get(0);
         }else if (issuesList.size()>2){
             iusseText="\n已出账："+num +"，:共"+(issuesList.size())+"笔:\n"+
                     newIssueList.get(newIssueList.size()-1)+"  "+
-                    issuesList.get(issuesList.size()-1).getDowned().setScale(2, RoundingMode.HALF_UP)+showDetailList.get(issuesList.size()-1)+operatorNameList.get(issuesList.size()-1)+callBackNames.get(issuesList.size()-1)+"\n"+
+                    issuesList.get(issuesList.size()-1).getDowned().setScale(2, RoundingMode.HALF_UP)+(showDetailList.isEmpty()? "" : showDetailList.get(issuesList.size()-1)) +operatorNameList.get(issuesList.size()-1)+callBackNames.get(issuesList.size()-1)+"\n"+
                     newIssueList.get(newIssueList.size()-2)+"  "+
-                    issuesList.get(issuesList.size()-2).getDowned().setScale(2, RoundingMode.HALF_UP)+showDetailList.get(issuesList.size()-2)+operatorNameList.get(issuesList.size()-2)+callBackNames.get(issuesList.size()-2)+"\n"+
+                    issuesList.get(issuesList.size()-2).getDowned().setScale(2, RoundingMode.HALF_UP)+(showDetailList.isEmpty()? "" : showDetailList.get(issuesList.size()-2))+operatorNameList.get(issuesList.size()-2)+callBackNames.get(issuesList.size()-2)+"\n"+
                     newIssueList.get(newIssueList.size()-3)+"  "+
-                    issuesList.get(issuesList.size()-3).getDowned().setScale(2, RoundingMode.HALF_UP)+showDetailList.get(issuesList.size()-3)+operatorNameList.get(issuesList.size()-3)+callBackNames.get(issuesList.size()-3);
+                    issuesList.get(issuesList.size()-3).getDowned().setScale(2, RoundingMode.HALF_UP)+(showDetailList.isEmpty()? "" : showDetailList.get(issuesList.size()-3))+callBackNames.get(issuesList.size()-3);
         } else {
             if (updateAccount.getDown()!=null){
                 issue.setDown(updateAccount.getDown());
@@ -325,9 +323,12 @@ public class RuzhangOperations{
             issue.setDowned(BigDecimal.ZERO);
             iusseText="\n\n" +"已下发：\n"+ "暂无下发数据";
         }
-        List<String> accountOperatorNames = this.forAccountOperatorName(accounts, rate);
-        List<String> accountCallBackNames = this.forAccountCallBackName(accounts, rate);
-        List<String> accountDetails = this.forAccountShowDetail(accounts, rate);
+        List<String> accountOperatorNames = this.forAccountOperatorName(accounts);
+        List<String> accountCallBackNames = this.forAccountCallBackName(accounts);
+        List<String> accountDetails = this.forAccountShowDetail(accounts);
+        BigDecimal yingxiafa=this.forYingxiafa(accounts);//应下方
+        BigDecimal yixiafa=this.forYixiafa(issuesList);//已下方
+//        BigDecimal weixiafa=this.forWeixiafa(accounts);//未下方
         if (accounts.size()==1){
             //已下发
             BigDecimal downed = issuesList.stream().filter(Objects::nonNull).map(Issue::getDowned).reduce(BigDecimal.ZERO, BigDecimal::add);
@@ -335,6 +336,18 @@ public class RuzhangOperations{
             BigDecimal downing = accounts.stream().filter(Objects::nonNull).map(Account::getDowning).reduce(BigDecimal.ZERO, BigDecimal::add);
             //未下发
             BigDecimal down = accounts.stream().filter(Objects::nonNull).map(Account::getDown).reduce(BigDecimal.ZERO, BigDecimal::add);
+            Rate rate1=rateService.selectRateByID(accounts.get(0).getRateId());
+            BigDecimal exchange;
+            BigDecimal rateRate=rate.getRate();
+            //如果是公式入账
+            if (rate1.isMatcher()){
+                exchange=rate1.getExchange();
+//                rateRate=rate1.getRate();
+            }else {
+                exchange=rate.getExchange();
+//                rateRate=rate.getRate();
+            }
+            BigDecimal decimal=downing.divide(exchange,2, RoundingMode.HALF_UP);
             return  "\n已入账："+accounts.get(0).getTotal() +"，共"+(accounts.size())+"笔:\n"+
                     newList.get(newList.size()-1)+" "+
                     accounts.get(0).getTotal().setScale(2, RoundingMode.HALF_UP)+" "+accountDetails.get(0)
@@ -342,9 +355,9 @@ public class RuzhangOperations{
                     "\n\n总入账："+ updateAccount.getTotal().setScale(2, RoundingMode.HALF_UP)+
                     "\n汇率："+ rate.getExchange().setScale(2, RoundingMode.HALF_UP)+
                     "\n费率："+ rate.getRate().setScale(2, RoundingMode.HALF_UP)+
-                    "\n应下发："+ downing.setScale(2, RoundingMode.HALF_UP)+"   |    "+downing.divide(rate.getExchange(),2, RoundingMode.HALF_UP) +"U"+
-                    "\n已下发："+ downed.setScale(2, RoundingMode.HALF_UP)+"   |    "+downed.divide(rate.getExchange(),2, RoundingMode.HALF_UP) +"U"+
-                    "\n未下发："+ downing.subtract(downed).setScale(2, RoundingMode.HALF_UP)+"   |    "+downing.subtract(downed).divide(rate.getExchange(),2, RoundingMode.HALF_UP) +"U";
+                    "\n应下发："+ downing.setScale(2, RoundingMode.HALF_UP)+"   |    "+downing.divide(exchange,2, RoundingMode.HALF_UP) +"U"+
+                    "\n已下发："+ downed.setScale(2, RoundingMode.HALF_UP)+"   |    "+downed.divide(exchange,2, RoundingMode.HALF_UP) +"U"+
+                    "\n未下发："+ downing.subtract(downed).setScale(2, RoundingMode.HALF_UP)+"   |    "+downing.subtract(downed).divide(exchange,2, RoundingMode.HALF_UP) +"U";
         }else if (accounts.size()==2){
             //已下发
             BigDecimal downed = issuesList.stream().filter(Objects::nonNull).map(Issue::getDowned).reduce(BigDecimal.ZERO, BigDecimal::add);
@@ -352,17 +365,19 @@ public class RuzhangOperations{
             BigDecimal downing = accounts.stream().filter(Objects::nonNull).map(Account::getDowning).reduce(BigDecimal.ZERO, BigDecimal::add);
             //未下发
             BigDecimal down = accounts.stream().filter(Objects::nonNull).map(Account::getDown).reduce(BigDecimal.ZERO, BigDecimal::add);
-            return "\n已入账："+accounts.get(accounts.size()-1).getTotal().add(accounts.get(accounts.size()-2).getTotal()) +"，:共"+(accounts.size())+"笔:\n"+
+            BigDecimal total = accounts.get(accounts.size() - 1).getTotal().add(accounts.get(accounts.size() - 2).getTotal());
+            return "\n已入账："+total +"，:共"+(accounts.size())+"笔:\n"+
                     newList.get(newList.size()-1)+" "+
                     accounts.get(1).getTotal().setScale(2, RoundingMode.HALF_UP)+" "+accountDetails.get(1)+accountOperatorNames.get(1)+accountCallBackNames.get(1)+"\n"+
                     newList.get(newList.size()-2)+" "+
                     accounts.get(0).getTotal().setScale(2, RoundingMode.HALF_UP)+" "+accountDetails.get(0)+accountOperatorNames.get(0)+accountCallBackNames.get(0)+"\n"+iusseText+"\n"+
-                    "\n\n总入账："+ updateAccount.getTotal().add(accounts.get(1).getTotal()).setScale(2, RoundingMode.HALF_UP)+
+                    "\n\n总入账："+ total.setScale(2, RoundingMode.HALF_UP)+
                     "\n汇率："+ rate.getExchange().setScale(2, RoundingMode.HALF_UP)+
                     "\n费率："+ rate.getRate().setScale(2, RoundingMode.HALF_UP)+
-                    "\n应下发："+ downing.setScale(2, RoundingMode.HALF_UP)+"   |    "+downing.divide(rate.getExchange(),2, RoundingMode.HALF_UP) +"U"+
-                    "\n已下发："+ downed.setScale(2, RoundingMode.HALF_UP)+"   |    "+downed.divide(rate.getExchange(),2, RoundingMode.HALF_UP) +"U"+
-                    "\n未下发："+ downing.subtract(downed).setScale(2, RoundingMode.HALF_UP) +"   |    "+ downing.subtract(downed).divide(rate.getExchange(),2, RoundingMode.HALF_UP) +"U";
+                    "\n应下发："+ downing.setScale(2, RoundingMode.HALF_UP)+"   |    "+yingxiafa +"U"+
+                    "\n已下发："+ downed.setScale(2, RoundingMode.HALF_UP)+"   |    "+yixiafa +"U"+
+                    "\n未下发："+ downing.subtract(downed).setScale(2, RoundingMode.HALF_UP) +"   |    "+
+                    yingxiafa.subtract(yixiafa) +"U";
         }else if (accounts.size()>2){
             //已下发
             BigDecimal downed = issuesList.stream().filter(Objects::nonNull).map(Issue::getDowned).reduce(BigDecimal.ZERO, BigDecimal::add);
@@ -371,44 +386,71 @@ public class RuzhangOperations{
             //未下发
             BigDecimal down = accounts.stream().filter(Objects::nonNull).map(Account::getDown).reduce(BigDecimal.ZERO, BigDecimal::add);
             //accounts.get(accounts.size()-1).getTotal() 要累加 因为total都是单独记账
-            return "\n已入账："+accounts.stream().filter(Objects::nonNull).map(Account::getTotal).reduce(BigDecimal.ZERO, BigDecimal::add) +"，:共"+(accounts.size())+"笔:\n"+
+            BigDecimal total = accounts.stream().filter(Objects::nonNull).map(Account::getTotal).reduce(BigDecimal.ZERO, BigDecimal::add);
+            return "\n已入账："+total +"，:共"+(accounts.size())+"笔:\n"+
                     newList.get(newList.size()-1)+" "+
                     accounts.get(accounts.size()-1).getTotal().setScale(2, RoundingMode.HALF_UP)+" "+accountDetails.get(accounts.size()-1)+accountOperatorNames.get(accounts.size()-1)+accountCallBackNames.get(accounts.size()-1)+"\n"+
                     newList.get(newList.size()-2)+" "+
                     accounts.get(accounts.size()-2).getTotal().setScale(2, RoundingMode.HALF_UP)+" "+accountDetails.get(accounts.size()-2)+accountOperatorNames.get(accounts.size()-2)+accountCallBackNames.get(accounts.size()-2)+"\n"+
                     newList.get(newList.size()-3)+" "+
                     accounts.get(accounts.size()-3).getTotal().setScale(2, RoundingMode.HALF_UP)+" "+accountDetails.get(accounts.size()-3)+accountOperatorNames.get(accounts.size()-3)+accountCallBackNames.get(accounts.size()-3)+"\n"+iusseText+"\n"+
-                    "\n\n总入账："+ updateAccount.getTotal().setScale(2, RoundingMode.HALF_UP)+
+                    "\n\n总入账："+ total.setScale(2, RoundingMode.HALF_UP)+
                     "\n汇率："+ rate.getExchange().setScale(2, RoundingMode.HALF_UP)+
                     "\n费率："+ rate.getRate().setScale(2, RoundingMode.HALF_UP)+
                     //应该用循环写累加 updateAccount.getDowning()
-                    "\n应下发："+ downing.setScale(2, RoundingMode.HALF_UP)+"   |    " +downing.divide(rate.getExchange(),2, RoundingMode.HALF_UP) +"U"+
-                    "\n已下发："+ downed.setScale(2, RoundingMode.HALF_UP)+"   |    " +downed.divide(rate.getExchange(),2, RoundingMode.HALF_UP) +"U"+
-                    "\n未下发："+ downing.subtract(downed).setScale(2, RoundingMode.HALF_UP) +"   |    "+ downing.subtract(downed).divide(rate.getExchange(),2, RoundingMode.HALF_UP) +"U";
+                    "\n应下发："+ downing.setScale(2, RoundingMode.HALF_UP)+"   |    " +yingxiafa +"U"+
+                    "\n已下发："+ downed.setScale(2, RoundingMode.HALF_UP)+"   |    " +yixiafa +"U"+
+                    "\n未下发："+ downing.subtract(downed).setScale(2, RoundingMode.HALF_UP) +"   |    "+
+                    yingxiafa.subtract(yixiafa)+"U";
         } else {
+            //已下发
+            BigDecimal downed = issuesList.stream().filter(Objects::nonNull).map(Issue::getDowned).reduce(BigDecimal.ZERO, BigDecimal::add);
+            //应下发
+            BigDecimal downing = accounts.stream().filter(Objects::nonNull).map(Account::getDowning).reduce(BigDecimal.ZERO, BigDecimal::add);
             //accounts
             return "\n已入账："+accounts.stream().filter(Objects::nonNull).map(Account::getTotal).reduce(BigDecimal.ZERO, BigDecimal::add)+"，:共"+(accounts.size())+"笔:\n"+
-                    " "+ "暂无已入账数据"+
-                    iusseText
-                    +"已下发:"+issue.getDown()+
+                    " "+ "暂无已入账数据"+ iusseText+
                     "\n\n总入账："+ 0+
                     "\n汇率："+ rate.getExchange().setScale(2, RoundingMode.HALF_UP)+
                     "\n费率："+ rate.getRate().setScale(2, RoundingMode.HALF_UP)+
                     //应该用循环写累加 而不是accounts.get(0)
-                    "\n应下发："+ 0+"   |    "+0 +"U                  "+
-                    "\n已下发："+ issue.getDowned().setScale(2, RoundingMode.HALF_UP)+"   |    "+issue.getDowned().divide(rate.getExchange(),2, RoundingMode.HALF_UP).setScale(2, RoundingMode.HALF_UP) +"U"+
-                    "\n未下发："+ accounts.stream().filter(Objects::nonNull).map(Account::getDown).reduce(BigDecimal.ZERO, BigDecimal::add).setScale(2, RoundingMode.HALF_UP)+"   |    "
-                    +accounts.stream().filter(Objects::nonNull).map(Account::getDown).reduce(BigDecimal.ZERO, BigDecimal::add).divide(rate.getExchange(),2, RoundingMode.HALF_UP).setScale(2, RoundingMode.HALF_UP) +"U";
+                    "\n应下发："+ downing+"   |    "+yingxiafa +"U                  "+
+                    "\n已下发："+ downed.setScale(2, RoundingMode.HALF_UP)+"   |    "+yixiafa +"U"+
+                    "\n未下发："+ downing.subtract(downed).setScale(2, RoundingMode.HALF_UP) +"   |    "+ yingxiafa.subtract(yixiafa)+"U";
         }
 
     }
+
+    private BigDecimal forYixiafa(List<Issue> issuesList) {
+        BigDecimal temp = new BigDecimal(0);
+        for (int i = 0; i < issuesList.size(); i++) {
+            Rate rate1=rateService.selectRateByID(issuesList.get(i).getRateId());
+            BigDecimal exchange=rate1.getExchange();
+            BigDecimal divide = issuesList.get(i).getDowned().divide(exchange, 2, RoundingMode.HALF_UP);
+            temp=temp.add(divide);
+        }
+        return temp;
+    }
+    //应下方
+    private BigDecimal forYingxiafa(List<Account> accounts) {
+        BigDecimal temp = new BigDecimal(0);
+        for (int i = 0; i < accounts.size(); i++) {
+            Rate rate1=rateService.selectRateByID(accounts.get(i).getRateId());
+            BigDecimal exchange=rate1.getExchange();
+            BigDecimal divide = accounts.get(i).getDowning().divide(exchange, 2, RoundingMode.HALF_UP);
+            temp=temp.add(divide);
+        }
+        return temp;
+    }
+
     //-----------------------------------Account 操作---------------------------------------
-    public List<String> forAccountOperatorName(List<Account> accounts,Rate rate){
+    public List<String> forAccountOperatorName(List<Account> accounts){
         //是否隐藏操作人 @ +accounts.get(0).getHandle()
         List<String> operatorNameList=new ArrayList<>();
         for (int i = 0; i < accounts.size(); i++) {
             String operatorFirstName = accounts.get(i).getHandleFirstName()==null ? "": accounts.get(i).getHandleFirstName();
             String operatorNameLast =  accounts.get(i).getHandleLastName()==null ? "": accounts.get(i).getHandleLastName();
+            Rate rate=rateService.selectRateByID(accounts.get(i).getRateId());
             //显示操作人
             String operatorName = rate.getHandleStatus() == 0 ? operatorFirstName+operatorNameLast : "";
             String format = String.format("<a href=\"tg://user?id=%d\">%s</a>", Long.parseLong(accounts.get(i).getUserId()), operatorName);
@@ -416,11 +458,12 @@ public class RuzhangOperations{
         }
         return operatorNameList;
     }
-    public List<String> forAccountCallBackName(List<Account> accounts,Rate rate){
+    public List<String> forAccountCallBackName(List<Account> accounts){
         List<String> callBackNameList=new ArrayList<>();
         for (int i = 0; i < accounts.size(); i++) {
             String callBackFirstName = accounts.get(i).getCallBackFirstName() == null ? "" : accounts.get(i).getCallBackFirstName();
             String callBackLastName = accounts.get(i).getCallBackLastName() == null ? "" : accounts.get(i).getCallBackLastName();
+            Rate rate=rateService.selectRateByID(accounts.get(i).getRateId());
             //显示回复人
             String callBackName= rate.getCallBackStatus() ==0 ? callBackFirstName+callBackLastName : "";
             String format = String.format("<a href=\"tg://user?id=%d\">%s</a>", Long.parseLong(accounts.get(i).getUserId()), callBackName);
@@ -428,22 +471,30 @@ public class RuzhangOperations{
         }
         return callBackNameList;
     }
-    public List<String> forAccountShowDetail(List<Account> accounts,Rate rate){
+    public List<String> forAccountShowDetail(List<Account> accounts){
         List<String> showDetailList=new ArrayList<>();
         for (int i = 0; i < accounts.size(); i++) {
+            Rate rate=rateService.selectRateByID(accounts.get(i).getRateId());
+            BigDecimal exchange=rate.getExchange().setScale(2, RoundingMode.HALF_UP);
+            BigDecimal total = accounts.get(i).getTotal().setScale(2, RoundingMode.HALF_UP);
+            BigDecimal rateRate = rate.getRate().multiply(BigDecimal.valueOf(0.01)).setScale(2, RoundingMode.HALF_UP);
+            BigDecimal totalTimesRate1 = total.multiply(rateRate).setScale(2, RoundingMode.HALF_UP);
+            BigDecimal total2=total.subtract(totalTimesRate1);
             //显示明细
-            String showDetail = rate.getDetailStatus() == 0 ? "/"+ rate.getExchange().setScale(2, RoundingMode.HALF_UP)+"*"+ rate.getRate().multiply(BigDecimal.valueOf(100)).setScale(2, RoundingMode.HALF_UP)+"=" +
-                    accounts.get(i).getDowning().subtract(accounts.get(i).getDowning().multiply(rate.getRate())).divide(rate.getExchange(), 2, BigDecimal.ROUND_HALF_UP) : "";
+            String showDetail = rate.getDetailStatus() == 0 ? "/"+ rate.getExchange().setScale(2, RoundingMode.HALF_UP)+"*"+
+                    rate.getRate().setScale(2, RoundingMode.HALF_UP)+"=" +
+                    total2.divide(exchange,2, RoundingMode.HALF_UP): "";//-不涉及费率
             showDetailList.add(showDetail);
         }
         return showDetailList;
     }
     //-----------------------------------Issue 操作---------------------------------------
-    public List<String> forOperatorName(List<Issue> issueList,Rate rate){
+    public List<String> forOperatorName(List<Issue> issueList){
         List<String> operatorNameList=new ArrayList<>();
         for (int i = 0; i < issueList.size(); i++) {
             String handleFirstName = issueList.get(i).getHandleFirstName()==null?"":issueList.get(i).getHandleFirstName();
             String handleLastName =issueList.get(i).getHandleLastName()==null?"":issueList.get(i).getHandleLastName();
+            Rate rate=rateService.selectRateByID(issueList.get(i).getRateId());
             //显示操作人
             String operatorName = rate.getHandleStatus() == 0 ? handleFirstName+handleLastName : "";
             String format = String.format("<a href=\"tg://user?id=%d\">%s</a>", Long.parseLong(issueList.get(i).getUserId()), operatorName);
@@ -451,11 +502,12 @@ public class RuzhangOperations{
         }
         return operatorNameList;
     }
-    public List<String> forCallBackName(List<Issue> issuesList,Rate rate){
+    public List<String> forCallBackName(List<Issue> issuesList){
         List<String> callBackNameList=new ArrayList<>();
         for (int i = 0; i < issuesList.size(); i++) {
             String callBackFirstName = issuesList.get(i).getCallBackFirstName() == null ? "" : issuesList.get(i).getCallBackFirstName();
             String callBackLastName = issuesList.get(i).getCallBackLastName() == null ? "" : issuesList.get(i).getCallBackLastName();
+            Rate rate=rateService.selectRateByID(issuesList.get(i).getRateId());
             //显示回复人
             String callBackName= rate.getCallBackStatus() ==0 ? callBackFirstName+callBackLastName : "";
             String format = String.format("<a href=\"tg://user?id=%d\">%s</a>", Long.parseLong(issuesList.get(i).getUserId()), callBackName);
@@ -463,13 +515,18 @@ public class RuzhangOperations{
         }
         return callBackNameList;
     }
-    public List<String> forShowDetail(List<Issue> issuesList,Rate rate){
+    public List<String> forShowDetail(List<Issue> issuesList){
         List<String> showDetailList=new ArrayList<>();
         for (int i = 0; i < issuesList.size(); i++) {
+            Rate rate=rateService.selectRateByID(issuesList.get(i).getRateId());
+            BigDecimal exchange=rate.getExchange().setScale(2, RoundingMode.HALF_UP);
+            BigDecimal total = issuesList.get(i).getDowned().setScale(2, RoundingMode.HALF_UP);
             //显示明细
-            String showDetail = rate.getDetailStatus() == 0 ? "/"+ rate.getExchange().setScale(2, RoundingMode.HALF_UP)+"*"+ rate.getRate().multiply(BigDecimal.valueOf(100)).setScale(2, RoundingMode.HALF_UP)+"=" +
-                    issuesList.get(i).getDowned().subtract(issuesList.get(i).getDowned().multiply(rate.getRate())).divide(rate.getExchange(), 2, BigDecimal.ROUND_HALF_UP) : "";
-            showDetailList.add(showDetail);
+            String showDetail = rate.getDetailStatus() == 0 ? "/"+ rate.getExchange().setScale(2, RoundingMode.HALF_UP)+
+                    "=" + total.divide(exchange,2, RoundingMode.HALF_UP): "";
+            if (StringUtils.isNotBlank(showDetail)) {
+                showDetailList.add(showDetail);
+            }
         }
         return showDetailList;
     }
