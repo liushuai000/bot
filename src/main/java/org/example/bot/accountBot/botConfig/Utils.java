@@ -5,9 +5,11 @@ import org.apache.commons.lang3.StringUtils;
 import org.example.bot.accountBot.pojo.Account;
 import org.example.bot.accountBot.pojo.Issue;
 import org.example.bot.accountBot.pojo.Rate;
+import org.example.bot.accountBot.pojo.User;
 import org.example.bot.accountBot.service.AccountService;
 import org.example.bot.accountBot.service.IssueService;
 import org.example.bot.accountBot.service.RateService;
+import org.example.bot.accountBot.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.stereotype.Service;
@@ -40,6 +42,8 @@ public class Utils{
     @Autowired
     private IssueService issueService;
     @Autowired
+    private UserService userService;
+    @Autowired
     AccountBot accountBot;
     //匹配+1000/7*0.05
     public static final Pattern pattern = Pattern.compile("([+-]?\\d+)[/]([+-]?\\d+)[/\\*]([+-]?(\\d*\\.\\d+|\\d+))");
@@ -64,10 +68,10 @@ public class Utils{
         }
     }
     //入账操作2.0，匹配公式
-    public  boolean calcRecorded(String text1,String messageUserId, String userName, Account updateAccount, BigDecimal total, BigDecimal down, Issue issue,
+    public  boolean calcRecorded(String text1,String messageUserId, String userName,String groupId, Account updateAccount, BigDecimal total, BigDecimal down, Issue issue,
                                  BigDecimal downed, BigDecimal downing) {
         Rate rate = new Rate();
-        rate.setMatcher(true);
+        rate.setGroupId(groupId);
         rateService.setInitRate(rate);
         String text = text1.substring(1);
         if (text1.charAt(0)!='+'&&text1.charAt(0)!='-'){
@@ -143,12 +147,11 @@ public class Utils{
         updateAccount.setRateId(rate.getId());
         updateAccount.setTotal(t);
         updateAccount.setUserId(messageUserId);
-        updateAccount.setHandle(userName);
         updateAccount.setDowning(downing.setScale(2, RoundingMode.HALF_UP));
         updateAccount.setDown(downing.subtract(downed));
         log.info("应下发:{},总入账:{},account:{}", downing, total, updateAccount);
         accountService.insertAccount(updateAccount);
-        issueService.updateIssueDown(down.add(t));
+        issueService.updateIssueDown(down.add(t),updateAccount.getGroupId());
         return true;
     }
     //加法2 用于matchFound 2 3
@@ -158,8 +161,7 @@ public class Utils{
         downing =dowingAccount(t,rate,downing) ;
 //        total = total.add(t);
         updateAccount.setTotal(t);
-        updateAccount.setHandle(userName);//操作人
-        updateAccount.setUserId(messageUserId);
+        updateAccount.setUserId(messageUserId);//操作人id
         //计算应下发
         downing=dowingAccount(t,rate,downing);
         updateAccount.setDowning(downing.setScale(2, RoundingMode.HALF_UP));
@@ -167,21 +169,22 @@ public class Utils{
         updateAccount.setRateId(rate.getId());
         accountService.insertAccount(updateAccount);
         //应该是新增加一条 已出帐记录吧!issueService.insert();
-        issueService.updateIssueDown(down.add(t));
+        issueService.updateIssueDown(down.add(t),updateAccount.getGroupId());
         return true;
     }
     //减法
-    private  boolean calcSubtraction(Rate rate,String messageUserId,String userName, BigDecimal down, Issue issue, BigDecimal downed, BigDecimal t) {
+    private  boolean calcSubtraction(Rate rate,String messageUserId,String userName,BigDecimal down, Issue issue, BigDecimal downed, BigDecimal t) {
         rateService.insertRate(rate);
         issue.setRateId(rate.getId());
-        issue.setHandle(userName);
         issue.setUserId(messageUserId);
         //应该减去未下发-issue里的已下发
-        issue.setDown(down.subtract(t));
-        issue.setDowned(downed.add(t));
-        if (issue.getHandle()!=null){
+        downed=dowingAccount(t,rate,downed);
+        issue.setDown(down.subtract(downed));
+        issue.setDowned(downed);
+        User byUserId = userService.findByUserId(messageUserId);
+        if (byUserId!=null){
             issueService.insertIssue(issue);
-            accountService.updateDown(down.subtract(t));
+            accountService.updateDown(down.subtract(t),rate.getGroupId());
             log.info("执行了1================");
         }
         return true;
@@ -202,11 +205,10 @@ public class Utils{
     //应下发计算公式：d=(total-(total*rate1))/exchange  用加已下发吗downed  因为未下发减去已下发=应下发
     public  BigDecimal dowingAccount(BigDecimal total, Rate rate, BigDecimal downing) {
         BigDecimal rate1 = rate.getRate();//费率
-
         rate1=rate1.multiply(BigDecimal.valueOf(0.01));
         BigDecimal exchange = rate.getExchange();//汇率 不知道用不用
         BigDecimal totalTimesRate1=new BigDecimal(0);
-        if (rate.isCalcU()){//只有在+30U u结尾的这种情况下不计算费率
+        if (!rate.isCalcU()){//只有在+-30U u结尾的这种情况下不计算费率
             totalTimesRate1 = total.multiply(rate1);
         }
         // 计算 total - (total * rate1)

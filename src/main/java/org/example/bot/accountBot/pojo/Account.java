@@ -27,24 +27,10 @@ public class Account {
     private int rateId;//外键id rate的因为是多个账单 一对多 (+1000/7*0.05)单笔的就是一对一汇率
     @TableField("group_id")
     private String groupId;//群组id
-    @TableField("handle")
-    private String handle;//操作人
     @TableField("user_id")
     private String userId;//这个是发送消息的那个人的id
-    @TableField("handle_first_name")
-    private String handleFirstName;  //操作人昵称e
-    @TableField("handle_last_name")
-    private String handleLastName;  //操作人昵称e
-    @TableField("handle_status")
-    private int handleStatus; //操作人显示状态:1表示不显示，0表示显示
-    @TableField("call_back")
-    private String callBack;    //回复人
-    @TableField("call_back_first_name")
-    private String callBackFirstName;    //回复人昵称
-    @TableField("call_back_last_name")
-    private String callBackLastName;    //回复人昵称
-    @TableField("call_back_status")
-    private int callBackStatus; //回复人显示状态:1表示不显示，0表示显示
+    @TableField("call_back_user_id")
+    private String callBackUserId;//回复人id
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
     @TableField("add_time")
     private Date addTime;
@@ -58,6 +44,7 @@ public class Account {
     private int dataStatus; //清理今天数据也需要用状态改过期 时间状态:1表示过期，0表示未过期
     @TableField("set_time")
     private Date setTime;   //账单 设置的过期时间
-
+    @TableField("account_handler_money")
+    private BigDecimal accountHandlerMoney=BigDecimal.ZERO;//全局入款手续费 account issue 里的手续费是记录单笔历史的
 
 }

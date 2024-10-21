@@ -32,8 +32,6 @@ public class PaperPlaneBotGroup extends AccountBot{
 
     }
 
-
-
     /**
      * 设置用户为管理员
      * setCanChangeInfo: 允许用户更改群组信息。

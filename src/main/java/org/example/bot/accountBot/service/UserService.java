@@ -35,27 +35,11 @@ public class UserService {
         queryWrapper.eq("is_normal", isNormal);
         return mapper.selectList(queryWrapper);
     }
-    public List<User> findByUserIds(List<String> userIds) {
-        QueryWrapper<User> queryWrapper = new QueryWrapper<>();
-        queryWrapper.in("user_id", userIds);
-        return mapper.selectList(queryWrapper);
-    }
     //查询是否已经在数据库的操作员
     public User findByUsername(String userName) {
         QueryWrapper<User> queryWrapper = new QueryWrapper<>();
         queryWrapper.eq("username", userName);
         return mapper.selectOne(queryWrapper);
-    }
-    public User findByUsernameAndIsAdmin(String userName,boolean isNormal) {
-        QueryWrapper<User> queryWrapper = new QueryWrapper<>();
-        queryWrapper.eq("username", userName);
-        queryWrapper.eq("is_normal", isNormal);
-        return mapper.selectOne(queryWrapper);
-    }
-    public List<User> findByUsernames(List<String> userNames) {
-        QueryWrapper<User> queryWrapper = new QueryWrapper<>();
-        queryWrapper.in("username", userNames);
-        return mapper.selectList(queryWrapper);
     }
 
     public void insertUser(User user) {

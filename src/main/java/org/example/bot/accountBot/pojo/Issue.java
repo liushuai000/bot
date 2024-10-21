@@ -20,29 +20,18 @@ import java.util.Date;
 @Data
 @TableName(value = "issue", schema = "bot", autoResultMap = true)
 public class Issue {
-    //应该加userid ???然后时间倒序查
     @TableId(type= IdType.AUTO,value = "id")
     private int id;
     @TableField("rate_id")
     private int rateId;//外键id rate的因为是多个账单 一对多 (+1000/7*0.05)单笔的就是一对一汇率
     @TableField("group_id")
     private String groupId;//群组id
-    @TableField("handle")
-    private String handle;//操作人
     @TableField("user_id")
     private String userId;//操作人id
-    @TableField("handle_first_name")
-    private String handleFirstName;    //操作人昵称
-    @TableField("handle_last_name")
-    private String handleLastName;    //操作人昵称
-    @TableField("call_back")
-    private String callBack;    //回复人
-    @TableField("call_back_first_name")
-    private String callBackFirstName;    //回复人昵称
-    @TableField("call_back_last_name")
-    private String callBackLastName;    //回复人昵称
-    @TableField("user_message_text")
-    private String userMessageText;    //用户发的文本消息 记录操作
+    @TableField("call_back_user_id")
+    private String callBackUserId;//回复人id
+//    @TableField("user_message_text")
+//    private String userMessageText;    //用户发的文本消息 记录操作
     @TableField("downed")
     private BigDecimal downed;    //已下发 已出帐
     @TableField("down")
@@ -54,4 +43,6 @@ public class Issue {
     private int dataStatus;    //时间状态:1表示过期，0表示未过期
     @TableField("set_time")
     private Date setTime;    //设置的过期时间
+    @TableField("issue_handler_money")
+    private BigDecimal issueHandlerMoney=BigDecimal.ZERO;//全局下方手续费
 }

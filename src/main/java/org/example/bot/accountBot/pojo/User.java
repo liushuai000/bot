@@ -30,4 +30,12 @@ public class User {
     public String lastName;    //昵称 小帅
     @TableField("is_normal")
     public boolean isNormal=true; //是普通(1) 否(0)
+    @TableField("old_username")
+    public String oldUsername;  //这个是旧的用户名 liuxiaolon  防止修改用户名情况
+    @TableField("old_first_name")
+    public String oldFirstName;    //这个是旧的昵称 刘
+    @TableField("old_last_name")
+    public String oldLastName;    //这个是旧的昵称 小帅
+    @TableField("valid_time")
+    private Date validTime;//有效期
 }

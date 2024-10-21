@@ -5,12 +5,17 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import lombok.extern.slf4j.Slf4j;
 import org.example.bot.accountBot.mapper.RateMapper;
+import org.example.bot.accountBot.mapper.StatusMapper;
 import org.example.bot.accountBot.pojo.Rate;
+import org.example.bot.accountBot.pojo.Status;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.util.Date;
 import java.util.List;
 
@@ -21,15 +26,19 @@ public class RateService {
 
     @Autowired
     RateMapper mapper;
+    @Autowired
+    StatusService statusService;
 
-    public void updateRate(String rate) {
+    public void updateRate(String rate,String groupId) {
         UpdateWrapper<Rate> wrapper = new UpdateWrapper();
+        wrapper.eq("group_id", groupId);
         wrapper.set("rate", rate);
         mapper.update(null, wrapper);
     }
 
-    public void updateExchange(BigDecimal exchange) {
+    public void updateExchange(BigDecimal exchange,String groupId) {
         UpdateWrapper<Rate> wrapper = new UpdateWrapper();
+        wrapper.eq("group_id", groupId);
         wrapper.set("exchange", exchange);
         mapper.update(null, wrapper);
 
@@ -37,75 +46,63 @@ public class RateService {
     public Rate selectRateByID(int rateId) {
         return mapper.selectById(rateId);//需要order by addTime 吗
     }
-    public List<Rate> selectRateList() {
+    public List<Rate> selectRateList(String groupId) {
         QueryWrapper<Rate> queryWrapper = new QueryWrapper();
         //只查询不是公式入账的的rate 因为要获取最新的并且不是公式入账的汇率和费率计算
+        queryWrapper.eq("group_id", groupId);
         queryWrapper.eq("is_matcher", false);
-        queryWrapper.orderByDesc("add_time");
-        queryWrapper.last("LIMIT 2");
-        return mapper.selectList(queryWrapper);
-    }
-    public List<Rate> selectNewTimeRateList() {
-        QueryWrapper<Rate> queryWrapper = new QueryWrapper();
-        //只查询不是公式入账的的rate 因为要获取最新的并且不是公式入账的汇率和费率计算
-//        queryWrapper.eq("is_matcher", false);
         queryWrapper.orderByDesc("add_time");
         queryWrapper.last("LIMIT 1");
         return mapper.selectList(queryWrapper);
     }
+//    public List<Rate> selectNewTimeRateList() {
+//        QueryWrapper<Rate> queryWrapper = new QueryWrapper();
+//        //只查询不是公式入账的的rate 因为要获取最新的并且不是公式入账的汇率和费率计算
+////        queryWrapper.eq("is_matcher", false);
+//        queryWrapper.orderByDesc("add_time");
+//        queryWrapper.last("LIMIT 1");
+//        return mapper.selectList(queryWrapper);
+//    }
 
     public void insertRate(Rate rate) {
         mapper.insert(rate);
     }
 
-    public void updateOverDue(Date overdue) {
+    public void updateOverDue(Date overdue,String groupId) {
         UpdateWrapper<Rate> wrapper = new UpdateWrapper();
+        wrapper.eq("group_id", groupId);
         wrapper.set("over_due", overdue);
         mapper.update(null, wrapper);
     }
 
-    public void updateHandleStatus(int handleStatus) {
-        UpdateWrapper<Rate> wrapper = new UpdateWrapper();
-        wrapper.set("handle_status", handleStatus);
-        mapper.update(null, wrapper);
-    }
-
-    public void updateCallBackStatus(int callBackStatus) {
-        UpdateWrapper<Rate> wrapper = new UpdateWrapper();
-        wrapper.set("call_back_status", callBackStatus);
-        mapper.update(null, wrapper);
-    }
-
-    public void updateDetailStatus(int detailStatus) {
-        UpdateWrapper<Rate> wrapper = new UpdateWrapper();
-        wrapper.set("detail_status", detailStatus);
-        mapper.update(null, wrapper);
-    }
-
-    public Rate getInitRate() {
+    public Rate getInitRate(String groupId) {
         Rate rate=new Rate();
-        rate.setAddTime(new Date());
+        //-1秒因为设置汇率的时候此时rate表是空 会插入两条rate  一条初始化一条设置汇率的记录
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime localDateTime = now.plusSeconds(-1);
+        ZonedDateTime zdt = localDateTime.atZone(ZoneId.systemDefault());
+        Date date = Date.from(zdt.toInstant());
+        rate.setAddTime(date);
+        List<Rate> rates = selectRateList(groupId);
         //查询Rate 不是公式入账的
-        if (!selectRateList().isEmpty()){
-            rate=selectRateList().get(0);
+        if (!rates.isEmpty()){
+            rate=rates.get(0);
             log.info("rates:{}",rate);
         }else {
-            Date overdue=new Date();
+            Date overdue=new Date();//是否设置默认汇率为1
+            rate.setExchange(new BigDecimal(1));
             rate.setOverDue(overdue);
-            rate.setHandleStatus(1);
-            rate.setCallBackStatus(1);
-            rate.setDetailStatus(1);
+            rate.setGroupId(groupId);
             this.insertRate(rate);
         }
         return rate;
     }
     public void setInitRate(Rate rate) {
+        //是公式入账
+        rate.setMatcher(true);
         rate.setAddTime(new Date());
         Date overdue=new Date();
         rate.setOverDue(overdue);
-        rate.setHandleStatus(1);
-        rate.setCallBackStatus(1);
-        rate.setDetailStatus(1);
     }
 
 

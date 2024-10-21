@@ -1,11 +1,14 @@
 package org.example.bot.accountBot.botConfig;
 
 import lombok.extern.slf4j.Slf4j;
+import org.example.bot.accountBot.dto.UserDTO;
 import org.example.bot.accountBot.pojo.Account;
 import org.example.bot.accountBot.pojo.Issue;
 import org.example.bot.accountBot.pojo.Rate;
+import org.example.bot.accountBot.pojo.Status;
 import org.example.bot.accountBot.service.AccountService;
 import org.example.bot.accountBot.service.IssueService;
+import org.example.bot.accountBot.utils.BaseConstant;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
@@ -33,18 +36,13 @@ public class ShowOperatorName {
     RuzhangOperations ruzhangOperations;
 
     //显示操作人名字  显示账单用
-    public void  replay(SendMessage sendMessage, Account updateAccount, Rate rate, List<Issue> issuesList, Issue issue, String text) {
-        if (!text.equals("显示操作人名字") && !text.equals("显示操作人名称") && !text.equals("显示明细")
-                && !text.equals("显示回复人名称")     && !text.equals("隐藏操作人名称")    && !text.equals("隐藏操作人名字")
-                && !text.equals("隐藏名字") && !text.equals("隐藏名称")&& !text.equals("显示回复人名称")&& !text.equals("将回复人显示")
-                && !isEmptyMoney(text)){
-            return;
-        }
+    public void  replay(SendMessage sendMessage, UserDTO userDTO, Account updateAccount, Rate rate, List<Issue> issuesList, Issue issue, String text, Status status) {
+        if (!BaseConstant.showReplay(text)) return;
         //TODO message 先给null
         new ButtonList().implList(null, sendMessage);
         String iusseText="";
         //重新获取最新的数据
-        List<Account> accounts = accountService.selectAccountDataStatus0();
+        List<Account> accounts = accountService.selectAccountDataStatus0(userDTO.getGroupId());
         List<String> newList = new ArrayList<>();
         List<String> newIssueList=new ArrayList<>();
         for (Account account : accounts) {
@@ -53,7 +51,7 @@ public class ShowOperatorName {
         }
         //已出账
         BigDecimal num = issuesList.stream().filter(Objects::nonNull).map(Issue::getDowned).reduce(BigDecimal.ZERO, BigDecimal::add);
-        List<Issue> issues = issueService.selectIssue();
+        List<Issue> issues = issueService.selectIssue(userDTO.getGroupId());
         log.info("issues,,{}",issues);
         //获取时间数据方便后续操作
 
@@ -72,7 +70,7 @@ public class ShowOperatorName {
             issue=issues.get(issues.size()-1);;
         }
         //显示操作人
-        iusseText = ruzhangOperations.getSendText(updateAccount, accounts, rate, num, newList, newIssueList, issuesList, issue);
+        iusseText = ruzhangOperations.getSendText(updateAccount, accounts, rate, num, newList, newIssueList, issuesList, issue,status);
         accountBot.sendMessage(sendMessage,iusseText);
     }
     //true 是0 显示账单

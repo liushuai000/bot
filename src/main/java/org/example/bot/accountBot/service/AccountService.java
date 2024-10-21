@@ -24,10 +24,11 @@ public class AccountService {
     AccountMapper mapper;
 
 
-    public List<Account> selectAccountDataStatus0() {
+    public List<Account> selectAccountDataStatus0(String groupId) {
         QueryWrapper<Account> queryWrapper = new QueryWrapper<>();
         queryWrapper.eq("data_status",0);
-        queryWrapper.orderByAsc("add_time");
+        queryWrapper.eq("group_id",groupId);//如果groupId为空是否查的到呢
+        queryWrapper.orderByDesc("add_time");
         return mapper.selectList(queryWrapper);
     }
 
@@ -35,43 +36,50 @@ public class AccountService {
         mapper.insert(updateAccount);
     }
 
-    public void updateDataStatus() {
+    public void updateDataStatus(String groupId) {
         UpdateWrapper<Account> updateWrapper = new UpdateWrapper<>();
+        updateWrapper.eq("group_id",groupId);//如果groupId为空是否查的到呢
         updateWrapper.set("data_status",1);
         mapper.update(null,updateWrapper);
     }
 
-    public void updateSetTime(Date setTime) {
+    public void updateSetTime(Date setTime,String groupId) {
         UpdateWrapper<Account> updateWrapper = new UpdateWrapper<>();
         updateWrapper.set("set_time",setTime);
+        updateWrapper.eq("group_id",groupId);//如果groupId为空是否查的到呢
         mapper.update(null,updateWrapper);
     }
-    public void deleteHistoryData() {
+    public void deleteHistoryData(String groupId) {
         UpdateWrapper<Account> updateWrapper = new UpdateWrapper<>();
+        updateWrapper.eq("group_id",groupId);//如果groupId为空是否查的到呢
         updateWrapper.eq("data_status",0);
         mapper.delete(updateWrapper);
     }
-    public void deleteTodayData() {
+    public void deleteTodayData(String groupId) {
         UpdateWrapper<Account> updateWrapper = new UpdateWrapper<>();
+        updateWrapper.eq("group_id",groupId);
         updateWrapper.eq("data_status",0);
         mapper.delete(updateWrapper);
     }
 
 
-    public void deleteInData(Date addTime) {
+    public void deleteInData(Date addTime,String groupId) {
         UpdateWrapper<Account> updateWrapper = new UpdateWrapper<>();
         updateWrapper.eq("add_time",addTime);
+        updateWrapper.eq("group_id",groupId);
         mapper.delete(updateWrapper);
     }
 
-    public void updateDown(BigDecimal add) {
+    public void updateDown(BigDecimal add,String groupId) {
         UpdateWrapper<Account> updateWrapper = new UpdateWrapper<>();
+        updateWrapper.eq("group_id",groupId);
         updateWrapper.set("down",add);
         mapper.update(null,updateWrapper);
     }
 
-    public void updateNewestData(BigDecimal down) {
+    public void updateNewestData(BigDecimal down,String groupId) {
         UpdateWrapper<Account> updateWrapper = new UpdateWrapper<>();
+        updateWrapper.eq("group_id",groupId);
         updateWrapper.set("down",down);
         mapper.update(null,updateWrapper);
     }

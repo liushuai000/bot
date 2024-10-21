@@ -53,8 +53,11 @@ public class NotificationService {
     }
     //
     public void initNotification(UserDTO userDTO) {
+        QueryWrapper<Notification> queryWrapper = new QueryWrapper<>();
+        queryWrapper.eq("user_id", userDTO.getUserId());
         //需要加群组id
-        Notification notification1 = mapper.selectById(userDTO.getUserId());
+        Notification notification1 = mapper.selectOne(queryWrapper);
+
         QueryWrapper<Notification> wrapper = new QueryWrapper<>();
         wrapper.eq("username", userDTO.getUsername());
         Notification notification2 = mapper.selectOne(wrapper);
