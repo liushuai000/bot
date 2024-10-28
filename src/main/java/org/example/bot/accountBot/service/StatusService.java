@@ -37,6 +37,10 @@ public class StatusService {
         mapper.insert(status);
     }
 
+    public void update(Status status){
+        mapper.updateById(status);
+    }
+
     public void updateStatus(String nameStatus,int detailStatus,String groupId) {
         UpdateWrapper<Status> wrapper = new UpdateWrapper();
         wrapper.eq("group_id", groupId);
@@ -59,6 +63,7 @@ public class StatusService {
             status.setHandleStatus(1);
             status.setCallBackStatus(1);
             status.setDetailStatus(1);
+            status.setRiqie(false);
             insertStatus(status);
         }
         return status;

@@ -71,6 +71,7 @@ public class RateService {
     public void updateOverDue(Date overdue,String groupId) {
         UpdateWrapper<Rate> wrapper = new UpdateWrapper();
         wrapper.eq("group_id", groupId);
+        wrapper.le("add_time", overdue);//添加时间小于设置的日切时间
         wrapper.set("over_due", overdue);
         mapper.update(null, wrapper);
     }
@@ -89,9 +90,7 @@ public class RateService {
             rate=rates.get(0);
             log.info("rates:{}",rate);
         }else {
-            Date overdue=new Date();//是否设置默认汇率为1
             rate.setExchange(new BigDecimal(1));
-            rate.setOverDue(overdue);
             rate.setGroupId(groupId);
             this.insertRate(rate);
         }
@@ -101,8 +100,6 @@ public class RateService {
         //是公式入账
         rate.setMatcher(true);
         rate.setAddTime(new Date());
-        Date overdue=new Date();
-        rate.setOverDue(overdue);
     }
 
 

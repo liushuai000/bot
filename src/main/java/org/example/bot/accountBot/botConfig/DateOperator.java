@@ -5,9 +5,11 @@ import org.example.bot.accountBot.dto.UserDTO;
 import org.example.bot.accountBot.pojo.Account;
 import org.example.bot.accountBot.pojo.Issue;
 import org.example.bot.accountBot.pojo.Rate;
+import org.example.bot.accountBot.pojo.Status;
 import org.example.bot.accountBot.service.AccountService;
 import org.example.bot.accountBot.service.IssueService;
 import org.example.bot.accountBot.service.RateService;
+import org.example.bot.accountBot.service.StatusService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
@@ -17,6 +19,8 @@ import java.time.*;
 import java.time.format.DateTimeFormatter;
 import java.util.Date;
 import java.util.List;
+import java.util.Objects;
+import java.util.stream.Collectors;
 
 /**
  * 操作时间
@@ -33,82 +37,28 @@ public class DateOperator{
     IssueService issueService;
     @Autowired
     AccountBot accountBot;
+    @Autowired
+    StatusService statusService;
 
-    boolean Over24Hour=false;//是否把accountBot 里的删除
-    public Date oldSetTime;//历史账单的过期时间
-    void setOver24Hour(boolean over24Hour) {
-        this.Over24Hour = over24Hour;
-    }
-    //判断是否过期
-    public List<Account> isOver24Hour(Message message, SendMessage sendMessage,String groupId) {
-        List<Account> accountList=accountService.selectAccountDataStatus0(groupId);
-        Date setTime=new Date();
-        if (accountList.size()>0){
-            oldSetTime=accountList.get(accountList.size()-1).getSetTime();
-            setTime=accountList.get(accountList.size()-1).getSetTime();
-        }
-        log.info("setTime;;;{}",setTime);
-        if (message.getText().length()>=4&&message.getText().substring(0,4).equals("设置日切")
-                ||message.getText().length()>=4&&message.getText().substring(0,4).equals("开启日切")){
-            accountService.updateSetTime(setTime,groupId);
+    //判断是否过期 groupId text  查询是否过期
+    public void isOver24HourCheck(Message message, SendMessage sendMessage, UserDTO userDTO, Status status) {
+        if (userDTO.getText().length()>=4&&userDTO.getText().substring(0,4).equals("设置日切")
+                ||userDTO.getText().length()>=4&&userDTO.getText().substring(0,4).equals("开启日切")){
             Integer hours = Integer.parseInt(message.getText().substring(4, message.getText().length()));
-            Date tempDate = new Date();
-            LocalDateTime tomorrow = LocalDateTime.now().plusDays(1).withHour(hours).withMinute(tempDate.getMinutes()).withSecond(tempDate.getSeconds()).withNano(0);
+            LocalDateTime tomorrow = LocalDateTime.now().plusDays(1).withHour(hours).withMinute(59)
+                    .withSecond(59).withNano(0);
             Date OverDue = Date.from(tomorrow.atZone(ZoneId.systemDefault()).toInstant());
-            //过期时间是一天
-            rateService.updateOverDue(OverDue,groupId);
+            status.setRiqie(true);//是否开启日切 是
+            status.setSetTime(OverDue);//设置日切时间
+            statusService.update(status);
+            //需要更新Rate init设置 已过日切的使用旧的Rate之前群组设置的  没过日切的使用新Rate TODO
             accountBot.sendMessage(sendMessage,"设置成功 有效期:"+tomorrow.getYear()+"年"+tomorrow.getMonthValue()+ "月"+
                     tomorrow.getDayOfMonth()+"日"+ tomorrow.getHour()+"时"+tomorrow.getMinute()+"分" +tomorrow.getSecond()+"秒");
-            return accountList;
         }
-        List<Account> accounts = accountService.selectAccountDataStatus0(groupId);
-        if (accounts.size()!=0){
-            accountList=accounts;
-            Rate rate=rateService.selectRateByID(accountList.get(accountList.size()-1).getRateId());
-            setTime = accountList.get(accountList.size()-1).getSetTime();
-            //true 已过期  -1表示已过期
-            if (-1==accountList.get(accountList.size()-1).getAddTime().compareTo(rate.getOverDue())){
-                Over24Hour=true;
-                accountService.updateDataStatus(groupId);
-                Rate rate1=new Rate();
-                accountService.updateSetTime(setTime,groupId);
-                rateService.updateRate(String.valueOf(rate1.getRate()),groupId);
-                rateService.updateExchange(rate1.getExchange(),groupId);
-                accountList=accountService.selectAccountDataStatus0(groupId);
-                log.info("已过期:{}  listOver24:{}",rate.getOverDue(),accountList);
-            }
-        }
-        log.info("Over24Hour,,:{}",Over24Hour);
-        setOver24Hour(Over24Hour);
-        return accountList;
-    }
-    //获取并判断下发订单是否过期
-    public List<Issue> issueIsOver24Hour(Message message, SendMessage sendMessage, UserDTO userDTO) {
-        List<Issue> list=issueService.selectIssue(userDTO.getGroupId());
-        if (!list.isEmpty()){
-            oldSetTime=list.get(list.size()-1).getSetTime();
-            Rate rate=rateService.selectRateByID(list.get(list.size()-1).getRateId());
-            Date setTime = list.get(list.size()-1).getSetTime();
-            //如果当天的时间大于设置的逾期时间
-            if (-1==list.get(list.size()-1).getAddTime().compareTo(rate.getOverDue())){
-                Over24Hour=true;
-                issueService.updateIssueDataStatus(userDTO.getGroupId());
-                Rate rate1=new Rate();
-                issueService.updateIssueSetTime(setTime,userDTO.getGroupId());
-                log.info("issueSetTime,,:{}",setTime);
-                rateService.updateRate(String.valueOf(rate1.getRate()),userDTO.getGroupId());
-                rateService.updateExchange(rate1.getExchange(),userDTO.getGroupId());
-                list=issueService.selectIssue(userDTO.getGroupId());
-                log.info("listOver24:{}",list);
-            }
-        }
-        log.info("Over24Hour,:{}",Over24Hour);
-        setOver24Hour(Over24Hour);
-        return list;
     }
 
     // 操作人跟最高权限人都可以删除。 删除今日数据/关闭日切 到时间后账单数据自动保存为历史数据，软件界面内数据全部自动清空，操作员权限保留。
-    public void deleteTodayData(Message message, SendMessage sendMessage,String groupId) {
+    public void deleteTodayData(Message message, SendMessage sendMessage,String groupId,Status status) {
         String text = message.getText();
         if (text.length()>=4){
             //删除今日账单关键词： 清理今天数据 删除今天数据 清理今天账单 删除今天账单 是否判断操作员权限？
@@ -116,16 +66,18 @@ public class DateOperator{
                     ||text.equals("清理今日账单")||text.equals("删除今日账单")||text.equals("清理今天帐单")
                     ||text.equals("删除今天账单")||text.equals("删除账单") ||text.equals("删除今天帐单")||text.equals("删除帐单")
                     ||text.equals("清除账单")||text.equals("删除账单")||text.equals("清除帐单")||text.equals("删除帐单")){
-                accountService.deleteTodayData(groupId);
-                issueService.deleteTodayIssueData(groupId);
+                //如果设置了日切 没有日切就是今天的 就删除日切的  删除是改状态datastatus 为0不可见还是 真删除
+                accountService.deleteTodayData(status.getSetTime(),groupId);
+                issueService.deleteTodayIssueData(status.getSetTime(),groupId);
                 accountBot.sendMessage(sendMessage,"操作成功");
             }else if (text.equals("删除全部账单")||text.equals("清除全部账单")){
                 accountService.deleteHistoryData(groupId);
                 issueService.deleteHistoryIssueData(groupId);
                 accountBot.sendMessage(sendMessage,"操作成功");
             }else if (text.equals("关闭日切")){
-                Date overdue=new Date();
-                rateService.updateOverDue(overdue,groupId);
+                status.setRiqie(false);//是否开启日切 是
+                status.setSetTime(new Date());//设置日切时间
+                statusService.update(status);
                 accountBot.sendMessage(sendMessage,"操作成功,关闭日切");
             }
         }
@@ -146,4 +98,23 @@ public class DateOperator{
         log.info("Converted date: " + addTime);
         return addTime;
     }
+
+
+    //如果日切时间超时 我需要删除开启日切的账单并且需要关闭日切
+    public List<Account> selectAccountIsRiqie(SendMessage sendMessage,Status status, String groupId) {
+        //搜索出历史账单/判断是否过期
+        List<Account> accountList=accountService.selectAccountRiqie(status.isRiqie(),groupId);
+        //当前时间小于日切时间
+        if (status.isRiqie() && new Date().compareTo(status.getSetTime())<0){
+            status.setRiqie(false);
+            statusService.update(status);
+            accountList.stream().filter(Objects::nonNull).filter(account -> account.isRiqie())
+                    .forEach(a->accountService.deleteById(a.getId()));
+            accountList = accountList.stream().filter(Objects::nonNull).filter(account -> !account.isRiqie()).collect(Collectors.toList());
+            accountBot.sendMessage(sendMessage,"日切时间已到期!已关闭日切"+status.getSetTime());
+        }
+        return accountList;
+    }
+
+
 }

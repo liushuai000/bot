@@ -2,23 +2,24 @@ package org.example.bot.accountBot.botConfig;
 
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
-import org.example.bot.accountBot.pojo.Account;
-import org.example.bot.accountBot.pojo.Issue;
-import org.example.bot.accountBot.pojo.Rate;
-import org.example.bot.accountBot.pojo.User;
+import org.example.bot.accountBot.pojo.*;
 import org.example.bot.accountBot.service.AccountService;
 import org.example.bot.accountBot.service.IssueService;
 import org.example.bot.accountBot.service.RateService;
 import org.example.bot.accountBot.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Component;
 import org.springframework.stereotype.Service;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Message;
 
-import javax.annotation.Resource;
+import javax.script.ScriptEngine;
+import javax.script.ScriptEngineManager;
+import javax.script.ScriptException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.util.Date;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -53,23 +54,26 @@ public class Utils{
     public static final Pattern pattern2 = Pattern.compile("([+-]?\\d+(\\.\\d+)?)\\*(\\d+(\\.\\d+)?)");
     //匹配+1000/7
     public static final Pattern pattern3 = Pattern.compile("([+-]?\\d+)/([+-]?\\d+)");
-
     public static void main(String[] args) {
-        String input = "+1000*5/7"; // 示例输入
-        // 正则表达式
-        String regex = "([+-]?\\d+)[/]([+-]?\\d+)[/\\*]([+-]?(\\d*\\.\\d+|\\d+))";
-        Pattern pattern = Pattern.compile(regex);
-        Matcher matcher = pattern.matcher(input);
-        while (matcher.find()) {
-            // 输出提取的数字
-            System.out.println("第一位 (整数): " + matcher.group(1).replaceAll("[+]", "")); // 去掉符号，获取的数：1000
-            System.out.println("第二位 (整数): " + matcher.group(2)); // 获取的数：7
-            System.out.println("第三位 (小数或整数): " + new BigDecimal(matcher.group(3))); // 获取的数：0.05或5
-        }
+//        String input = "+1000*5/7"; // 示例输入
+//        // 正则表达式
+//        String regex = "([+-]?\\d+)[/]([+-]?\\d+)[/\\*]([+-]?(\\d*\\.\\d+|\\d+))";
+//        Pattern pattern = Pattern.compile(regex);
+//        Matcher matcher = pattern.matcher(input);
+//        while (matcher.find()) {
+//            // 输出提取的数字
+//            System.out.println("第一位 (整数): " + matcher.group(1).replaceAll("[+]", "")); // 去掉符号，获取的数：1000
+//            System.out.println("第二位 (整数): " + matcher.group(2)); // 获取的数：7
+//            System.out.println("第三位 (小数或整数): " + new BigDecimal(matcher.group(3))); // 获取的数：0.05或5
+//        }
+
+        Date date = new Date();
+        Date from = Date.from(LocalDateTime.now().plusDays(20).atZone(ZoneId.systemDefault()).toInstant());
+        System.err.println(date.compareTo(from)<0);//等于true
     }
     //入账操作2.0，匹配公式
-    public  boolean calcRecorded(String text1,String messageUserId, String userName,String groupId, Account updateAccount, BigDecimal total, BigDecimal down, Issue issue,
-                                 BigDecimal downed, BigDecimal downing) {
+    public  boolean calcRecorded(String text1, String messageUserId, String userName, String groupId, Account updateAccount, BigDecimal total, BigDecimal down, Issue issue,
+                                 BigDecimal downed, BigDecimal downing, Status status) {
         Rate rate = new Rate();
         rate.setGroupId(groupId);
         rateService.setInitRate(rate);
@@ -109,36 +113,36 @@ public class Utils{
         log.info(".....t:{},r:{},e:{}", t, r, e);
         //按照公式进行计算
         if (matchFound&&text1.charAt(0)=='+') {
-            return calcAdd(messageUserId,userName, updateAccount, total, down, downing, rate, t, r, e,downed);
+            return calcAdd(messageUserId,userName, updateAccount, total, down, downing, rate, t, r, e,downed,status);
         } else if (matchFound&&text1.charAt(0)=='-'){
             // 解析数字
             rate.setRate(r);
             rate.setExchange(e);//不应该是updateRate insert
-            return calcSubtraction(rate,messageUserId,userName, down, issue, downed, t);
+            return calcSubtraction(rate,messageUserId,userName, down, issue, downed, t,status);
         }else if (matchFound1&&text1.charAt(0)=='+'){
-            return calcAdd(messageUserId,userName, updateAccount, total, down, downing, rate, t, r, e,downed);
+            return calcAdd(messageUserId,userName, updateAccount, total, down, downing, rate, t, r, e,downed,status);
         }else if (matchFound1&&text1.charAt(0)=='-'){
             rate.setRate(r);
             rate.setExchange(e);
-            return calcSubtraction(rate,messageUserId,userName, down, issue, downed, t);
+            return calcSubtraction(rate,messageUserId,userName, down, issue, downed, t,status);
         }else if (matchFound2&&text1.charAt(0)=='+'){
             rate.setRate(r);//如果setExchange 默认为null  应该设置为0
-            return calcAdd2(messageUserId,userName, updateAccount,  down, downing, rate, t,downed);
+            return calcAdd2(messageUserId,userName, updateAccount,  down, downing, rate, t,downed,status);
         }else if (matchFound2&&text1.charAt(0)=='-'){
             rate.setRate(r);
-            return calcSubtraction(rate,messageUserId,userName, down, issue, downed, t);
+            return calcSubtraction(rate,messageUserId,userName, down, issue, downed, t,status);
         } else if (matchFound3&&text1.charAt(0)=='+') {
             rate.setExchange(e);
-            return calcAdd2(messageUserId,userName, updateAccount, down, downing, rate, t,downed);
+            return calcAdd2(messageUserId,userName, updateAccount, down, downing, rate, t,downed,status);
         }else if (matchFound3&&text1.charAt(0)=='-'){
             rate.setExchange(e);
-            return calcSubtraction(rate,messageUserId,userName, down, issue, downed, t);
+            return calcSubtraction(rate,messageUserId,userName, down, issue, downed, t,status);
         }
         return false;
     }
     //加法  用于matchFound 0 1
     private  boolean calcAdd(String messageUserId,String userName, Account updateAccount, BigDecimal total, BigDecimal down, BigDecimal downing,
-                             Rate rate, BigDecimal t, BigDecimal r, BigDecimal e,BigDecimal downed) {
+                             Rate rate, BigDecimal t, BigDecimal r, BigDecimal e,BigDecimal downed,Status status) {
         rate.setRate(r);
         rate.setExchange(e);
         rateService.insertRate(rate);
@@ -149,6 +153,7 @@ public class Utils{
         updateAccount.setUserId(messageUserId);
         updateAccount.setDowning(downing.setScale(2, RoundingMode.HALF_UP));
         updateAccount.setDown(downing.subtract(downed));
+        updateAccount.setRiqie(status.isRiqie());
         log.info("应下发:{},总入账:{},account:{}", downing, total, updateAccount);
         accountService.insertAccount(updateAccount);
         issueService.updateIssueDown(down.add(t),updateAccount.getGroupId());
@@ -156,7 +161,7 @@ public class Utils{
     }
     //加法2 用于matchFound 2 3
     private  boolean calcAdd2(String messageUserId,String userName, Account updateAccount, BigDecimal down, BigDecimal downing,
-                              Rate rate, BigDecimal t,BigDecimal downed) {
+                              Rate rate, BigDecimal t,BigDecimal downed,Status status) {
         rateService.insertRate(rate);
         downing =dowingAccount(t,rate,downing) ;
 //        total = total.add(t);
@@ -167,13 +172,15 @@ public class Utils{
         updateAccount.setDowning(downing.setScale(2, RoundingMode.HALF_UP));
         updateAccount.setDown(downing.subtract(downed));
         updateAccount.setRateId(rate.getId());
+        updateAccount.setRiqie(status.isRiqie());
         accountService.insertAccount(updateAccount);
         //应该是新增加一条 已出帐记录吧!issueService.insert();
         issueService.updateIssueDown(down.add(t),updateAccount.getGroupId());
         return true;
     }
     //减法
-    private  boolean calcSubtraction(Rate rate,String messageUserId,String userName,BigDecimal down, Issue issue, BigDecimal downed, BigDecimal t) {
+    private  boolean calcSubtraction(Rate rate,String messageUserId,String userName,BigDecimal down, Issue issue, BigDecimal downed,
+                                     BigDecimal t,Status status) {
         rateService.insertRate(rate);
         issue.setRateId(rate.getId());
         issue.setUserId(messageUserId);
@@ -181,6 +188,7 @@ public class Utils{
         downed=dowingAccount(t,rate,downed);
         issue.setDown(down.subtract(downed));
         issue.setDowned(downed);
+        issue.setRiqie(status.isRiqie());
         User byUserId = userService.findByUserId(messageUserId);
         if (byUserId!=null){
             issueService.insertIssue(issue);
@@ -231,46 +239,60 @@ public class Utils{
             log.info("计算器功能异常");
         }
     }
+
     //计算器的判断是否符合+-*/
     public  String calculate(String text) {
-        // 正则表达式匹配形如 "数字 运算符 数字" 的模式
-        Pattern pattern = Pattern.compile("^(\\d+)([+\\-*/])(\\d+)$");
-        Matcher matcher = pattern.matcher(text);
-        if (matcher.find()) {
-            // 解析数字
-            int number1 = Integer.parseInt(matcher.group(1));
-            int number2 = Integer.parseInt(matcher.group(3));
-            char operator = matcher.group(2).charAt(0);
-            // 计算结果
-            int result = 0;
-            switch (operator) {
-                case '+':
-                    result = number1 + number2;
-                    break;
-                case '-':
-                    result = number1 - number2;
-                    break;
-                case '*':
-                    result = number1 * number2;
-                    break;
-                case '/':
-                    if (number2 != 0) {
-                        result = number1 / number2;
-                    } else {
-                        return "Error: Division by zero";
-                    }
-                    break;
-                default:
-                    return "Invalid operator";
-            }
+        try {
+            String result = evaluateExpression(text);
+            System.out.println("Result: " + result);
+            if (StringUtils.isNotBlank(result))  return text+"="+result;
+        } catch (Exception e) {
+            System.out.println("Error evaluating expression: " + e.getMessage());
+        }
+        return null;
+    }
+    public static String evaluateExpression(String expression) {
+        // 移除空格
+        expression = expression.replaceAll("\\s+", "");
 
-            // 返回结果字符串
-            return text + "=" + result;
+        // 检查表达式是否符合要求
+        if (isValidExpression(expression)) {
+            try {
+                // 创建ScriptEngine
+                ScriptEngineManager manager = new ScriptEngineManager();
+                ScriptEngine engine = manager.getEngineByName("JavaScript");
+                // 计算表达式
+                double result = (double) engine.eval(expression);
+                String l=String.valueOf(result);
+                //四舍五入
+                BigDecimal roundedResult = new BigDecimal(result).setScale(l.length()-4, RoundingMode.UP);
+                return l;
+            } catch (ScriptException e) {
+                return "";
+            }
         } else {
-            // 如果不匹配，返回 null
-            return null;
+            return "";
         }
     }
 
+    // 检查表达式是否只有两个数值和一个运算符
+    private static boolean isValidExpression(String expression) {
+        String[] tokens = expression.split("(?<=[-+*/])|(?=[-+*/])"); // 按运算符分割
 
+        // 检查是否只有三个token：一个数值、一个运算符、另一个数值
+        return tokens.length == 3 &&
+                isNumber(tokens[0]) &&
+                isOperator(tokens[1]) &&
+                isNumber(tokens[2]);
+    }
+
+    // 检查是否为数字
+    private static boolean isNumber(String token) {
+        return token.matches("-?\\d+(\\.\\d+)?"); // 匹配整数或小数
+    }
+
+    // 检查是否为运算符
+    private static boolean isOperator(String token) {
+        return "+-*/".contains(token);
+    }
 }

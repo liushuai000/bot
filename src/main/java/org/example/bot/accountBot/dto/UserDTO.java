@@ -1,5 +1,6 @@
 package org.example.bot.accountBot.dto;
 
+import io.swagger.annotations.ApiModel;
 import lombok.Data;
 import lombok.experimental.Accessors;
 import org.telegram.telegrambots.meta.api.objects.Message;
@@ -9,6 +10,7 @@ import org.telegram.telegrambots.meta.api.objects.Message;
  */
 @Accessors(chain = true)
 @Data
+@ApiModel("UserDTO")
 public class UserDTO {
 
     public int id; //主键id
@@ -21,7 +23,7 @@ public class UserDTO {
 
     public String lastName;    //昵称 小帅
 
-    public boolean isNormal=true;    //是否是普通用户  默认是
+    public boolean isNormal=true;    //是否是普通用户  默认是  false是管理
     //-----------以下是回复人的信息-----------
     public String callBackUserId;
 
@@ -41,7 +43,7 @@ public class UserDTO {
         this.username=message.getFrom().getUserName();
         this.userId=message.getFrom().getId()+"";
         this.text=message.getText();
-        // 检查是否为群组消息
+        // 检查是否为群组消息  isUserChat
         if (message.getChat().isGroupChat()||message.getChat().isSuperGroupChat()) {
             long groupId = message.getChatId(); // 获取群组 ID
             System.out.println("群组 ID: " + groupId);

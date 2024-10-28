@@ -42,7 +42,7 @@ public class ShowOperatorName {
         new ButtonList().implList(null, sendMessage);
         String iusseText="";
         //重新获取最新的数据
-        List<Account> accounts = accountService.selectAccountDataStatus0(userDTO.getGroupId());
+        List<Account> accounts = accountService.selectAccountRiqie(status.isRiqie(),userDTO.getGroupId());
         List<String> newList = new ArrayList<>();
         List<String> newIssueList=new ArrayList<>();
         for (Account account : accounts) {
@@ -51,7 +51,7 @@ public class ShowOperatorName {
         }
         //已出账
         BigDecimal num = issuesList.stream().filter(Objects::nonNull).map(Issue::getDowned).reduce(BigDecimal.ZERO, BigDecimal::add);
-        List<Issue> issues = issueService.selectIssue(userDTO.getGroupId());
+        List<Issue> issues = issueService.selectIssueRiqie(status.isRiqie(),userDTO.getGroupId());
         log.info("issues,,{}",issues);
         //获取时间数据方便后续操作
 

@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import lombok.extern.slf4j.Slf4j;
 import org.example.bot.accountBot.mapper.IssueMapper;
+import org.example.bot.accountBot.pojo.Account;
 import org.example.bot.accountBot.pojo.Issue;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -27,26 +28,12 @@ public class IssueService {
     @Autowired
     IssueMapper mapper;
 
-    public List<Issue> selectIssue(String groupId) {
+    public List<Issue> selectIssueRiqie(boolean riqie,String groupId) {
         QueryWrapper<Issue> queryWrapper = new QueryWrapper<>();
         queryWrapper.eq("group_id", groupId);
-        queryWrapper.eq("data_status", 0);
+        queryWrapper.eq("riqie", riqie);
         queryWrapper.orderByDesc("add_time");
         return mapper.selectList(queryWrapper);
-    }
-
-    public void updateIssueDataStatus(String groupId) {
-        UpdateWrapper<Issue> updateWrapper = new UpdateWrapper<>();
-        updateWrapper.eq("group_id", groupId);
-        updateWrapper.set("data_status", 1);
-        mapper.update(null,updateWrapper);
-    }
-
-    public void updateIssueSetTime(Date setTime, String groupId) {
-        UpdateWrapper<Issue> updateWrapper = new UpdateWrapper<>();
-        updateWrapper.eq("group_id", groupId);
-        updateWrapper.set("set_time", setTime);
-        mapper.update(null,updateWrapper);
     }
 
     public void insertIssue(Issue issue) {
@@ -59,15 +46,21 @@ public class IssueService {
         updateWrapper.set("down", down);
         mapper.update(null,updateWrapper);
     }
-    public void deleteTodayIssueData(String groupId) {
+    public void deleteTodayIssueData(Date setTime,String groupId) {
         LocalDateTime startOfDay = LocalDateTime.now().withHour(0).withMinute(0).withSecond(0);
         LocalDateTime endOfDay = LocalDateTime.now().withHour(23).withMinute(59).withSecond(59);
         QueryWrapper<Issue> wrapper = new QueryWrapper<>();
-        wrapper.eq("data_status", 0);
+//        wrapper.eq("riqie", 0);
         wrapper.eq("group_id", groupId);
-        wrapper.ge("add_time", Date.from(startOfDay.atZone(ZoneId.systemDefault()).toInstant()))
-                .le("add_time", Date.from(endOfDay.atZone(ZoneId.systemDefault()).toInstant()));
+        //如果日切时间小于当前时间
+        if (new Date().compareTo(setTime)<0){
+            wrapper.ge("add_time", Date.from(startOfDay.atZone(ZoneId.systemDefault()).toInstant()))
+                    .le("add_time", Date.from(endOfDay.atZone(ZoneId.systemDefault()).toInstant()));
+        }else {
+            wrapper.le("add_time",setTime);
+        }
         mapper.delete(wrapper);
+
     }
     public void deleteHistoryIssueData(String groupId) {
         QueryWrapper<Issue> wrapper = new QueryWrapper<>();

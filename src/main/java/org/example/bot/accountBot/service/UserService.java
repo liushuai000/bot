@@ -69,11 +69,18 @@ public class UserService {
         wrapper.eq("user_id", user.getUserId());
         mapper.update(user,wrapper);
     }
-    public void updateUserByNormal(User user) {
+//    public void updateUserByNormal(User user) {
+//        UpdateWrapper<User> wrapper= new UpdateWrapper<>();
+//        wrapper.eq("username", user.getUsername());
+//        wrapper.eq("user_id", user.getUserId());
+//        wrapper.set("is_normal", user.isNormal());
+//        mapper.update(user,wrapper);
+//    }
+    public void updateUserByOperation(User user) {
         UpdateWrapper<User> wrapper= new UpdateWrapper<>();
         wrapper.eq("username", user.getUsername());
         wrapper.eq("user_id", user.getUserId());
-        wrapper.set("is_normal", user.isNormal());
+        wrapper.set("is_operation", user.isOperation());
         mapper.update(user,wrapper);
     }
 //
@@ -84,4 +91,10 @@ public class UserService {
         mapper.update(user,wrapper);
     }
 
+    public void updateUserValidTime(User user, Date date) {
+        UpdateWrapper<User> wrapper= new UpdateWrapper<>();
+        wrapper.eq("user_id", user.getUserId());
+        wrapper.set("valid_time", date);
+        mapper.update(user,wrapper);
+    }
 }

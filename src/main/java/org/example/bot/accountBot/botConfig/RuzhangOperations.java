@@ -90,7 +90,7 @@ public class RuzhangOperations{
                 accountService.deleteInData(accounts.get(accounts.size()-1).getAddTime(),userDTO.getGroupId());
                 issueService.updateIssueDown(accounts.get(accounts.size()-1).getDown(),userDTO.getGroupId());
                 accountBot.sendMessage(sendMessage,"撤销成功");
-                //TODO chishui_id  &&callBackName.equals(username)
+
             }else if (text.equals("取消")&&replyToText!=null){
                 log.info("replyToXXXTentacion:{}",replyToText);
                 if (replyToText.charAt(0)=='+'){
@@ -151,9 +151,9 @@ public class RuzhangOperations{
         //当前时间
         updateAccount.setAddTime(new Date());
         //数据状态默认是0
-        updateAccount.setDataStatus(0);
+        updateAccount.setRiqie(status.isRiqie());
         issue.setAddTime(new Date());
-        issue.setDataStatus(0);
+        issue.setRiqie(status.isRiqie());
         down = updateAccount.getDown();
         BigDecimal downed = issue.getDowned();
         BigDecimal downing = updateAccount.getDowning();
@@ -175,52 +175,13 @@ public class RuzhangOperations{
         issue.setUserId(userDTO.getUserId());
         //如果是回复消息，设置回复人的相关消息 用不用判断空 然后给空字符串
         updateAccount.setCallBackUserId(userDTO.getCallBackUserId());
-        //设置account的过期时间
-        if(!accountList.isEmpty()){
-            if (accountList.get(accountList.size()-1).getSetTime()!=null){
-                updateAccount.setSetTime(accountList.get(accountList.size()-1).getSetTime());
-            }else {
-                if (dateOperator.oldSetTime!=null){
-                    updateAccount.setSetTime(dateOperator.oldSetTime);
-                }else {
-                    updateAccount.setSetTime(new Date());
-                }
-                log.info("oldSetTime,{}",dateOperator.oldSetTime);
-            }
-            updateAccount.setSetTime(accountList.get(accountList.size()-1).getSetTime());
-        }else {
-            if (dateOperator.oldSetTime!=null){
-                updateAccount.setSetTime(dateOperator.oldSetTime);
-            }else {
-                updateAccount.setSetTime(new Date());
-            }
-        }
-        //设置issue的过期时间
-        if(issueList.size()>0){
-            if (issueList.get(issueList.size()-1).getSetTime()!=null){
-                issue.setSetTime(issueList.get(issueList.size()-1).getSetTime());
-            }else {
-                if (dateOperator.oldSetTime!=null){
-                    issue.setSetTime(dateOperator.oldSetTime);
-                }else {
-                    issue.setSetTime(new Date());
-                }
-                log.info("oldSetTime,{}",dateOperator.oldSetTime);
-            }
-            issue.setSetTime(issueList.get(issueList.size()-1).getSetTime());
-        }else {
-            if (dateOperator.oldSetTime!=null){
-                issue.setSetTime(dateOperator.oldSetTime);
-            }else {
-                issue.setSetTime(new Date());
-            }
-        }
         char firstChar = text.charAt(0);
         if (isMatcher){
             //公式入账 isMatch
-            utils.calcRecorded(text, userDTO.getUserId(),userDTO.getUsername(),userDTO.getGroupId(), updateAccount, total, down,issue,downed,downing);
+            utils.calcRecorded(text, userDTO.getUserId(),userDTO.getUsername(),userDTO.getGroupId(), updateAccount,
+                    total, down,issue,downed,downing,status);
         }
-       if (isMatcher==false && !accountBot.showOperatorName.isEmptyMoney(text)){
+        if (isMatcher==false && !showOperatorName.isEmptyMoney(text)){
             if (firstChar == '+' ){
                 //+10u
                 updateAccount.setTotal(num);
@@ -231,6 +192,7 @@ public class RuzhangOperations{
                 updateAccount.setDown(downing.subtract(downed));//总入帐-(总入帐*费率)/汇率=应下发- 已下发= 未下发
                 updateAccount.setRateId(rate.getId());
                 updateAccount.setAccountHandlerMoney(status.getAccountHandlerMoney());
+                updateAccount.setRiqie(status.isRiqie());
                 accountService.insertAccount(updateAccount);
             }else if (firstChar == '-' ){
                 issue.setUserId(userDTO.getUserId());
@@ -239,6 +201,7 @@ public class RuzhangOperations{
                 issue.setDowned(num);
                 issue.setCallBackUserId(userDTO.getCallBackUserId());
                 issue.setIssueHandlerMoney(status.getIssueHandlerMoney());
+                issue.setRiqie(status.isRiqie());
                 User byUserId = userService.findByUserId(userDTO.getUserId());
                 if (byUserId!=null){
                     issueService.insertIssue(issue);
@@ -248,8 +211,8 @@ public class RuzhangOperations{
             }
         }
         //重新获取最新的数据
-        List<Account> accounts = accountService.selectAccountDataStatus0(userDTO.getGroupId());
-        List<Issue> issues = issueService.selectIssue(userDTO.getGroupId());
+        List<Account> accounts = accountService.selectAccountRiqie(status.isRiqie(),userDTO.getGroupId());
+        List<Issue> issues = issueService.selectIssueRiqie(status.isRiqie(),userDTO.getGroupId());
         log.info("issues,,{}",issues);
         //获取时间数据方便后续操作
         List<String> newAccountList = new ArrayList<>();
@@ -297,7 +260,7 @@ public class RuzhangOperations{
                 issuesStringBuilder.append(
                         newIssueList.get(i)+"  "+ issuesList.get(i).getDowned().setScale(2, RoundingMode.HALF_UP)+(showDetailList.isEmpty()? ""
                                 : showDetailList.get(i))+operatorNameList.get(i));
-                if (!callBackNames.isEmpty()){
+                if (!callBackNames.isEmpty() && callBackNames.size()>i){
                     issuesStringBuilder.append(callBackNames.get(i));
                 }
                 issuesStringBuilder.append("\n");
@@ -306,40 +269,46 @@ public class RuzhangOperations{
         //显示分类 只查询有回复人的
         if (status.getDisplaySort()==0){
             List<Issue> collect = issuesList.stream().filter(Objects::nonNull).filter(issue1 -> isNotBlank(issue1.getCallBackUserId())).collect(Collectors.toList());
-            BigDecimal callBackMoney=collect.stream().map(Issue::getDowned).reduce(BigDecimal.ZERO, BigDecimal::add);
-            issuesStringBuilder.append("出账分类："+callBackMoney+"\n");
-            for (int i = 0; i < status.getShowFew() ; i++) {
-                if (!collect.isEmpty()&& collect.size()>i){
-                    Rate rate1=rateService.selectRateByID(collect.get(i).getRateId());
-                    String xf;
-                    if (status.getShowMoneyStatus()==0){
-                        xf=collect.get(i).getDowned()+"\n";
-                    }else if (status.getShowMoneyStatus()==1){
-                        xf=collect.get(i).getDowned().divide(rate1.getExchange(),2, RoundingMode.HALF_UP)+"U\n";
-                    }else {
-                        xf=collect.get(i).getDowned()+" | "+collect.get(i).getDowned().divide(rate1.getExchange(),2, RoundingMode.HALF_UP)+"U\n";
-                    }
-                    User byUserId = userService.findByUserId(collect.get(i).getCallBackUserId());
+            Map<String, List<Issue>> assembleIssueMap = collect.stream().collect(Collectors.groupingBy(Issue::getCallBackUserId, Collectors.toList()));
+            issuesStringBuilder.append("出账分类：\n");
+            assembleIssueMap.forEach((userId, issueList) -> {
+                BigDecimal tot=new BigDecimal(0);
+                BigDecimal down = new BigDecimal(0);
+                String format = "";
+                for (int i = 0; i < issueList.size() ; i++) {
+                    Rate rate1=rateService.selectRateByID(issueList.get(i).getRateId());
+                    tot=tot.add(issueList.get(i).getDowned());
+                    down=down.add(issueList.get(i).getDowned().divide(rate1.getExchange(),2, RoundingMode.HALF_UP));
+                    User byUserId = userService.findByUserId(issueList.get(i).getCallBackUserId());
                     String callBackFirstName = byUserId.getFirstName() == null ? "" : byUserId.getFirstName();
                     String callBackLastName = byUserId.getLastName() == null ? "" : byUserId.getLastName();
                     String name=callBackFirstName+callBackLastName;
-                    String format = String.format("<a href=\"tg://user?id=%d\">%s</a>", Long.parseLong(collect.get(i).getUserId()), name);
-                    issuesStringBuilder.append(format+": "+xf);
+                    format = String.format("<a href=\"tg://user?id=%d\">%s</a>", Long.parseLong(issueList.get(i).getUserId()), name);
                 }
-            }
+                String xf;
+                if (status.getShowMoneyStatus()==0){
+                    xf=tot+"\n";
+                }else if (status.getShowMoneyStatus()==1){
+                    xf=down+"U\n";
+                }else {
+                    xf=tot+" | "+down+"U\n";
+                }
+                issuesStringBuilder.append(format+": "+xf);
+            });
         }
         BigDecimal sxfCount2 = new BigDecimal(0);
+        BigDecimal bigDecimal0 = new BigDecimal(0);//用于比较0
         if (!issuesList.isEmpty()){
             sxfCount2 =issuesList.stream().map(Issue::getIssueHandlerMoney).reduce(BigDecimal.ZERO, BigDecimal::add);
             BigDecimal downed = issuesList.stream().filter(Objects::nonNull).map(Issue::getDowned).reduce(BigDecimal.ZERO, BigDecimal::add);
-            iusseText="\n已出账："+downed +"，:共"+(issuesList.size())+"笔:\n"+ issuesStringBuilder;
+            iusseText="\n已出账"+downed +"，:共"+(issuesList.size())+"笔:\n"+ issuesStringBuilder;
         }else {
             if (updateAccount.getDown()!=null){
                 issue.setDown(updateAccount.getDown());
             }
             issue.setDown(BigDecimal.ZERO);
             issue.setDowned(BigDecimal.ZERO);
-            iusseText="\n\n" +"已下发：\n"+ "暂无下发数据";
+            iusseText="\n\n" +"已出账\n"+ "暂无出账数据";
         }
         int accountHandleStatus = 0;
         int accountCallBackStatus = 0;
@@ -382,7 +351,7 @@ public class RuzhangOperations{
                     stringBuilder.append(
                             newList.get(i)+" "+ accounts.get(i).getTotal().setScale(2, RoundingMode.HALF_UP)+" "
                                     +accountDetails.get(i)+" "+accountOperatorNames.get(i)+" ");
-                    if (!accountCallBackNames.isEmpty()){
+                    if (!accountCallBackNames.isEmpty() && accountCallBackNames.size()>i){
                         stringBuilder.append(accountCallBackNames.get(i));
                     }
                     stringBuilder.append("\n");
@@ -391,35 +360,40 @@ public class RuzhangOperations{
             //显示分类
             if (status.getDisplaySort()==0){
                 List<Account> collect = accounts.stream().filter(Objects::nonNull).filter(account -> isNotBlank(account.getCallBackUserId())).collect(Collectors.toList());
-                BigDecimal callBackMoney =collect.stream().map(Account::getTotal).reduce(BigDecimal.ZERO, BigDecimal::add);
-                stringBuilder.append("入款分类："+callBackMoney+"\n");
-                for (int i = 0; i < status.getShowFew() ; i++) {
-                    if (!collect.isEmpty() && collect.size()>i){
-                        Rate rate1=rateService.selectRateByID(collect.get(i).getRateId());
-                        String xf;
-                        if (status.getShowMoneyStatus()==0){
-                            xf=collect.get(i).getTotal()+"\n";
-                        }else if (status.getShowMoneyStatus()==1){
-                            xf=collect.get(i).getDowning().divide(rate1.getExchange(),2, RoundingMode.HALF_UP)+"U\n";
-                        }else {
-                            xf=collect.get(i).getTotal()+" | "+collect.get(i).getDowning().divide(rate1.getExchange(),2, RoundingMode.HALF_UP)+"U\n";
-                        }
-                        User byUserId = userService.findByUserId(collect.get(i).getCallBackUserId());
+                stringBuilder.append("入款分类："+"\n");
+                Map<String, List<Account>> assembleAccountMap = collect.stream().collect(Collectors.groupingBy(Account::getCallBackUserId, Collectors.toList()));
+                assembleAccountMap.forEach((userId, accountList) -> {
+                    BigDecimal tot=new BigDecimal(0);
+                    BigDecimal down = new BigDecimal(0);
+                    String format = "";
+                    for (int i = 0; i < accountList.size() ; i++) {
+                        Rate rate1=rateService.selectRateByID(accountList.get(i).getRateId());
+                        tot=tot.add(accountList.get(i).getTotal());
+                        down=down.add(accountList.get(i).getDowning().divide(rate1.getExchange(),2, RoundingMode.HALF_UP));
+                        User byUserId = userService.findByUserId(accountList.get(i).getCallBackUserId());
                         String callBackFirstName = byUserId.getFirstName() == null ? "" : byUserId.getFirstName();
                         String callBackLastName = byUserId.getLastName() == null ? "" : byUserId.getLastName();
                         String name=callBackFirstName+callBackLastName;
-                        String format = String.format("<a href=\"tg://user?id=%d\">%s</a>", Long.parseLong(collect.get(i).getUserId()), name);
-                        stringBuilder.append(format+": "+xf);
+                        format = String.format("<a href=\"tg://user?id=%d\">%s</a>", Long.parseLong(accountList.get(i).getUserId()), name);
                     }
-                }
+                    String xf;
+                    if (status.getShowMoneyStatus()==0){
+                        xf=tot+"\n";
+                    }else if (status.getShowMoneyStatus()==1){
+                        xf=down+"U\n";
+                    }else {
+                        xf=tot+" | "+down+"U\n";
+                    }
+                    stringBuilder.append(format+": "+xf);
+                });
             }
             String sxf = "";
+            BigDecimal sxfCount =accounts.stream().map(Account::getAccountHandlerMoney).reduce(BigDecimal.ZERO, BigDecimal::add);
             if (status.getShowHandlerMoneyStatus()==0){
-                BigDecimal sxfCount =accounts.stream().map(Account::getAccountHandlerMoney).reduce(BigDecimal.ZERO, BigDecimal::add);
-                sxf=    "\n单笔入款手续费："+ status.getAccountHandlerMoney()+
-                        "\n单笔下方手续费："+ status.getIssueHandlerMoney()+
-                        "\n入款手续费总："+ sxfCount+
-                        "\n下发手续费总："+ sxfCount2;//sxf2 是下发手续费
+                String rukuan = status.getAccountHandlerMoney().compareTo(bigDecimal0) == 0 ? "" : "\n单笔入款手续费：" + status.getAccountHandlerMoney();
+                String  xiafa= status.getIssueHandlerMoney().compareTo(bigDecimal0) == 0 ? "" : "\n单笔下发手续费：" + status.getIssueHandlerMoney();
+                String count = sxfCount.add(sxfCount2).compareTo(bigDecimal0) == 0 ? "" : "\n手续费总：" + sxfCount.add(sxfCount2);
+                sxf=  rukuan+ xiafa+count;//sxf2 是下发手续费
             }
 //            入款分类：
             return "\n已入账："+total +"，:共"+(accounts.size())+"笔:\n"+
@@ -428,7 +402,7 @@ public class RuzhangOperations{
                     "\n汇率："+ rate.getExchange().setScale(2, RoundingMode.HALF_UP)+
                     "\n费率："+ rate.getRate().setScale(2, RoundingMode.HALF_UP)+
                     "\n应下发："+ yxf+
-                    "\n已下发："+ yixf+
+                    "\n已下发"+ yixf+
                     "\n未下发："+ wxf+sxf;
         } else {
             //已下发
@@ -463,12 +437,12 @@ public class RuzhangOperations{
                 }
             }
             String sxf = "";
+            BigDecimal sxfCount =accounts.stream().map(Account::getAccountHandlerMoney).reduce(BigDecimal.ZERO, BigDecimal::add);
             if (status.getShowHandlerMoneyStatus()==0){
-                BigDecimal sxfCount =accounts.stream().map(Account::getAccountHandlerMoney).reduce(BigDecimal.ZERO, BigDecimal::add);
-                sxf=    "\n单笔入款手续费："+ status.getAccountHandlerMoney()+
-                        "\n单笔下方手续费："+ status.getIssueHandlerMoney()+
-                        "\n入款手续费总："+ sxfCount+
-                        "\n下发手续费总："+ sxfCount2;//sxf2 是下发手续费
+                String rukuan = status.getAccountHandlerMoney().compareTo(bigDecimal0) == 0 ? "" : "\n单笔入款手续费：" + status.getAccountHandlerMoney();
+                String  xiafa= status.getIssueHandlerMoney().compareTo(bigDecimal0) == 0 ? "" : "\n单笔下发手续费：" + status.getIssueHandlerMoney();
+                String count = sxfCount.add(sxfCount2).compareTo(bigDecimal0) == 0 ? "" : "\n手续费总：" + sxfCount.add(sxfCount2);
+                sxf=  rukuan+ xiafa+count;//sxf2 是下发手续费
             }
             return "\n已入账："+total+"，:共"+(accounts.size())+"笔:\n"+
                     " "+ "暂无已入账数据"+ iusseText+
@@ -523,6 +497,7 @@ public class RuzhangOperations{
         List<String> callBackNameList=new ArrayList<>();
         for (int i = 0; i < accounts.size(); i++) {
             if (accounts.get(i).getCallBackUserId()==null){
+                callBackNameList.add("");
                 continue;
             }
             User byUserId = userService.findByUserId(accounts.get(i).getCallBackUserId());
@@ -570,6 +545,7 @@ public class RuzhangOperations{
         List<String> callBackNameList=new ArrayList<>();
         for (int i = 0; i < issuesList.size(); i++) {
             if (issuesList.get(i).getCallBackUserId()==null){
+                callBackNameList.add("");
                 continue;
             }
             User byUserId = userService.findByUserId(issuesList.get(i).getCallBackUserId());//查询回复人信息
