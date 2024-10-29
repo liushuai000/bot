@@ -142,10 +142,10 @@ public class AccountBot extends TelegramLongPollingBot {
         if (StringUtils.isEmpty(userDTO.getUsername()))userDTO.setUsername("");
         //设置日切
         dateOperator.isOver24HourCheck(message, sendMessage, userDTO, status);
-        List<Account> accountList=dateOperator.selectAccountIsRiqie(sendMessage,status,userDTO.getGroupId());
-
-        //搜索出历史下发订单/判断是否过期
-        List<Issue> issueList=issueService.selectIssueRiqie(status.isRiqie(),userDTO.getGroupId());
+        //查询最新数据用这个 dateOperator.selectIsRiqie
+        List<Account> accountList=dateOperator.selectIsRiqie(sendMessage,status,userDTO.getGroupId());
+        List<Issue> issueList=dateOperator.selectIsIssueRiqie(sendMessage,status,userDTO.getGroupId());
+        dateOperator.checkRiqie(sendMessage,status,accountList,issueList);
         //设置操作人员
         settingOperatorPerson.setHandle(split1, sendMessage, message,message.getText(),userDTO,user1,status);
         //设置费率/汇率
@@ -163,7 +163,7 @@ public class AccountBot extends TelegramLongPollingBot {
         //删除操作人员
         settingOperatorPerson.deleteHandle(message.getText(),sendMessage);
         //删除今日数据/关闭日切/
-        dateOperator.deleteTodayData(message,sendMessage,userDTO.getGroupId(),status);
+        dateOperator.deleteTodayData(message,sendMessage,userDTO.getGroupId(),status,accountList,issueList);
         //通知功能
         notificationService.inform(message.getText(),sendMessage);
     }

@@ -64,7 +64,6 @@ public class IssueService {
     }
     public void deleteHistoryIssueData(String groupId) {
         QueryWrapper<Issue> wrapper = new QueryWrapper<>();
-        wrapper.eq("data_status", 0);
         wrapper.eq("group_id", groupId);
         mapper.delete(wrapper);
     }
@@ -76,4 +75,17 @@ public class IssueService {
         mapper.delete(updateWrapper);
     }
 
+    public void updateLastUpdateRiqie(int id,boolean riqie,Date updateTime) {
+        UpdateWrapper<Issue> updateWrapper = new UpdateWrapper<>();
+        updateWrapper.eq("id",id);
+        updateWrapper.set("update_time",updateTime);
+        updateWrapper.set("riqie",riqie);
+        mapper.update(null,updateWrapper);
+    }
+    public void updateRiqie(int id, boolean riqie) {
+        UpdateWrapper<Issue> updateWrapper = new UpdateWrapper<>();
+        updateWrapper.eq("id",id);
+        updateWrapper.set("riqie",riqie);
+        mapper.update(null,updateWrapper);
+    }
 }

@@ -21,7 +21,7 @@ public class User {
     @TableId(type= IdType.AUTO,value = "id")
     public int id; //主键id
     @TableField("user_id")
-    public String userId; //主键id update.getMessage().getReplyToMessage().getFrom().id 是纸飞机生成的id
+    public String userId; //主键id
     @TableField("superiors_user_id")
     public String superiorsUserId;//上级用户id   上级管理设置操作员  根据上级用户id获取管理员有效期
     @TableField("username")

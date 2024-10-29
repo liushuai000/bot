@@ -34,6 +34,9 @@ public class Issue {
     private BigDecimal downed;    //已下发 已出帐
     @TableField("down")
     private BigDecimal down;    //未下发
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
+    @TableField("update_time")
+    private Date updateTime;//日切关闭时的时间
     @TableField("add_time")
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
     private Date addTime;

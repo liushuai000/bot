@@ -1,5 +1,6 @@
 package org.example.bot.accountBot.mapper;
 
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import org.apache.ibatis.annotations.*;
 import org.example.bot.accountBot.pojo.Account;
@@ -10,6 +11,7 @@ import java.util.List;
 
 @Mapper
 public interface AccountMapper extends BaseMapper<Account> {
+
 //
 //    @Select("select handle, handleFirstName,handleStatus,call_back,callBackFirstName,callBackStatus, total, downing, down, addTime, dataStatus,setTime from accounts where dataStatus = 0")
 //    List<Account> selectAccountDataStatus0();

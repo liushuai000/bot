@@ -13,8 +13,7 @@ import java.util.Date;
 @Data
 @ApiModel("RateDTO")
 public class RateDTO {
-    @ApiModelProperty(value="id")
-    public String id;
+
     @ApiModelProperty("group_id")
     private String groupId;//群组id
     @ApiModelProperty("exchange")
@@ -22,10 +21,10 @@ public class RateDTO {
     @ApiModelProperty("rate")
     private BigDecimal rate=BigDecimal.ZERO;    //费率
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
-    @ApiModelProperty("add_time")
+    @ApiModelProperty("addTime")
     private Date addTime;//添加的时间
-    @ApiModelProperty("is_matcher")
-    private boolean isMatcher=false;    //是否是公式入账的：true 1 表示是， false 0表示不是
+    @ApiModelProperty("matcher")
+    private boolean matcher=false;    //是否是公式入账的：true 1 表示是， false 0表示不是
     @ApiModelProperty("calc_u")//如果是+30u 带U就不计算费率 默认false不带U计算
     private boolean calcU=false;// true 是计算 false是不计算 直接增加 +30u 的时候会计算费率这个点，不应该计算费率，只需要根据当前设置的固定汇率计算除金额，跟+30u
 

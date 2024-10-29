@@ -69,7 +69,7 @@ public class Utils{
 
         Date date = new Date();
         Date from = Date.from(LocalDateTime.now().plusDays(20).atZone(ZoneId.systemDefault()).toInstant());
-        System.err.println(date.compareTo(from)<0);//等于true
+        System.err.println(from.compareTo(date));//等于true
     }
     //入账操作2.0，匹配公式
     public  boolean calcRecorded(String text1, String messageUserId, String userName, String groupId, Account updateAccount, BigDecimal total, BigDecimal down, Issue issue,

@@ -34,6 +34,8 @@ public class ShowOperatorName {
     AccountBot accountBot;
     @Autowired
     RuzhangOperations ruzhangOperations;
+    @Autowired
+    private DateOperator dateOperator;
 
     //显示操作人名字  显示账单用
     public void  replay(SendMessage sendMessage, UserDTO userDTO, Account updateAccount, Rate rate, List<Issue> issuesList, Issue issue, String text, Status status) {
@@ -42,7 +44,7 @@ public class ShowOperatorName {
         new ButtonList().implList(null, sendMessage);
         String iusseText="";
         //重新获取最新的数据
-        List<Account> accounts = accountService.selectAccountRiqie(status.isRiqie(),userDTO.getGroupId());
+        List<Account> accounts = dateOperator.selectIsRiqie(sendMessage,status,userDTO.getGroupId());
         List<String> newList = new ArrayList<>();
         List<String> newIssueList=new ArrayList<>();
         for (Account account : accounts) {
@@ -51,7 +53,7 @@ public class ShowOperatorName {
         }
         //已出账
         BigDecimal num = issuesList.stream().filter(Objects::nonNull).map(Issue::getDowned).reduce(BigDecimal.ZERO, BigDecimal::add);
-        List<Issue> issues = issueService.selectIssueRiqie(status.isRiqie(),userDTO.getGroupId());
+        List<Issue> issues = dateOperator.selectIsIssueRiqie(sendMessage,status,userDTO.getGroupId());
         log.info("issues,,{}",issues);
         //获取时间数据方便后续操作
 

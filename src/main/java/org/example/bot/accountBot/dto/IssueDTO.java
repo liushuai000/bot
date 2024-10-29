@@ -13,16 +13,16 @@ import java.util.Date;
 @Accessors(chain = true)
 @Data
 @ApiModel("IssueDTO")
-public class IssueDTO {
+public class IssueDTO extends RateDTO{
     @ApiModelProperty(value="id")
     public String id;
-    @ApiModelProperty("rate_id")
+    @ApiModelProperty("rateId")
     private int rateId;//外键id rate的因为是多个账单 一对多 (+1000/7*0.05)单笔的就是一对一汇率
-    @ApiModelProperty("group_id")
+    @ApiModelProperty("groupId")
     private String groupId;//群组id
-    @ApiModelProperty("user_id")
+    @ApiModelProperty("userId")
     private String userId;//操作人id
-    @ApiModelProperty("call_back_user_id")
+    @ApiModelProperty("callBackUserId")
     private String callBackUserId;//回复人id
     @ApiModelProperty("downed")
     private BigDecimal downed;    //已下发 已出帐
@@ -33,7 +33,7 @@ public class IssueDTO {
     private Date addTime;
     @ApiModelProperty("riqie")
     private boolean riqie=false;   //是否设置了日切  用status里的 set_riqie 查询status里的日切时间
-    @ApiModelProperty("issue_handler_money")
+    @ApiModelProperty("issueHandlerMoney")
     private BigDecimal issueHandlerMoney=BigDecimal.ZERO;//全局下方手续费
 
 

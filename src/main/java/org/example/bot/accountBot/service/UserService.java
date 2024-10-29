@@ -33,7 +33,7 @@ public class UserService {
     public List<User> selectByNormal(boolean isNormal) {
         QueryWrapper<User> queryWrapper = new QueryWrapper<>();
         queryWrapper.eq("is_normal", isNormal);
-        return mapper.selectList(queryWrapper);
+        return mapper.selectList(queryWrapper);//显示操作人is_operation
     }
     //查询是否已经在数据库的操作员
     public User findByUsername(String userName) {

@@ -211,8 +211,8 @@ public class RuzhangOperations{
             }
         }
         //重新获取最新的数据
-        List<Account> accounts = accountService.selectAccountRiqie(status.isRiqie(),userDTO.getGroupId());
-        List<Issue> issues = issueService.selectIssueRiqie(status.isRiqie(),userDTO.getGroupId());
+        List<Account> accounts = dateOperator.selectIsRiqie(sendMessage,status,userDTO.getGroupId());
+        List<Issue> issues = dateOperator.selectIsIssueRiqie(sendMessage,status,userDTO.getGroupId());
         log.info("issues,,{}",issues);
         //获取时间数据方便后续操作
         List<String> newAccountList = new ArrayList<>();
@@ -402,7 +402,7 @@ public class RuzhangOperations{
                     "\n汇率："+ rate.getExchange().setScale(2, RoundingMode.HALF_UP)+
                     "\n费率："+ rate.getRate().setScale(2, RoundingMode.HALF_UP)+
                     "\n应下发："+ yxf+
-                    "\n已下发"+ yixf+
+                    "\n已下发: "+ yixf+
                     "\n未下发："+ wxf+sxf;
         } else {
             //已下发

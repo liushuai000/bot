@@ -34,10 +34,13 @@ public class Account {
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
     @TableField("add_time")
     private Date addTime;
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
+    @TableField("update_time")
+    private Date updateTime;//日切关闭时的时间
     @TableField("total")
     private BigDecimal total;    //总入账 这个是每笔要入款的金额
     @TableField("downing")
-    private BigDecimal downing;    //应下发
+    private BigDecimal downing;    //应下发  默认12点
     @TableField("down")
     private BigDecimal down;    //未下发
     @TableField("riqie")

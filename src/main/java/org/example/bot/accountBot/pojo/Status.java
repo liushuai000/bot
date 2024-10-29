@@ -8,6 +8,8 @@ import lombok.Data;
 import lombok.experimental.Accessors;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.Date;
 
 //此表为根据群组id设置操作人显示 明细显示 回复人显示
@@ -41,8 +43,15 @@ public class Status {
     @TableField("show_handler_money_status")
     private int showHandlerMoneyStatus=1;//手续费显示状态：1表示不显示，0表示显示
     @TableField("set_time")
-    private Date setTime;   //账单 设置的过期时间 日切时间
+    private Date setTime=this.parseDate();   //账单 设置的过期时间 日切时间
     @TableField("riqie")
     private boolean riqie;   //是否设置了日切 true 1 false 0
+
+    public Date parseDate(){
+        LocalDateTime tomorrow=LocalDateTime.now().plusDays(1).withHour(12).withMinute(0).withSecond(0).withNano(0);
+        return Date.from(tomorrow.atZone(ZoneId.systemDefault()).toInstant());
+    }
+
+
 
 }

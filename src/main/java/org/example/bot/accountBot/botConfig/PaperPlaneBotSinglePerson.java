@@ -3,6 +3,7 @@ package org.example.bot.accountBot.botConfig;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.example.bot.accountBot.dto.UserDTO;
+import org.example.bot.accountBot.mapper.UserAuthorityMapper;
 import org.example.bot.accountBot.pojo.User;
 import org.example.bot.accountBot.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -30,6 +31,9 @@ public class PaperPlaneBotSinglePerson {
     UserService userService;
     @Value("${adminUserId}")
     protected String adminUserId;
+    @Autowired
+    UserAuthorityMapper userAuthorityMapper;
+
 
     //设置机器人在群组内的有效时间 默认免费使用日期6小时. 机器人底部按钮 获取个人信息 获取最新用户名 获取个人id 使用日期;
     protected void handleNonGroupMessage(Message message, SendMessage sendMessage, UserDTO userDTO) {
