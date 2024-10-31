@@ -22,14 +22,16 @@ public class UserAuthority {
 
     @TableId(type= IdType.AUTO,value = "id")
     public int id; //主键id
-//    @TableField("is_normal")
-//    public boolean isNormal=true; //是普通(1) 否(0)
+    @TableField("user_id")
+    private String userId;
+    @TableField("username")
+    public String username;
     @TableField("is_operation")
     public boolean isOperation;//默认不是操作员需要管理员设置操作员 是操作员(1) 否(0)  超级管理  管理(isNormal) 操作员(isOperation)  群里普通用户
     @TableField("group_id")
     private String groupId;//群组id
     @TableField("create_time")
-    private Date createTime;
+    private Date createTime=new Date();
 
 
 

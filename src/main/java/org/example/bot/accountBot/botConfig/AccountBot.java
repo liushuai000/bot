@@ -3,6 +3,7 @@ package org.example.bot.accountBot.botConfig;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.example.bot.accountBot.dto.UserDTO;
+import org.example.bot.accountBot.mapper.UserAuthorityMapper;
 import org.example.bot.accountBot.pojo.*;
 
 import org.example.bot.accountBot.service.*;
@@ -12,8 +13,10 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
+import org.telegram.telegrambots.meta.api.objects.ChatMemberUpdated;
 import org.telegram.telegrambots.meta.api.objects.Message;
 import org.telegram.telegrambots.meta.api.objects.Update;
+import org.telegram.telegrambots.meta.api.objects.chatmember.ChatMember;
 
 import java.util.*;
 
@@ -48,9 +51,8 @@ public class AccountBot extends TelegramLongPollingBot {
     @Autowired
     protected PaperPlaneBotSinglePerson paperPlaneBotSinglePerson;
     @Autowired
-    protected AccountService accountService;
-    @Autowired
-    protected IssueService issueService;
+    private UserAuthorityService userAuthorityService;
+
     @Override
     public String getBotUsername() {
         return username;
@@ -85,7 +87,7 @@ public class AccountBot extends TelegramLongPollingBot {
         sendMessage.setChatId(String.valueOf(message.getChatId()==null?"":message.getChatId()));
         if (update.hasMessage() && update.getMessage().hasText()) this.BusinessHandler(message,sendMessage,replyToText,userDTO);
     }
-    //getMessageContentIsContain  小心添加命令后拦截 注意!!!!
+
     public void BusinessHandler(Message message,SendMessage sendMessage, String replyToText, UserDTO userDTO) {
         //私聊的机器人  处理个人消息
         if (message.getChat().isUserChat()){
@@ -94,15 +96,21 @@ public class AccountBot extends TelegramLongPollingBot {
         }
         User userTemp = userService.findByUserId(userDTO.getUserId());
         User userTemp2 = userService.findByUsername(userDTO.getUsername());
+        UserAuthority userAuthority=userAuthorityService.selectByUserAndGroupId(userDTO.getUserId(),userDTO.getGroupId());
+        UserAuthority userAuthorityName=userAuthorityService.findByUsername(userDTO.getUsername(),userDTO.getGroupId());
         //改成sql查询username 和userId 不要全查了 并且isNormal是false
         this.setIsAdminUser(sendMessage,userDTO,userTemp,userTemp2);
         User user1;
+        UserAuthority userAuthorityName1;
         if (userTemp!=null){
             user1=userTemp;
+            userAuthorityName1=userAuthority;
         }else if (userTemp2!=null){
             user1=userTemp2;
+            userAuthorityName1=userAuthorityName;
         }else {
             user1=userService.findByUserId(userDTO.getUserId());
+            userAuthorityName1=userAuthorityService.selectByUserAndGroupId(userDTO.getUserId(),userDTO.getGroupId());
         }
         //计算器功能
         utils.counter(message,sendMessage);
@@ -119,12 +127,8 @@ public class AccountBot extends TelegramLongPollingBot {
                 this.sendMessage(sendMessage,"管理员无效或不在有效期内!请联系: "+format);
                 return;
             }
-        }else {
-            String format = String.format("<a href=\"tg://user?id=%d\">%s</a>", Long.parseLong(adminUserId), "超级管理");
-            this.sendMessage(sendMessage,"管理员无效或不在有效期内!请联系: "+format);
-            return;
         }
-        if (!user1.isOperation()){
+        if (user==null && !userAuthorityName1.isOperation()){
             this.sendMessage(sendMessage,"不是操作员 请联系管理员!");
             return;
         }
@@ -155,6 +159,8 @@ public class AccountBot extends TelegramLongPollingBot {
         //入账操作
         ruzhangOperations.inHandle(split2,message.getText(),  updateAccount,  sendMessage, accountList, message,split3,
                 rate,issue,issueList,userDTO,status);
+        //删除今日数据/关闭日切/
+        dateOperator.deleteTodayData(message,sendMessage,userDTO.getGroupId(),status,accountList,issueList);
         //入账时候已经调用过 +0显示账单用
         if (!showOperatorName.isEmptyMoney(message.getText())){
             //显示操作人名字 && 显示明细
@@ -162,8 +168,6 @@ public class AccountBot extends TelegramLongPollingBot {
         }
         //删除操作人员
         settingOperatorPerson.deleteHandle(message.getText(),sendMessage);
-        //删除今日数据/关闭日切/
-        dateOperator.deleteTodayData(message,sendMessage,userDTO.getGroupId(),status,accountList,issueList);
         //通知功能
         notificationService.inform(message.getText(),sendMessage);
     }
@@ -180,13 +184,19 @@ public class AccountBot extends TelegramLongPollingBot {
                 userNew.setUsername(userDTO.getCallBackName()==null?"":userDTO.getCallBackName());
                 userNew.setLastName(userDTO.getCallBackLastName()==null?"":userDTO.getCallBackLastName());
                 userNew.setFirstName(userDTO.getCallBackFirstName()==null?"":userDTO.getCallBackFirstName());
-                userNew.setOldUsername(userDTO.getCallBackName()==null?"":userDTO.getCallBackName());
-                userNew.setOldFirstName(userDTO.getCallBackFirstName()==null?"":userDTO.getCallBackFirstName());
-                userNew.setOldLastName(userDTO.getCallBackLastName()==null?"":userDTO.getCallBackLastName());
-                userNew.setOperation(false);
                 userNew.setValidTime(new Date());
                 userNew.setCreateTime(new Date());
                 userService.insertUser(userNew);
+
+                UserAuthority userAuthority = new UserAuthority();
+                userAuthority.setOperation(false);
+                userAuthority.setUserId(userDTO.getCallBackUserId());
+                userAuthority.setUsername(userDTO.getCallBackName()==null?"":userDTO.getCallBackName());
+                userAuthority.setGroupId(userDTO.getGroupId());
+                UserAuthority repeat = userAuthorityService.repeat(userAuthority,userDTO.getGroupId());
+                if (repeat==null){
+                    userAuthorityService.insertUserAuthority(userAuthority);
+                }
             }
         }
         //能发送消息userid就不为空 因为有一种空的用户名情况 但是没有空的userId情况
@@ -217,6 +227,14 @@ public class AccountBot extends TelegramLongPollingBot {
                 user.setLastName(lastNameDTO);
                 user.setFirstName(firstNameDTO);
                 userService.updateUserid(user);
+
+                UserAuthority userAuthority1 = new UserAuthority();
+                userAuthority1.setUserId(user.getUserId());
+                userAuthority1.setUsername(username);
+                UserAuthority userAuthority = userAuthorityService.repeat(userAuthority1,userDTO.getGroupId());
+                userAuthority.setUsername(username);
+                userAuthority.setGroupId(userDTO.getGroupId());
+                userAuthorityService.update(userAuthority);
             }
         } else if (byUsername!=null ){//设置完操作员  然后操作员也不说话 然后操作员直接修改了用户名 会有问题
             if (byUsername.getUsername()!=null){
@@ -226,6 +244,11 @@ public class AccountBot extends TelegramLongPollingBot {
                 byUsername.setLastName(lastNameDTO);
                 byUsername.setFirstName(firstNameDTO);
                 userService.updateUsername(byUsername);
+
+                UserAuthority userAuthority = userAuthorityService.findByUsername(byUsername.getUsername(), userDTO.getGroupId());
+                userAuthority.setUserId(userDTO.getUserId());
+                userAuthority.setGroupId(userDTO.getGroupId());
+                userAuthorityService.update(userAuthority);
             }
         }else {
             User userNew = new User();
@@ -233,13 +256,18 @@ public class AccountBot extends TelegramLongPollingBot {
             userNew.setUsername(userDTO.getUsername()==null?"":userDTO.getUsername());
             userNew.setLastName(userDTO.getLastName()==null?"":userDTO.getLastName());
             userNew.setFirstName(userDTO.getFirstName()==null?"":userDTO.getFirstName());
-            userNew.setOldUsername(userDTO.getUsername()==null?"":userDTO.getUsername());
-            userNew.setOldFirstName(userDTO.getFirstName()==null?"":userDTO.getFirstName());
-            userNew.setOldLastName(userDTO.getLastName()==null?"":userDTO.getLastName());
-            userNew.setOperation(false);
             userNew.setValidTime(new Date());
             userNew.setCreateTime(new Date());
             userService.insertUser(userNew);
+            UserAuthority userAuthority = new UserAuthority();
+            userAuthority.setOperation(false);
+            userAuthority.setUserId(userDTO.getUserId());
+            userAuthority.setUsername(userDTO.getUsername()==null?"":userDTO.getUsername());
+            userAuthority.setGroupId(userDTO.getGroupId());
+            UserAuthority repeat = userAuthorityService.repeat(userAuthority,userDTO.getGroupId());
+            if (repeat==null){
+                userAuthorityService.insertUserAuthority(userAuthority);
+            }
         }
     }
 

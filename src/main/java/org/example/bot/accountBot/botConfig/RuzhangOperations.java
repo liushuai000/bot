@@ -87,25 +87,37 @@ public class RuzhangOperations{
         String text = message.getText();
         if (text.length()>=2||replyToText!=null){
             if (text.equals("撤销入款")){
-                accountService.deleteInData(accounts.get(accounts.size()-1).getAddTime(),userDTO.getGroupId());
-                issueService.updateIssueDown(accounts.get(accounts.size()-1).getDown(),userDTO.getGroupId());
-                accountBot.sendMessage(sendMessage,"撤销成功");
-
+                if (accounts.isEmpty()){
+                    accountBot.sendMessage(sendMessage,"撤销未成功! 账单为空");
+                }else {
+                    List<Account> sortedUserList = accounts.stream().sorted(Comparator.comparing(Account::getAddTime)) // 按时间倒序排序
+                            .collect(Collectors.toList());
+                    accountService.deleteInData(String.valueOf(sortedUserList.get(sortedUserList.size()-1).getId()),userDTO.getGroupId());
+                    issueService.updateIssueDown(sortedUserList.get(sortedUserList.size()-1).getDown(),userDTO.getGroupId());
+                    accountBot.sendMessage(sendMessage,"撤销成功");
+                }
             }else if (text.equals("取消")&&replyToText!=null){
                 log.info("replyToXXXTentacion:{}",replyToText);
                 if (replyToText.charAt(0)=='+'){
-                    accountService.deleteInData(accounts.get(accounts.size()-1).getAddTime(),userDTO.getGroupId());
+                    accountService.deleteInData(String.valueOf(accounts.get(accounts.size()-1).getId()),userDTO.getGroupId());
                     issueService.updateIssueDown(accounts.get(accounts.size()-1).getDown(),userDTO.getGroupId());
                 }else if (replyToText.charAt(0)=='-'){
-                    issueService.deleteNewestIssue(issueList.get(issueList.size()-1).getAddTime(),userDTO.getGroupId());
+                    issueService.deleteNewestIssue(String.valueOf(issueList.get(issueList.size()-1).getId()),userDTO.getGroupId());
                     accountService.updateNewestData(issueList.get(issueList.size()-1).getDown(),userDTO.getGroupId());
                 }else {
                     return;
                 }
                 accountBot.sendMessage(sendMessage,"取消成功");
             }else if (text.equals("撤销下发")){
-                issueService.deleteNewestIssue(issueList.get(issueList.size()-1).getAddTime(),userDTO.getGroupId());
-                accountService.updateNewestData(issueList.get(issueList.size()-1).getDown(),userDTO.getGroupId());
+                if (issueList.isEmpty()){
+                    accountBot.sendMessage(sendMessage,"撤销未成功! 账单为空");
+                    return;
+                }else {
+                    List<Issue> sortedUserList = issueList.stream().sorted(Comparator.comparing(Issue::getAddTime)) // 按时间倒序排序
+                            .collect(Collectors.toList());
+                    issueService.deleteNewestIssue(String.valueOf(sortedUserList.get(sortedUserList.size()-1).getId()),userDTO.getGroupId());
+                    accountService.updateNewestData(sortedUserList.get(sortedUserList.size()-1).getDown(),userDTO.getGroupId());
+                }
                 accountBot.sendMessage(sendMessage,"撤销成功");
             }
         }
@@ -128,12 +140,21 @@ public class RuzhangOperations{
             return;
         }
         BigDecimal num = new BigDecimal(0);
+        Rate rate1 = null;
         //当不是公式入账时才赋值
         if (!isMatcher) {
             if (text.substring(1).endsWith("u")||text.substring(1).endsWith("U")){
                 String numberPart = text.substring(0, text.length() - 1);
                 num=new BigDecimal(numberPart.substring(1)).multiply(rate.getExchange());
+                rate1=new Rate();
                 rate.setCalcU(true);//是+30U 的不计算费率
+                rate1.setCalcU(true);
+                rate1.setMatcher(false);
+                rate1.setGroupId(rate.getGroupId());
+                rate1.setExchange(rate.getExchange());
+                rate1.setRate(rate.getRate());
+                rate1.setAddTime(new Date());
+                rateService.insertRate(rate1);
             }else {
                 num=new BigDecimal(text.substring(1));
             }
@@ -190,7 +211,11 @@ public class RuzhangOperations{
                 downing=utils.dowingAccount(num,rate,downing);
                 updateAccount.setDowning(downing.setScale(2, RoundingMode.HALF_UP));
                 updateAccount.setDown(downing.subtract(downed));//总入帐-(总入帐*费率)/汇率=应下发- 已下发= 未下发
-                updateAccount.setRateId(rate.getId());
+                if (rate1!=null){
+                    updateAccount.setRateId(rate1.getId());
+                }else {
+                    updateAccount.setRateId(rate.getId());
+                }
                 updateAccount.setAccountHandlerMoney(status.getAccountHandlerMoney());
                 updateAccount.setRiqie(status.isRiqie());
                 accountService.insertAccount(updateAccount);
@@ -301,7 +326,7 @@ public class RuzhangOperations{
         if (!issuesList.isEmpty()){
             sxfCount2 =issuesList.stream().map(Issue::getIssueHandlerMoney).reduce(BigDecimal.ZERO, BigDecimal::add);
             BigDecimal downed = issuesList.stream().filter(Objects::nonNull).map(Issue::getDowned).reduce(BigDecimal.ZERO, BigDecimal::add);
-            iusseText="\n已出账"+downed +"，:共"+(issuesList.size())+"笔:\n"+ issuesStringBuilder;
+            iusseText="\n已出账: "+downed +"，:共"+(issuesList.size())+"笔:\n"+ issuesStringBuilder;
         }else {
             if (updateAccount.getDown()!=null){
                 issue.setDown(updateAccount.getDown());
@@ -389,12 +414,10 @@ public class RuzhangOperations{
             }
             String sxf = "";
             BigDecimal sxfCount =accounts.stream().map(Account::getAccountHandlerMoney).reduce(BigDecimal.ZERO, BigDecimal::add);
-            if (status.getShowHandlerMoneyStatus()==0){
-                String rukuan = status.getAccountHandlerMoney().compareTo(bigDecimal0) == 0 ? "" : "\n单笔入款手续费：" + status.getAccountHandlerMoney();
-                String  xiafa= status.getIssueHandlerMoney().compareTo(bigDecimal0) == 0 ? "" : "\n单笔下发手续费：" + status.getIssueHandlerMoney();
-                String count = sxfCount.add(sxfCount2).compareTo(bigDecimal0) == 0 ? "" : "\n手续费总：" + sxfCount.add(sxfCount2);
-                sxf=  rukuan+ xiafa+count;//sxf2 是下发手续费
-            }
+            String rukuan = status.getAccountHandlerMoney().compareTo(bigDecimal0) == 0 ? "" : "\n单笔入款手续费：" + status.getAccountHandlerMoney();
+            String  xiafa= status.getIssueHandlerMoney().compareTo(bigDecimal0) == 0 ? "" : "\n单笔下发手续费：" + status.getIssueHandlerMoney();
+            String count = sxfCount.add(sxfCount2).compareTo(bigDecimal0) == 0 ? "" : "\n手续费总：" + sxfCount.add(sxfCount2);
+            sxf=  rukuan+ xiafa+count;//sxf2 是下发手续费
 //            入款分类：
             return "\n已入账："+total +"，:共"+(accounts.size())+"笔:\n"+
                     stringBuilder +iusseText+"\n"+
@@ -402,7 +425,7 @@ public class RuzhangOperations{
                     "\n汇率："+ rate.getExchange().setScale(2, RoundingMode.HALF_UP)+
                     "\n费率："+ rate.getRate().setScale(2, RoundingMode.HALF_UP)+
                     "\n应下发："+ yxf+
-                    "\n已下发: "+ yixf+
+                    "\n已下发："+ yixf+
                     "\n未下发："+ wxf+sxf;
         } else {
             //已下发
@@ -438,12 +461,10 @@ public class RuzhangOperations{
             }
             String sxf = "";
             BigDecimal sxfCount =accounts.stream().map(Account::getAccountHandlerMoney).reduce(BigDecimal.ZERO, BigDecimal::add);
-            if (status.getShowHandlerMoneyStatus()==0){
-                String rukuan = status.getAccountHandlerMoney().compareTo(bigDecimal0) == 0 ? "" : "\n单笔入款手续费：" + status.getAccountHandlerMoney();
-                String  xiafa= status.getIssueHandlerMoney().compareTo(bigDecimal0) == 0 ? "" : "\n单笔下发手续费：" + status.getIssueHandlerMoney();
-                String count = sxfCount.add(sxfCount2).compareTo(bigDecimal0) == 0 ? "" : "\n手续费总：" + sxfCount.add(sxfCount2);
-                sxf=  rukuan+ xiafa+count;//sxf2 是下发手续费
-            }
+            String rukuan = status.getAccountHandlerMoney().compareTo(bigDecimal0) == 0 ? "" : "\n单笔入款手续费：" + status.getAccountHandlerMoney();
+            String  xiafa= status.getIssueHandlerMoney().compareTo(bigDecimal0) == 0 ? "" : "\n单笔下发手续费：" + status.getIssueHandlerMoney();
+            String count = sxfCount.add(sxfCount2).compareTo(bigDecimal0) == 0 ? "" : "\n手续费总：" + sxfCount.add(sxfCount2);
+            sxf=  rukuan+ xiafa+count;//sxf2 是下发手续费
             return "\n已入账："+total+"，:共"+(accounts.size())+"笔:\n"+
                     " "+ "暂无已入账数据"+ iusseText+
                     "\n\n总入账："+ 0+
@@ -516,12 +537,18 @@ public class RuzhangOperations{
             Rate rate=rateService.selectRateByID(accounts.get(i).getRateId());
             BigDecimal exchange=rate.getExchange().setScale(2, RoundingMode.HALF_UP);
             BigDecimal total = accounts.get(i).getTotal().setScale(2, RoundingMode.HALF_UP);
+            BigDecimal totalTimesRate1;
             BigDecimal rateRate = rate.getRate().multiply(BigDecimal.valueOf(0.01)).setScale(2, RoundingMode.HALF_UP);
-            BigDecimal totalTimesRate1 = total.multiply(rateRate).setScale(2, RoundingMode.HALF_UP);
-            BigDecimal total2=total.subtract(totalTimesRate1);
+            BigDecimal total2;
+            if (!rate.isCalcU()){
+                totalTimesRate1 = total.multiply(rateRate).setScale(2, RoundingMode.HALF_UP);
+                total2=total.subtract(totalTimesRate1);
+            }else {
+                total2=total;
+            }
+            String isCalc=!rate.isCalcU()?"*"+ rate.getRate().setScale(2, RoundingMode.HALF_UP):"";
             //显示明细
-            String showDetail = detailStatus == 0 ? "/"+ rate.getExchange().setScale(2, RoundingMode.HALF_UP)+"*"+
-                    rate.getRate().setScale(2, RoundingMode.HALF_UP)+"=" +
+            String showDetail = detailStatus == 0 ? "/ "+ rate.getExchange().setScale(2, RoundingMode.HALF_UP)+isCalc+"=" +
                     total2.divide(exchange,2, RoundingMode.HALF_UP): "";//-不涉及费率
             showDetailList.add(showDetail);
         }
@@ -565,7 +592,7 @@ public class RuzhangOperations{
             BigDecimal exchange=rate.getExchange().setScale(2, RoundingMode.HALF_UP);
             BigDecimal total = issuesList.get(i).getDowned().setScale(2, RoundingMode.HALF_UP);
             //显示明细
-            String showDetail = detailStatus == 0 ? "/"+ rate.getExchange().setScale(2, RoundingMode.HALF_UP)+
+            String showDetail = detailStatus == 0 ? "/ "+ rate.getExchange().setScale(2, RoundingMode.HALF_UP)+
                     "=" + total.divide(exchange,2, RoundingMode.HALF_UP): "";
             if (isNotBlank(showDetail)) {
                 showDetailList.add(showDetail);

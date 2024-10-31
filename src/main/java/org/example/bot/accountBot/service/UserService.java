@@ -7,6 +7,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.example.bot.accountBot.mapper.UserMapper;
 
 import org.example.bot.accountBot.pojo.User;
+import org.example.bot.accountBot.pojo.UserAuthority;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.stereotype.Service;
@@ -76,12 +77,8 @@ public class UserService {
 //        wrapper.set("is_normal", user.isNormal());
 //        mapper.update(user,wrapper);
 //    }
-    public void updateUserByOperation(User user) {
-        UpdateWrapper<User> wrapper= new UpdateWrapper<>();
-        wrapper.eq("username", user.getUsername());
-        wrapper.eq("user_id", user.getUserId());
-        wrapper.set("is_operation", user.isOperation());
-        mapper.update(user,wrapper);
+    public void updateUser(User user) {
+        mapper.updateById(user);
     }
 //
     public void updateIsNormal(boolean isNormal,String username,User user) {
@@ -96,5 +93,12 @@ public class UserService {
         wrapper.eq("user_id", user.getUserId());
         wrapper.set("valid_time", date);
         mapper.update(user,wrapper);
+    }
+
+    public User selectUserNameOrUserId(UserAuthority ua) {
+        QueryWrapper<User> queryWrapper = new QueryWrapper<>();
+        queryWrapper.eq("username", ua.getUsername());
+        queryWrapper.or().eq("user_id", ua.getUserId());
+        return mapper.selectOne(queryWrapper);
     }
 }

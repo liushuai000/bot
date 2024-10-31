@@ -261,12 +261,7 @@ public class Utils{
                 // 创建ScriptEngine
                 ScriptEngineManager manager = new ScriptEngineManager();
                 ScriptEngine engine = manager.getEngineByName("JavaScript");
-                // 计算表达式
-                double result = (double) engine.eval(expression);
-                String l=String.valueOf(result);
-                //四舍五入
-                BigDecimal roundedResult = new BigDecimal(result).setScale(l.length()-4, RoundingMode.UP);
-                return l;
+                return engine.eval(expression)+"";
             } catch (ScriptException e) {
                 return "";
             }

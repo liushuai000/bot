@@ -4,10 +4,13 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import lombok.extern.slf4j.Slf4j;
 import org.example.bot.accountBot.dto.AccountDTO;
+import org.example.bot.accountBot.dto.QueryType;
+import org.example.bot.accountBot.dto.ReturnFromType;
 import org.example.bot.accountBot.mapper.AccountMapper;
 import org.example.bot.accountBot.mapper.RateMapper;
 import org.example.bot.accountBot.pojo.Account;
 import org.example.bot.accountBot.pojo.Issue;
+import org.example.bot.accountBot.pojo.Status;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.stereotype.Service;
@@ -24,9 +27,9 @@ import java.util.stream.Collectors;
 public interface AccountService {
 
 
-    List<AccountDTO> findAccountByGroupId(String groupId);
+    ReturnFromType findAccountByGroupId(QueryType queryType);
 
-    void deleteInData(Date addTime, String groupId);
+    void deleteInData(String id, String groupId);
 
     void updateNewestData(BigDecimal down, String groupId);
 
@@ -34,7 +37,7 @@ public interface AccountService {
 
     void updateDown(BigDecimal subtract, String groupId);
 
-    void deleteTodayData(Date setTime, String groupId);
+    void deleteTodayData(Status status, String groupId);
 
     List<Account> selectAccountRiqie(boolean riqie,Date setTime, String groupId);
 

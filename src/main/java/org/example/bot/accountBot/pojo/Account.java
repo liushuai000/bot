@@ -28,7 +28,7 @@ public class Account {
     @TableField("group_id")
     private String groupId;//群组id
     @TableField("user_id")
-    private String userId;//这个是发送消息的那个人的id
+    private String userId;
     @TableField("call_back_user_id")
     private String callBackUserId;//回复人id
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")

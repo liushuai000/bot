@@ -1,19 +1,13 @@
 package org.example.bot.accountBot.controller;
 
 import io.swagger.annotations.Api;
+import io.swagger.annotations.ApiImplicitParam;
 import io.swagger.annotations.ApiOperation;
-import org.example.bot.accountBot.dto.AccountDTO;
-import org.example.bot.accountBot.pojo.Account;
+import org.example.bot.accountBot.dto.QueryType;
 import org.example.bot.accountBot.service.AccountService;
-import org.example.bot.accountBot.service.RateService;
 import org.example.bot.accountBot.utils.JsonResult;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
-
-import java.util.List;
+import org.springframework.web.bind.annotation.*;
 
 @Api(tags="账单查询请求")
 @RestController
@@ -24,11 +18,10 @@ public class AccountController {
 
     //通知功能有bug      根据群组id查
     @ApiOperation("获取所有账单信息")
-    @PostMapping("/findAccountByGroupId")
-    public JsonResult findAccountByGroupId(@RequestBody AccountDTO accountDTO) {
-        return new JsonResult(accountService.findAccountByGroupId(accountDTO.getGroupId()));
+    @GetMapping("/findAccountByGroupId")
+    public JsonResult findAccountByGroupId(@RequestBody QueryType queryType) {
+        return new JsonResult(accountService.findAccountByGroupId(queryType));
     }
-
 
 
 }

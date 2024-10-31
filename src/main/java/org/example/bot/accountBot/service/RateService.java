@@ -23,26 +23,8 @@ import java.util.List;
 @Component
 @Service
 public class RateService {
-
     @Autowired
     RateMapper mapper;
-    @Autowired
-    StatusService statusService;
-
-    public void updateRate(String rate,String groupId) {
-        UpdateWrapper<Rate> wrapper = new UpdateWrapper();
-        wrapper.eq("group_id", groupId);
-        wrapper.set("rate", rate);
-        mapper.update(null, wrapper);
-    }
-
-    public void updateExchange(BigDecimal exchange,String groupId) {
-        UpdateWrapper<Rate> wrapper = new UpdateWrapper();
-        wrapper.eq("group_id", groupId);
-        wrapper.set("exchange", exchange);
-        mapper.update(null, wrapper);
-
-    }
     public Rate selectRateByID(int rateId) {
         return mapper.selectById(rateId);//需要order by addTime 吗
     }
@@ -51,29 +33,13 @@ public class RateService {
         //只查询不是公式入账的的rate 因为要获取最新的并且不是公式入账的汇率和费率计算
         queryWrapper.eq("group_id", groupId);
         queryWrapper.eq("is_matcher", false);
+        queryWrapper.eq("calc_u", false);
         queryWrapper.orderByDesc("add_time");
         queryWrapper.last("LIMIT 1");
         return mapper.selectList(queryWrapper);
     }
-//    public List<Rate> selectNewTimeRateList() {
-//        QueryWrapper<Rate> queryWrapper = new QueryWrapper();
-//        //只查询不是公式入账的的rate 因为要获取最新的并且不是公式入账的汇率和费率计算
-////        queryWrapper.eq("is_matcher", false);
-//        queryWrapper.orderByDesc("add_time");
-//        queryWrapper.last("LIMIT 1");
-//        return mapper.selectList(queryWrapper);
-//    }
-
     public void insertRate(Rate rate) {
         mapper.insert(rate);
-    }
-
-    public void updateOverDue(Date overdue,String groupId) {
-        UpdateWrapper<Rate> wrapper = new UpdateWrapper();
-        wrapper.eq("group_id", groupId);
-        wrapper.le("add_time", overdue);//添加时间小于设置的日切时间
-        wrapper.set("over_due", overdue);
-        mapper.update(null, wrapper);
     }
 
     public Rate getInitRate(String groupId) {

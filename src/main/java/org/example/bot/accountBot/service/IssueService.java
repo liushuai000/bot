@@ -8,6 +8,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.example.bot.accountBot.mapper.IssueMapper;
 import org.example.bot.accountBot.pojo.Account;
 import org.example.bot.accountBot.pojo.Issue;
+import org.example.bot.accountBot.pojo.Status;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.stereotype.Service;
@@ -46,19 +47,19 @@ public class IssueService {
         updateWrapper.set("down", down);
         mapper.update(null,updateWrapper);
     }
-    public void deleteTodayIssueData(Date setTime,String groupId) {
+    public void deleteTodayIssueData(Status status, String groupId) {
         LocalDateTime startOfDay = LocalDateTime.now().withHour(0).withMinute(0).withSecond(0);
         LocalDateTime endOfDay = LocalDateTime.now().withHour(23).withMinute(59).withSecond(59);
         QueryWrapper<Issue> wrapper = new QueryWrapper<>();
-//        wrapper.eq("riqie", 0);
         wrapper.eq("group_id", groupId);
-        //如果日切时间小于当前时间
-        if (new Date().compareTo(setTime)<0){
-            wrapper.ge("add_time", Date.from(startOfDay.atZone(ZoneId.systemDefault()).toInstant()))
-                    .le("add_time", Date.from(endOfDay.atZone(ZoneId.systemDefault()).toInstant()));
+        if (!status.isRiqie()){
+            wrapper.eq("riqie", false);
         }else {
-            wrapper.le("add_time",setTime);
+            wrapper.eq("riqie", true);
         }
+        wrapper.ge("add_time", Date.from(startOfDay.atZone(ZoneId.systemDefault()).toInstant()))
+                .le("add_time", Date.from(endOfDay.atZone(ZoneId.systemDefault()).toInstant()));
+
         mapper.delete(wrapper);
 
     }
@@ -68,9 +69,9 @@ public class IssueService {
         mapper.delete(wrapper);
     }
 
-    public void deleteNewestIssue(Date addTime, String groupId) {
+    public void deleteNewestIssue(String id, String groupId) {
         UpdateWrapper<Issue> updateWrapper = new UpdateWrapper<>();
-        updateWrapper.eq("add_time", addTime);
+        updateWrapper.eq("id", id);
         updateWrapper.eq("group_id", groupId);
         mapper.delete(updateWrapper);
     }

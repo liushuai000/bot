@@ -68,8 +68,8 @@ public class DateOperator{
                     ||text.equals("清理今日账单")||text.equals("删除今日账单")||text.equals("清理今天帐单")
                     ||text.equals("删除今天账单")||text.equals("删除账单") ||text.equals("删除今天帐单")||text.equals("删除帐单")
                     ||text.equals("清除账单")||text.equals("删除账单")||text.equals("清除帐单")||text.equals("删除帐单")){
-                accountService.deleteTodayData(status.getSetTime(),groupId);
-                issueService.deleteTodayIssueData(status.getSetTime(),groupId);
+                accountService.deleteTodayData(status,groupId);
+                issueService.deleteTodayIssueData(status,groupId);
                 accountBot.sendMessage(sendMessage,"操作成功 ，今日账单已删除");
             }else if (text.equals("删除全部账单")||text.equals("清除全部账单")){
                 accountService.deleteHistoryData(groupId);

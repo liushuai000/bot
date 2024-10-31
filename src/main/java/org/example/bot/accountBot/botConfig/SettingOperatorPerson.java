@@ -2,10 +2,13 @@ package org.example.bot.accountBot.botConfig;
 
 import lombok.extern.slf4j.Slf4j;
 import org.example.bot.accountBot.dto.UserDTO;
+import org.example.bot.accountBot.mapper.UserAuthorityMapper;
 import org.example.bot.accountBot.pojo.Status;
 import org.example.bot.accountBot.pojo.User;
+import org.example.bot.accountBot.pojo.UserAuthority;
 import org.example.bot.accountBot.service.RateService;
 import org.example.bot.accountBot.service.StatusService;
+import org.example.bot.accountBot.service.UserAuthorityService;
 import org.example.bot.accountBot.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -31,6 +34,8 @@ public class SettingOperatorPerson{
     RateService rateService;
     @Autowired
     StatusService statusService;
+    @Autowired
+    UserAuthorityService userAuthorityService;
     @Autowired
     AccountBot accountBot;
     @Value("${telegram.bot.username}")
@@ -63,59 +68,96 @@ public class SettingOperatorPerson{
                 }
                 for (String usernameTemp : userNames) {
                     User user2 = userService.findByUsername(usernameTemp);
+                    UserAuthority userAuthority = userAuthorityService.findByUsername(usernameTemp, userDTO.getGroupId());
                     if (userDTO.getUsername().equals(adminUserId) ||user2!=null && usernameTemp.equals(user2.getUsername())){
-                        if (user2.isOperation()){//是操作员
+                        if (userAuthority!=null && userAuthority.isOperation()){//是操作员
                             isShowAdminMessage = true;
                         }else {
-                            user2.setOperation(true);//是操作员
+                            userAuthority=new UserAuthority();
+                            userAuthority.setOperation(true);//是操作员
+                            userAuthority.setUsername(usernameTemp);
+                            userAuthority.setGroupId(userDTO.getGroupId());
+//                            userAuthority.setUserId(userDTO.getUserId());
+
                             user2.setSuperiorsUserId(userDTO.getUserId());
-                            userService.updateUserByOperation(user2);
+                            UserAuthority repeat = userAuthorityService.repeat(userAuthority,userDTO.getGroupId());
+                            if (repeat==null){
+                                userAuthorityService.insertUserAuthority(userAuthority);
+                            }
+                            userService.updateUser(user2);
                         }
                     }else {
                         User user = new User();
-                        user.setOperation(true);//是操作员
+                        UserAuthority userAuthority1 = new UserAuthority();
+                        userAuthority1.setUsername(usernameTemp);
+                        userAuthority1.setOperation(true);//是操作员
+//                        userAuthority1.setUserId(userDTO.getUserId());//设置了也是null
+                        userAuthority1.setGroupId(userDTO.getGroupId());
+
                         user.setSuperiorsUserId(userDTO.getUserId());
                         user.setUsername(usernameTemp);
+                        UserAuthority repeat = userAuthorityService.repeat(userAuthority1,userDTO.getGroupId());
+                        if (repeat==null){
+                            userAuthorityService.insertUserAuthority(userAuthority1);
+                        }
                         userService.insertUser(user);
                     }
                 }
                 //回复用
             }else if ( !compile.matcher(text).find()){
                 User callBackUser = userService.findByUserId(userDTO.getCallBackUserId());
-                User user2 = userService.findByUsername(userDTO.getCallBackName());;
+                UserAuthority userAuthority = userAuthorityService.selectByUserAndGroupId(userDTO.getCallBackUserId(), userDTO.getGroupId());
+                User user2 = userService.findByUsername(userDTO.getCallBackName());
+                UserAuthority userAuthority2 = userAuthorityService.findByUsername(userDTO.getCallBackName(), userDTO.getGroupId());
                 if (callBackUser!=null){
-                    if (callBackUser.isOperation()) {
+                    if (userAuthority.isOperation()) {
                         isShowAdminMessage = true;
                     }else {
                         callBackUser.setUserId(userDTO.getCallBackUserId());
                         callBackUser.setUsername(userDTO.getCallBackName()==null?"":userDTO.getCallBackName());
                         callBackUser.setFirstName(userDTO.getCallBackFirstName()==null?"":userDTO.getCallBackFirstName());
                         callBackUser.setLastName(userDTO.getCallBackLastName()==null?"":userDTO.getCallBackLastName());
-                        callBackUser.setOperation(true);
                         callBackUser.setSuperiorsUserId(userDTO.getUserId());
-                        userService.updateUserByOperation(callBackUser);
+                        userService.updateUser(callBackUser);
+                        userAuthority.setUserId(userDTO.getCallBackUserId());
+                        userAuthority.setUsername(userDTO.getCallBackName()==null?"":userDTO.getCallBackName());
+                        userAuthority.setOperation(true);
+                        userAuthority.setGroupId(userDTO.getGroupId());
+                        userAuthorityService.update(userAuthority);
                     }
                 } else if (user2!=null) {
-                    if (user2.isOperation()) {
+                    if (userAuthority2.isOperation()) {
                         isShowAdminMessage = true;
                     }else {
                         user2.setUserId(userDTO.getCallBackUserId());
                         user2.setUsername(userDTO.getCallBackName()==null?"":userDTO.getCallBackName());
                         user2.setFirstName(userDTO.getCallBackFirstName()==null?"":userDTO.getCallBackFirstName());
                         user2.setLastName(userDTO.getCallBackLastName()==null?"":userDTO.getCallBackLastName());
-                        user2.setOperation(true);
                         user2.setSuperiorsUserId(userDTO.getUserId());
-                        userService.updateUserByOperation(user2);
+                        userService.updateUser(user2);
+                        userAuthority2.setGroupId(userDTO.getGroupId());
+                        userAuthority2.setUserId(userDTO.getCallBackUserId());
+                        userAuthority2.setUsername(userDTO.getCallBackName()==null?"":userDTO.getCallBackName());
+                        userAuthority2.setOperation(true);
+                        userAuthorityService.update(userAuthority2);
                     }
                 }else {
                     User user = new User();
-                    user.setOperation(true);//设置操作员
                     user.setSuperiorsUserId(userDTO.getUserId());
                     user.setUserId(userDTO.getCallBackUserId());
                     user.setUsername(userDTO.getCallBackName()==null?"":userDTO.getCallBackName());
                     user.setFirstName(userDTO.getCallBackFirstName()==null?"":userDTO.getCallBackFirstName());
                     user.setLastName(userDTO.getCallBackLastName()==null?"":userDTO.getCallBackLastName());
                     userService.insertUser(user);
+                    UserAuthority userAuthority1 = new UserAuthority();
+                    userAuthority1.setUsername(userDTO.getCallBackName()==null?"":userDTO.getCallBackName());
+                    userAuthority1.setOperation(true);//设置操作员
+                    userAuthority1.setUserId(userDTO.getCallBackUserId());
+                    userAuthority1.setGroupId(userDTO.getGroupId());
+                    UserAuthority repeat = userAuthorityService.repeat(userAuthority,userDTO.getGroupId());
+                    if (repeat==null){
+                        userAuthorityService.insertUserAuthority(userAuthority1);
+                    }
                 }
             }
             if (!isShowAdminMessage){
@@ -125,8 +167,11 @@ public class SettingOperatorPerson{
             }
         }else if (split1[0].equals("显示操作人")||split1[0].equals("显示操作员")){
             StringBuilder sb = new StringBuilder("当前操作人: ");
-            boolean flag = false;
-            List<User> userNormalList =userService.selectByNormal(flag);
+            List<UserAuthority> userAuthorities=userAuthorityService.selectByUserOperator(userDTO.getGroupId(),true);
+            List<User> userNormalList = new ArrayList<>();
+            userAuthorities.stream().filter(Objects::nonNull).forEach(ua->{
+                userNormalList.add(userService.selectUserNameOrUserId(ua));
+            });
             for (int i = 0; i < userNormalList.size(); i++) {
                 String lastName = userNormalList.get(i).getLastName()==null?"":userNormalList.get(i).getLastName();
                 String callBackName=userNormalList.get(i).getFirstName()==null?"":userNormalList.get(i).getFirstName()+lastName+ "   ";

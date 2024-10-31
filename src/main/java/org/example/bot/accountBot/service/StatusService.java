@@ -63,7 +63,7 @@ public class StatusService {
             status.setHandleStatus(1);
             status.setCallBackStatus(1);
             status.setDetailStatus(1);
-            status.setRiqie(false);
+            status.setRiqie(true);
             insertStatus(status);
         }
         return status;

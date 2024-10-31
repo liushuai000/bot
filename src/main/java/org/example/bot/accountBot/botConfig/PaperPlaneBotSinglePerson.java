@@ -5,6 +5,8 @@ import org.apache.commons.lang3.StringUtils;
 import org.example.bot.accountBot.dto.UserDTO;
 import org.example.bot.accountBot.mapper.UserAuthorityMapper;
 import org.example.bot.accountBot.pojo.User;
+import org.example.bot.accountBot.pojo.UserAuthority;
+import org.example.bot.accountBot.service.UserAuthorityService;
 import org.example.bot.accountBot.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -32,7 +34,7 @@ public class PaperPlaneBotSinglePerson {
     @Value("${adminUserId}")
     protected String adminUserId;
     @Autowired
-    UserAuthorityMapper userAuthorityMapper;
+    UserAuthorityService userAuthorityService;
 
 
     //设置机器人在群组内的有效时间 默认免费使用日期6小时. 机器人底部按钮 获取个人信息 获取最新用户名 获取个人id 使用日期;
@@ -86,17 +88,22 @@ public class PaperPlaneBotSinglePerson {
                 user.setFirstName(userDTO.getFirstName());
                 user.setLastName(userDTO.getLastName());
                 user.setNormal(false);//默认操作权限管理员
-                user.setOperation(true);
                 user.setCreateTime(new Date());
                 user.setValidTime(validTime);
                 user.setValidFree(true);//是否使用过免费6小时
+                user.setSuperiorsUserId(userId);
                 userService.insertUser(user);
+
+                UserAuthority userAuthority = new UserAuthority();
+                userAuthority.setUserId(userId);
+                userAuthority.setOperation(true);
+                userAuthority.setUsername(userDTO.getUsername());
+                UserAuthority repeat = userAuthorityService.repeat(userAuthority,userDTO.getGroupId());
+                if (repeat==null){
+                    userAuthorityService.insertUserAuthority(userAuthority);
+                }
             }else {
-//                    user.setUsername(userDTO.getUsername());
-//                    user.setFirstName(userDTO.getFirstName());
-//                    user.setLastName(userDTO.getLastName());
                 user.setNormal(false);//默认操作权限管理员
-                user.setOperation(true);
                 user.setValidTime(validTime);
                 user.setSuperiorsUserId(userId);
                 user.setValidFree(true);
