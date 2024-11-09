@@ -56,9 +56,9 @@ public class UserAuthorityService {
         mapper.updateById(userAuthority);
     }
 
-    public UserAuthority selectByUserId(String userId) {
+    public UserAuthority selectByUserId(String userId,String groupId) {
         QueryWrapper<UserAuthority> queryWrapper = new QueryWrapper<>();
-        queryWrapper.eq("user_id", userId);
+        queryWrapper.eq("user_id", userId).eq("group_id", groupId);
         return mapper.selectOne(queryWrapper);
     }
 

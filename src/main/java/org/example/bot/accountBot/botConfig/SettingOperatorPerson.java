@@ -47,10 +47,9 @@ public class SettingOperatorPerson{
      * @param split1 传输的文本 是否是 设置操作员
      * @param userDTO 封装的用户信息
      * @param sendMessage 发生的消息
-     * @param message 消息
      * @param text  消息文本 6976772117
      */
-    public void setHandle(String[] split1, SendMessage sendMessage, Message message, String text, UserDTO userDTO, User user1, Status status) {
+    public void setHandle(String[] split1, SendMessage sendMessage, String text, UserDTO userDTO, User user1, Status status) {
         ButtonList buttonList = new ButtonList();
         boolean isShowAdminMessage = false;
         if (split1[0].equals("设置操作员")||split1[0].equals("设置操作人")){
@@ -184,7 +183,7 @@ public class SettingOperatorPerson{
                 }
                 sb.append(format);
             }
-            buttonList.implList(message, sendMessage);
+            buttonList.implList(sendMessage,userDTO.getGroupId(),userDTO.getGroupTitle());
             accountBot.sendMessage(sendMessage,sb.toString());
         }else if (split1[0].equals("显示手续费")){
             status.setShowHandlerMoneyStatus(0);

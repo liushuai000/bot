@@ -24,7 +24,7 @@ public class PaperPlaneBotButton {
         // 创建按钮行
         KeyboardRow row1 = new KeyboardRow();
         row1.add(new KeyboardButton("获取个人信息"));
-//        row1.add(new KeyboardButton("Button 2"));
+        row1.add(new KeyboardButton("监听列表"));
         KeyboardRow row2 = new KeyboardRow();
 //        row2.add(new KeyboardButton("Help"));
         // 将按钮行添加到键盘列表中

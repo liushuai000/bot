@@ -2,6 +2,7 @@ package org.example.bot.accountBot.service.Impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
+import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.example.bot.accountBot.assembler.AccountAssembler;
@@ -13,22 +14,29 @@ import org.example.bot.accountBot.mapper.UserMapper;
 import org.example.bot.accountBot.pojo.*;
 import org.example.bot.accountBot.service.AccountService;
 import org.example.bot.accountBot.service.RateService;
+import org.example.bot.accountBot.service.StatusService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 import org.springframework.stereotype.Service;
 
+import javax.annotation.Resource;
 import java.math.BigDecimal;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 @Component
 @Service
 @Slf4j
 public class AccountServiceImpl implements AccountService {
-    @Autowired
-    AccountMapper mapper;
+    @Resource
+    @Qualifier("accountMapper1")
+    AccountMapper accountMapper;
 
     @Autowired
     RateMapper rateMapper;
@@ -39,9 +47,12 @@ public class AccountServiceImpl implements AccountService {
     private IssueMapper issueMapper;
     @Autowired
     private RateService rateService;
+    @Autowired
+    private StatusService statusService;
 
     public ReturnFromType findAccountByGroupId(QueryType queryType) {
         Date addTime = queryType.getAddTime();
+        Date addEndTime = queryType.getAddEndTime();
         String username = queryType.getUsername();
         String groupId = queryType.getGroupId();
         boolean findAll = queryType.isFindAll();
@@ -51,16 +62,28 @@ public class AccountServiceImpl implements AccountService {
             return null;
         }
         try {
-            List<AccountDTO> accountDTOList=this.getAccountDTO(addTime,username,groupId,findAll,operation);
+            Status status = statusService.selectGroupId(groupId);
+            if (status!=null){
+                if (!status.isRiqie()){//不是日切
+                    LocalDateTime tomorrow = LocalDateTime.now().plusDays(-1);
+                    Date validTime = Date.from(tomorrow.atZone(ZoneId.systemDefault()).toInstant());
+                    returnFromType.setStartTime(validTime);
+                }else {
+                    returnFromType.setStartTime(status.getSetStartTime());//日切开始时间
+                }
+            }
+            List<AccountDTO> accountDTOList=this.getAccountDTO(addTime,addEndTime,username,groupId,findAll,operation,status);
             returnFromType.setAccountData(accountDTOList);
-            List<IssueDTO> issueDTOList=this.getIssueDTO(addTime,username,groupId,findAll,operation);
+            List<IssueDTO> issueDTOList=this.getIssueDTO(addTime,addEndTime,username,groupId,findAll,operation,status);
             returnFromType.setIssueData(issueDTOList);
-            List<CallbackUserDTO> callbackUserDTOList=this.getCallbackDTO(addTime,username,groupId,findAll,operation);
+//            if (accountDTOList==null)return returnFromType;
+            List<CallbackUserDTO> callbackUserDTOList=this.getCallbackDTO(accountDTOList,issueDTOList);
             returnFromType.setCallbackData(callbackUserDTOList);
-
+            List<OperationUserDTO> operationUserDTOList=this.getOperationUserDTO(accountDTOList,issueDTOList);
+            returnFromType.setCallbackData(callbackUserDTOList);
+            returnFromType.setOperationData(operationUserDTOList);
             Rate rate = rateService.selectRateList(groupId).get(0);
-            returnFromType.setRateData(accountAssembler.rateToDTO(rate));
-
+            returnFromType.setRateData(accountAssembler.rateToDTO(rate,accountDTOList,issueDTOList));
             return returnFromType;
         } catch (Exception e) {
             // 记录日志或返回空列表
@@ -68,78 +91,230 @@ public class AccountServiceImpl implements AccountService {
             return null;
         }
     }
-
-    private List<CallbackUserDTO> getCallbackDTO(Date addTime, String username, String groupId, boolean findAll, boolean operation) {
-        QueryWrapper<User> queryWrapper = new QueryWrapper<>();
-
-        return null;
+    private boolean isCallBackUserIdNull(AccountDTO accountDTO) {
+        return accountDTO != null && accountDTO.getCallBackUserId() == null;
+    }
+    private boolean isCallBackUserIdNoNull(AccountDTO accountDTO) {
+        return accountDTO != null && accountDTO.getCallBackUserId() != null;
+    }
+    private boolean isCallBackUserIdNullIssue(IssueDTO issueDTO) {
+        return issueDTO != null && issueDTO.getCallBackUserId() == null;
+    }
+    private boolean isCallBackUserIdNoNullIssue(IssueDTO issueDTO) {
+        return issueDTO != null && issueDTO.getCallBackUserId() != null;
+    }
+    private List<OperationUserDTO> getOperationUserDTO(List<AccountDTO> accountDTOList,List<IssueDTO> issueDTOList) {
+        Map<String, OperationUserDTO> summaryMap = new ConcurrentHashMap<>();
+        accountDTOList.stream().filter(Objects::nonNull).filter(this::isCallBackUserIdNull)
+                .forEach(accountDTO -> {
+                    String userId = accountDTO.getUserId();
+                    BigDecimal total = accountDTO.getTotal();
+                    OperationUserDTO accountSummary = summaryMap.get(userId);
+                    if (accountSummary==null){
+                        accountSummary = new OperationUserDTO();
+                        accountSummary.addTotal(total);
+                        accountSummary.incrementCount();
+                        summaryMap.put(userId,accountSummary);
+                    }else {
+                        accountSummary.incrementCount();
+                        accountSummary.addTotal(total);
+                    }
+                    accountSummary.setGroupId(accountDTO.getGroupId());
+                    accountSummary.setOperationName(accountDTO.getUsername());
+                    accountSummary.setOperationFirstName(accountDTO.getFirstName());
+                });
+        issueDTOList.stream().filter(Objects::nonNull).filter(this::isCallBackUserIdNullIssue)
+                .forEach(issueDTO -> {
+                    String userId = issueDTO.getUserId();
+                    BigDecimal total = issueDTO.getDowned();
+                    BigDecimal down = issueDTO.getDown();//未下发
+                    OperationUserDTO accountSummary = summaryMap.get(userId);
+                    if (accountSummary==null){
+                        accountSummary = new OperationUserDTO();
+                        accountSummary.addIssueTotal(total);
+                        accountSummary.IssueIncrementCount();
+                        summaryMap.put(userId,accountSummary);
+                    }else {
+                        accountSummary.IssueIncrementCount();
+                        accountSummary.addIssueTotal(total);
+                    }
+                    accountSummary.setDown(down);
+                    accountSummary.setGroupId(issueDTO.getGroupId());
+                    accountSummary.setOperationName(issueDTO.getUsername());
+                    accountSummary.setOperationFirstName(issueDTO.getFirstName());
+                });
+        List<OperationUserDTO> result = new ArrayList<>(summaryMap.values());
+        result.forEach(System.out::println);
+        return result;
     }
 
-    private List<IssueDTO> getIssueDTO(Date addTime, String username, String groupId, boolean findAll, boolean operation) {
+    private List<CallbackUserDTO> getCallbackDTO(List<AccountDTO> accountDTOList,List<IssueDTO> issueDTOList) {
+        Map<String, CallbackUserDTO> summaryMap = new ConcurrentHashMap<>();
+        accountDTOList.stream().filter(Objects::nonNull).filter(this::isCallBackUserIdNoNull)
+                .forEach(accountDTO -> {
+                    String userId = accountDTO.getUserId();
+                    BigDecimal total = accountDTO.getTotal();
+                    CallbackUserDTO accountSummary = summaryMap.get(userId);
+                    if (accountSummary==null){
+                        accountSummary = new CallbackUserDTO();
+                        accountSummary.addTotal(total);
+                        accountSummary.incrementCount();
+                        summaryMap.put(userId,accountSummary);
+                    }else {
+                        accountSummary.incrementCount();
+                        accountSummary.addTotal(total);
+                    }
+//                    accountSummary.setDown(accountDTO.get);
+                    accountSummary.setGroupId(accountDTO.getGroupId());
+                    accountSummary.setCallBackName(accountDTO.getCallBackName());
+                    accountSummary.setCallBackName(accountDTO.getCallBackFirstName());
+                });
+        issueDTOList.stream().filter(Objects::nonNull).filter(this::isCallBackUserIdNoNullIssue)
+                .forEach(issueDTO -> {
+                    String userId = issueDTO.getUserId();
+                    BigDecimal total = issueDTO.getDowned();
+                    BigDecimal down = issueDTO.getDown();//未下发
+                    CallbackUserDTO accountSummary = summaryMap.get(userId);
+                    if (accountSummary==null){
+                        accountSummary = new CallbackUserDTO();
+                        accountSummary.addIssueTotal(total);
+                        accountSummary.IssueIncrementCount();
+                        summaryMap.put(userId,accountSummary);
+                    }else {
+                        accountSummary.IssueIncrementCount();
+                        accountSummary.addIssueTotal(total);
+                    }
+                    accountSummary.setDown(down);
+                    accountSummary.setGroupId(issueDTO.getGroupId());
+                    accountSummary.setCallBackName(issueDTO.getCallBackName());
+                    accountSummary.setCallBackName(issueDTO.getCallBackFirstName());
+                });
+        List<CallbackUserDTO> result = new ArrayList<>(summaryMap.values());
+        result.forEach(System.out::println);
+        return result;
+
+    }
+
+    private List<IssueDTO> getIssueDTO(Date addTime,Date addEndTime, String username, String groupId, boolean findAll, boolean operation,Status status) {
         QueryWrapper<Issue> queryWrapper = new QueryWrapper<>();
         queryWrapper.eq("group_id", groupId);
         if (!findAll) {
-            queryWrapper.lt("add_time", addTime);
+            queryWrapper.ge("add_time", addTime).le("add_time", addEndTime);
+        }
+        if (status!=null){
+            if (status.isRiqie()){
+//                queryWrapper.eq("riqie", status.isRiqie());
+            }else {//如果没有开启日切查全部
+
+            }
+
         }
         queryWrapper.orderByDesc("add_time");
         List<Issue> issues = issueMapper.selectList(queryWrapper);
-        List<Issue> issueList;
-        if (StringUtils.isNotBlank(username)) {
-            QueryWrapper<User> userQueryWrapper = new QueryWrapper<>();
-            userQueryWrapper.eq("username", username);
-            User user = userMapper.selectOne(userQueryWrapper);
-            if (user == null) {
-                throw new NoSuchElementException("User not found for username: " + username);
+        List<Issue> issueList=issues;
+        if (!findAll) {
+            if (StringUtils.isNotBlank(username)) {
+                QueryWrapper<User> userQueryWrapper = new QueryWrapper<>();
+                userQueryWrapper.eq("username", username);
+                User user = userMapper.selectOne(userQueryWrapper);
+                if (user == null) {
+                    throw new NoSuchElementException("User not found for username: " + username);
+                }
+                String userId = user.getUserId();
+                issueList = issues.stream().filter(Objects::nonNull)
+                        .filter(operation ? account -> account.getUserId().equals(userId) : account -> userId.equals(account.getCallBackUserId()))
+                        .collect(Collectors.toList());
             }
-            String userId = user.getUserId();
-            issueList = issues.stream().filter(Objects::nonNull)
-                    .filter(operation ? account -> account.getUserId().equals(userId) : account -> account.getCallBackUserId().equals(userId))
-                    .collect(Collectors.toList());
-        }else {
-            issueList=issues;
         }
         List<Integer> rateIds = issueList.stream().filter(Objects::nonNull).map(Issue::getRateId).distinct().collect(Collectors.toList());
         List<String> userIds = issueList.stream().filter(Objects::nonNull).map(Issue::getUserId).distinct().collect(Collectors.toList());
         List<String> callBackUserIds = issueList.stream().filter(Objects::nonNull).map(Issue::getCallBackUserId).distinct().collect(Collectors.toList());
-        Map<Integer, Rate> rateMap = rateMapper.selectBatchIds(rateIds).stream().collect(Collectors.toMap(Rate::getId, rate -> rate));
-        Map<String, User> userIdMap = userMapper.selectBatchIds(userIds).stream().collect(Collectors.toMap(User::getUserId, user -> user));
-        Map<String, User> callBackUserIdsMap = userMapper.selectBatchIds(callBackUserIds).stream().collect(Collectors.toMap(User::getUserId, user -> user));
+        Map<Integer, Rate> rateMap;
+        if(!rateIds.isEmpty()){
+            rateMap=rateMapper.selectBatchIds(rateIds).stream().collect(Collectors.toMap(Rate::getId, rate -> rate));
+        } else {
+            rateMap = new HashMap<>();
+        }
+        QueryWrapper<User> wrapper = new QueryWrapper<>();
+        wrapper.in("user_id", userIds);
+        QueryWrapper<User> callBackWrapper = new QueryWrapper<>();
+        callBackWrapper.in("user_id", callBackUserIds);
+        Map<String, User> userIdMap ;
+        if (!userIds.isEmpty()){
+            userIdMap=userMapper.selectList(wrapper).stream().collect(Collectors.toMap(User::getUserId, user -> user));
+        }else {
+            userIdMap=new HashMap<>();
+        }
+        Map<String, User> callBackUserIdsMap ;
+        if (!callBackUserIds.isEmpty()){
+            callBackUserIdsMap=userMapper.selectList(callBackWrapper).stream().collect(Collectors.toMap(User::getUserId, user -> user));
+        }else {
+            callBackUserIdsMap=new HashMap<>();
+        }
         return issueList.stream().filter(Objects::nonNull).map(account -> accountAssembler.issueToDTO(account,
                 rateMap.get(account.getRateId()),userIdMap.get(account.getUserId()),callBackUserIdsMap.get(account.getCallBackUserId()))
         ).collect(Collectors.toList());
     }
 
-    public List<AccountDTO> getAccountDTO(Date addTime, String username, String groupId, boolean findAll, boolean operation) {
+    public List<AccountDTO> getAccountDTO(Date addTime,Date addEndTime, String username, String groupId, boolean findAll, boolean operation,Status status) {
         QueryWrapper<Account> queryWrapper = new QueryWrapper<>();
         queryWrapper.eq("group_id", groupId);
         if (!findAll) {
-            queryWrapper.lt("add_time", addTime);
+            queryWrapper.ge("add_time", addTime).le("add_time", addEndTime);
+        }
+        if (status!=null){
+            if (status.isRiqie()){
+//                queryWrapper.eq("riqie", status.isRiqie());
+            }else {//如果没有开启日切查全部
+
+            }
+
         }
         queryWrapper.orderByDesc("add_time");
-        List<Account> accounts = mapper.selectList(queryWrapper);
-        List<Account> accountList;
-        if (StringUtils.isNotBlank(username)) {
-            QueryWrapper<User> userQueryWrapper = new QueryWrapper<>();
-            userQueryWrapper.eq("username", username);
-            User user = userMapper.selectOne(userQueryWrapper);
-            if (user == null) {
-                throw new NoSuchElementException("User not found for username: " + username);
+        List<Account> accounts = accountMapper.selectList(queryWrapper);
+        if (accounts.isEmpty())return null;
+        List<Account> accountList = accounts;
+        if (!findAll) {
+            if (StringUtils.isNotBlank(username)) {
+                QueryWrapper<User> userQueryWrapper = new QueryWrapper<>();
+                userQueryWrapper.eq("username", username);
+                User user = userMapper.selectOne(userQueryWrapper);
+                if (user == null) {
+                    throw new NoSuchElementException("User not found for username: " + username);
+                }
+                String userId = user.getUserId();
+                accountList = accounts.stream().filter(Objects::nonNull)
+                        .filter(operation ? account -> account.getUserId().equals(userId) : account -> userId.equals(account.getCallBackUserId()))
+                        .collect(Collectors.toList());
             }
-            String userId = user.getUserId();
-            accountList = accounts.stream().filter(Objects::nonNull)
-                    .filter(operation ? account -> account.getUserId().equals(userId) : account -> account.getCallBackUserId().equals(userId))
-                    .collect(Collectors.toList());
-        }else {
-            accountList=accounts;
         }
         List<Integer> rateIds = accountList.stream().filter(Objects::nonNull).map(Account::getRateId).distinct().collect(Collectors.toList());
         List<String> userIds = accountList.stream().filter(Objects::nonNull).map(Account::getUserId).distinct().collect(Collectors.toList());
         List<String> callBackUserIds = accountList.stream().filter(Objects::nonNull).map(Account::getCallBackUserId).distinct().collect(Collectors.toList());
-        Map<Integer, Rate> rateMap = rateMapper.selectBatchIds(rateIds).stream().collect(Collectors.toMap(Rate::getId, rate -> rate));
-        Map<String, User> userIdMap = userMapper.selectBatchIds(userIds).stream().collect(Collectors.toMap(User::getUserId, user -> user));
-        Map<String, User> callBackUserIdsMap = userMapper.selectBatchIds(callBackUserIds).stream().collect(Collectors.toMap(User::getUserId, user -> user));
+        Map<Integer, Rate> rateMap;
+        if(!rateIds.isEmpty()){
+            rateMap=rateMapper.selectBatchIds(rateIds).stream().collect(Collectors.toMap(Rate::getId, rate -> rate));
+        } else {
+            rateMap = new HashMap<>();
+        }
+        QueryWrapper<User> wrapper = new QueryWrapper<>();
+        wrapper.in("user_id", userIds);
+        QueryWrapper<User> callBackWrapper = new QueryWrapper<>();
+        callBackWrapper.in("user_id", callBackUserIds);
+        Map<String, User> userIdMap ;
+        if (!userIds.isEmpty()){
+            userIdMap=userMapper.selectList(wrapper).stream().collect(Collectors.toMap(User::getUserId, user -> user));
+        }else {
+            userIdMap=new HashMap<>();
+        }
+        Map<String, User> callBackUserIdsMap ;
+        if (!callBackUserIds.isEmpty()){
+            callBackUserIdsMap=userMapper.selectList(callBackWrapper).stream().collect(Collectors.toMap(User::getUserId, user -> user));
+        }else {
+            callBackUserIdsMap=new HashMap<>();
+        }
         return accountList.stream().filter(Objects::nonNull).map(account -> accountAssembler.accountToDTO(account,
-                        rateMap.get(account.getRateId()),userIdMap.get(account.getUserId()),callBackUserIdsMap.get(account.getCallBackUserId()))
+                rateMap.get(account.getRateId()),userIdMap.get(account.getUserId()),callBackUserIdsMap.get(account.getCallBackUserId()))
         ).collect(Collectors.toList());
     }
 
@@ -153,31 +328,42 @@ public class AccountServiceImpl implements AccountService {
     //查询没有开启日切的
     public List<Account> selectAccountRiqie(boolean riqie,Date setTime, String groupId) {
         QueryWrapper<Account> queryWrapper = new QueryWrapper<>();
-        queryWrapper.eq("riqie",riqie);//查询没有开启日切的
+        if (riqie){//开启日切则查今日的日切数据
+            queryWrapper.eq("riqie",riqie);//查询没有开启日切的
+            queryWrapper.le("set_time",setTime);//查询小于等于日切时间的账单
+//            LocalDateTime startOfDay = LocalDateTime.now().withHour(0).withMinute(0).withSecond(0);
+//            LocalDateTime endOfDay = LocalDateTime.now().withHour(23).withMinute(59).withSecond(59);
+//            queryWrapper.ge("set_time", Date.from(startOfDay.atZone(ZoneId.systemDefault()).toInstant()))
+//                    .le("set_time", Date.from(endOfDay.atZone(ZoneId.systemDefault()).toInstant()));
+        }else {//如果关闭了日切则查全部的
+            LocalDateTime startOfDay = LocalDateTime.now().withHour(0).withMinute(0).withSecond(0);
+            LocalDateTime endOfDay = LocalDateTime.now().withHour(23).withMinute(59).withSecond(59);
+            queryWrapper.ge("add_time", Date.from(startOfDay.atZone(ZoneId.systemDefault()).toInstant()))
+                    .le("add_time", Date.from(endOfDay.atZone(ZoneId.systemDefault()).toInstant()));
+        }
         queryWrapper.eq("group_id",groupId);//如果groupId为空是否查的到呢
-//        queryWrapper.ge("add_time",setTime);//查询大于等于日切时间的账单
         queryWrapper.orderByDesc("add_time");
-        return mapper.selectList(queryWrapper);
+        return accountMapper.selectList(queryWrapper);
     }
     public List<Account> selectAccounts( String groupId) {
         QueryWrapper<Account> queryWrapper = new QueryWrapper<>();
         queryWrapper.eq("group_id",groupId);//如果groupId为空是否查的到呢
         queryWrapper.orderByDesc("add_time");
-        return mapper.selectList(queryWrapper);
+        return accountMapper.selectList(queryWrapper);
     }
 
 
     public void insertAccount(Account account) {
-        mapper.insert(account);
+        accountMapper.insert(account);
     }
     public void deleteById(int id) {
-        mapper.deleteById(id);
+        accountMapper.deleteById(id);
     }
     public void deleteHistoryData(String groupId) {
         UpdateWrapper<Account> updateWrapper = new UpdateWrapper<>();
         updateWrapper.eq("group_id",groupId);//如果groupId为空是否查的到呢
 //        updateWrapper.eq("riqie",0); 过期 或没过期的都删除
-        mapper.delete(updateWrapper);
+        accountMapper.delete(updateWrapper);
     }
 
     @Override
@@ -185,7 +371,7 @@ public class AccountServiceImpl implements AccountService {
         UpdateWrapper<Account> updateWrapper = new UpdateWrapper<>();
         updateWrapper.eq("id",id);
         updateWrapper.set("riqie",riqie);
-        mapper.update(null,updateWrapper);
+        accountMapper.update(null,updateWrapper);
     }
 
     @Override
@@ -194,7 +380,15 @@ public class AccountServiceImpl implements AccountService {
         updateWrapper.eq("id",id);
         updateWrapper.set("update_time",updateTime);
         updateWrapper.set("riqie",riqie);
-        mapper.update(null,updateWrapper);
+        accountMapper.update(null,updateWrapper);
+    }
+
+    @Override
+    public void updateSetTime(String id, Date setTime) {
+        UpdateWrapper<Account> updateWrapper = new UpdateWrapper<>();
+        updateWrapper.eq("id",id);
+        updateWrapper.set("set_time",setTime);
+        accountMapper.update(null,updateWrapper);
     }
 
 
@@ -210,28 +404,28 @@ public class AccountServiceImpl implements AccountService {
         }else {
             wrapper.eq("riqie", true);
         }
-        mapper.delete(wrapper);
+        accountMapper.delete(wrapper);
     }
 
     public void deleteInData(String id,String groupId) {
         UpdateWrapper<Account> updateWrapper = new UpdateWrapper<>();
         updateWrapper.eq("id",id);
         updateWrapper.eq("group_id",groupId);
-        mapper.delete(updateWrapper);
+        accountMapper.delete(updateWrapper);
     }
 
     public void updateDown(BigDecimal add, String groupId) {
         UpdateWrapper<Account> updateWrapper = new UpdateWrapper<>();
         updateWrapper.eq("group_id",groupId);
         updateWrapper.set("down",add);
-        mapper.update(null,updateWrapper);
+        accountMapper.update(null,updateWrapper);
     }
 
     public void updateNewestData(BigDecimal down,String groupId) {
         UpdateWrapper<Account> updateWrapper = new UpdateWrapper<>();
         updateWrapper.eq("group_id",groupId);
         updateWrapper.set("down",down);
-        mapper.update(null,updateWrapper);
+        accountMapper.update(null,updateWrapper);
     }
 
 }

@@ -29,13 +29,15 @@ public class IssueDTO{
     private String username;//操作账户
     @ApiModelProperty("firstName")
     private String firstName;//操作人名称  是firstName+lastName
+    @ApiModelProperty("callBackUserId")
+    private String callBackUserId;
     @ApiModelProperty("callBackName")
     private String callBackName;//操作账户
     @ApiModelProperty("callBackFirstName")
     private String callBackFirstName;//操作人名称  是firstName+lastName
     @TableField("is_matcher")
     private boolean isMatcher=false;
-    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", timezone = "GMT+8")
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
     @ApiModelProperty("addTime")
     private Date addTime;
     @ApiModelProperty("downed")
@@ -44,6 +46,5 @@ public class IssueDTO{
     private BigDecimal down;//未下发
     @ApiModelProperty("issueHandlerMoney")
     private BigDecimal issueHandlerMoney=BigDecimal.ZERO;//全局下方手续费
-
 
 }

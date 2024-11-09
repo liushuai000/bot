@@ -30,13 +30,15 @@ public class AccountDTO{
     private String username;//操作账户
     @ApiModelProperty("firstName")
     private String firstName;//操作人名称  是firstName+lastName
+    @ApiModelProperty("callBackUserId")
+    private String callBackUserId;
     @ApiModelProperty("callBackName")
     private String callBackName;//操作账户
     @ApiModelProperty("callBackFirstName")
     private String callBackFirstName;//操作人名称  是firstName+lastName
     @TableField("is_matcher")
     private boolean isMatcher=false;
-    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", timezone = "GMT+8")
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
     @ApiModelProperty("addTime")
     private Date addTime;
     @ApiModelProperty("total")
@@ -44,6 +46,7 @@ public class AccountDTO{
     @ApiModelProperty("accountHandlerMoney")
     private BigDecimal accountHandlerMoney=BigDecimal.ZERO;//全局入款手续费 account issue 里的手续费是记录单笔历史的
 
-
+    @ApiModelProperty("downing")
+    private BigDecimal downing=BigDecimal.ZERO;  //应下发
 
 }

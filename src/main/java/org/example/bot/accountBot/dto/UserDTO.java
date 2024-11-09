@@ -37,6 +37,8 @@ public class UserDTO {
 
     public String groupId;//群组id 和account 里的groupid Issue里的groupid 赋值
 
+    public String groupTitle;
+
     public  void  setInfo(Message message){
         this.firstName=message.getFrom().getFirstName();
         this.lastName=message.getFrom().getLastName();
@@ -46,7 +48,8 @@ public class UserDTO {
         // 检查是否为群组消息  isUserChat
         if (message.getChat().isGroupChat()||message.getChat().isSuperGroupChat()) {
             long groupId = message.getChatId(); // 获取群组 ID
-            System.out.println("群组 ID: " + groupId);
+            this.groupTitle=message.getChat().getTitle();
+            System.out.println("群组 ID: " + groupId+" 标题:"+groupTitle);
             this.groupId=groupId+"";
         }
     }

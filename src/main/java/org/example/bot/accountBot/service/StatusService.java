@@ -53,7 +53,7 @@ public class StatusService {
         wrapper.set(nameStatus, detailStatus);
         mapper.update(null, wrapper);
     }
-    public Status getInitStatus(String groupId) {
+    public Status getInitStatus(String groupId,String groupTitle) {
         Status status = selectGroupId(groupId);
         if (status==null) {
             status = new Status();
@@ -61,6 +61,7 @@ public class StatusService {
             status.setGroupId(groupId);
             status.setGroupTitle(groupId);
             status.setHandleStatus(1);
+            status.setGroupTitle(groupTitle);
             status.setCallBackStatus(1);
             status.setDetailStatus(1);
             status.setRiqie(true);

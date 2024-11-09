@@ -40,8 +40,7 @@ public class ShowOperatorName {
     //显示操作人名字  显示账单用
     public void  replay(SendMessage sendMessage, UserDTO userDTO, Account updateAccount, Rate rate, List<Issue> issuesList, Issue issue, String text, Status status) {
         if (!BaseConstant.showReplay(text)) return;
-        //TODO message 先给null
-        new ButtonList().implList(null, sendMessage);
+        new ButtonList().implList(sendMessage,userDTO.getGroupId(),userDTO.getGroupTitle());
         String iusseText="";
         //重新获取最新的数据
         List<Account> accounts = dateOperator.selectIsRiqie(sendMessage,status,userDTO.getGroupId());

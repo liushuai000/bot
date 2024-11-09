@@ -27,11 +27,11 @@ public class RateDTO {
     private BigDecimal downed=BigDecimal.ZERO;    //已下发
     @ApiModelProperty("down")
     private BigDecimal down=BigDecimal.ZERO;    //未下发
-    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
-    @ApiModelProperty("addTime")
-    private Date addTime;//添加的时间
-    @ApiModelProperty("calc_u")//如果是+30u 带U就不计算费率 默认false不带U计算
-    private boolean calcU=false;// true 是计算 false是不计算 直接增加 +30u 的时候会计算费率这个点，不应该计算费率，只需要根据当前设置的固定汇率计算除金额，跟+30u
+//    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
+//    @ApiModelProperty("addTime")
+//    private Date addTime;//添加的时间
+//    @ApiModelProperty("calc_u")//如果是+30u 带U就不计算费率 默认false不带U计算
+//    private boolean calcU=false;// true 是计算 false是不计算 直接增加 +30u 的时候会计算费率这个点，不应该计算费率，只需要根据当前设置的固定汇率计算除金额，跟+30u
     @ApiModelProperty("count")
     private BigDecimal count=BigDecimal.ZERO;//总入款
     @ApiModelProperty("CountHandlerMoney")

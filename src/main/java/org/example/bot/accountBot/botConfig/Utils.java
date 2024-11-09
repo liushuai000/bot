@@ -69,7 +69,7 @@ public class Utils{
 
         Date date = new Date();
         Date from = Date.from(LocalDateTime.now().plusDays(20).atZone(ZoneId.systemDefault()).toInstant());
-        System.err.println(from.compareTo(date));//等于true
+        System.err.println(date.compareTo(from)<0);//等于true
     }
     //入账操作2.0，匹配公式
     public  boolean calcRecorded(String text1, String messageUserId, String userName, String groupId, Account updateAccount, BigDecimal total, BigDecimal down, Issue issue,
@@ -154,6 +154,7 @@ public class Utils{
         updateAccount.setDowning(downing.setScale(2, RoundingMode.HALF_UP));
         updateAccount.setDown(downing.subtract(downed));
         updateAccount.setRiqie(status.isRiqie());
+        updateAccount.setSetTime(status.getSetTime());
         log.info("应下发:{},总入账:{},account:{}", downing, total, updateAccount);
         accountService.insertAccount(updateAccount);
         issueService.updateIssueDown(down.add(t),updateAccount.getGroupId());
@@ -173,6 +174,7 @@ public class Utils{
         updateAccount.setDown(downing.subtract(downed));
         updateAccount.setRateId(rate.getId());
         updateAccount.setRiqie(status.isRiqie());
+        updateAccount.setSetTime(status.getSetTime());
         accountService.insertAccount(updateAccount);
         //应该是新增加一条 已出帐记录吧!issueService.insert();
         issueService.updateIssueDown(down.add(t),updateAccount.getGroupId());
@@ -189,6 +191,7 @@ public class Utils{
         issue.setDown(down.subtract(downed));
         issue.setDowned(downed);
         issue.setRiqie(status.isRiqie());
+        issue.setSetTime(status.getSetTime());
         User byUserId = userService.findByUserId(messageUserId);
         if (byUserId!=null){
             issueService.insertIssue(issue);

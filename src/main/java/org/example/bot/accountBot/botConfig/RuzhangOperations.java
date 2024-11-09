@@ -5,6 +5,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.example.bot.accountBot.dto.UserDTO;
 import org.example.bot.accountBot.pojo.*;
 import org.example.bot.accountBot.service.*;
+import org.example.bot.accountBot.utils.BaseConstant;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -132,13 +133,13 @@ public class RuzhangOperations{
         BigDecimal down;
         //判断是否符合公式 true 是匹配
         boolean isMatcher = utils.isMatcher(text);
-        // 如果 text 的第一个字符是 '+'，或者 '-'，或者 orNo1 为 true，则继续执行
-        if (text.charAt(0) != '+' && text.charAt(0) != '-')  return;
         //+0 -0显示账单
-        if (showOperatorName.isEmptyMoney(text)){
+        if (showOperatorName.isEmptyMoney(text) || BaseConstant.showReplay(text)){
             showOperatorName.replay(sendMessage,userDTO,updateAccount,rate,issueList,issue,text,status);
             return;
         }
+        // 如果 text 的第一个字符是 '+'，或者 '-'，或者 orNo1 为 true，则继续执行
+        if (text.charAt(0) != '+' && text.charAt(0) != '-')  return;
         BigDecimal num = new BigDecimal(0);
         Rate rate1 = null;
         //当不是公式入账时才赋值
@@ -173,8 +174,10 @@ public class RuzhangOperations{
         updateAccount.setAddTime(new Date());
         //数据状态默认是0
         updateAccount.setRiqie(status.isRiqie());
+        updateAccount.setSetTime(status.getSetTime());
         issue.setAddTime(new Date());
         issue.setRiqie(status.isRiqie());
+        issue.setSetTime(status.getSetTime());
         down = updateAccount.getDown();
         BigDecimal downed = issue.getDowned();
         BigDecimal downing = updateAccount.getDowning();
@@ -218,6 +221,7 @@ public class RuzhangOperations{
                 }
                 updateAccount.setAccountHandlerMoney(status.getAccountHandlerMoney());
                 updateAccount.setRiqie(status.isRiqie());
+                updateAccount.setSetTime(status.getSetTime());
                 accountService.insertAccount(updateAccount);
             }else if (firstChar == '-' ){
                 issue.setUserId(userDTO.getUserId());
@@ -227,6 +231,7 @@ public class RuzhangOperations{
                 issue.setCallBackUserId(userDTO.getCallBackUserId());
                 issue.setIssueHandlerMoney(status.getIssueHandlerMoney());
                 issue.setRiqie(status.isRiqie());
+                issue.setSetTime(status.getSetTime());
                 User byUserId = userService.findByUserId(userDTO.getUserId());
                 if (byUserId!=null){
                     issueService.insertIssue(issue);
@@ -258,7 +263,7 @@ public class RuzhangOperations{
             //发送要显示的消息
             sendText1 = getSendText(updateAccount, accounts,rate, num, newAccountList,newIssueList,issues,issue,status);
             sendMessage.setText(sendText1);
-            new ButtonList().implList(message, sendMessage);
+            new ButtonList().implList( sendMessage,userDTO.getGroupId(),userDTO.getGroupTitle());
         }
         accountBot.sendMessage(sendMessage,sendText1);
     }
@@ -308,7 +313,7 @@ public class RuzhangOperations{
                     String callBackFirstName = byUserId.getFirstName() == null ? "" : byUserId.getFirstName();
                     String callBackLastName = byUserId.getLastName() == null ? "" : byUserId.getLastName();
                     String name=callBackFirstName+callBackLastName;
-                    format = String.format("<a href=\"tg://user?id=%d\">%s</a>", Long.parseLong(issueList.get(i).getUserId()), name);
+                    format = String.format("<a href=\"tg://user?id=%d\">%s</a>", Long.parseLong(issueList.get(i).getCallBackUserId()), name);
                 }
                 String xf;
                 if (status.getShowMoneyStatus()==0){
@@ -354,7 +359,7 @@ public class RuzhangOperations{
             //应下发
             BigDecimal downing = accounts.stream().filter(Objects::nonNull).map(Account::getDowning).reduce(BigDecimal.ZERO, BigDecimal::add);
             BigDecimal total = accounts.stream().filter(Objects::nonNull).map(Account::getTotal).reduce(BigDecimal.ZERO, BigDecimal::add);
-            String yxf;//应下方
+            String yxf;//应下发
             String yixf;//已下发
             String wxf;//未下发
             if (status.getShowMoneyStatus()==0){
@@ -399,7 +404,7 @@ public class RuzhangOperations{
                         String callBackFirstName = byUserId.getFirstName() == null ? "" : byUserId.getFirstName();
                         String callBackLastName = byUserId.getLastName() == null ? "" : byUserId.getLastName();
                         String name=callBackFirstName+callBackLastName;
-                        format = String.format("<a href=\"tg://user?id=%d\">%s</a>", Long.parseLong(accountList.get(i).getUserId()), name);
+                        format = String.format("<a href=\"tg://user?id=%d\">%s</a>", Long.parseLong(accountList.get(i).getCallBackUserId()), name);
                     }
                     String xf;
                     if (status.getShowMoneyStatus()==0){

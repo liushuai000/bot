@@ -44,6 +44,8 @@ public class Status {
     private int showHandlerMoneyStatus=1;//手续费显示状态：1表示不显示，0表示显示
     @TableField("set_time")
     private Date setTime=this.parseDate();   //账单 设置的过期时间 日切时间
+    @TableField("set_start_time")
+    private Date setStartTime=new Date();   //账单 设置的过期时间 日切时间
     @TableField("riqie")
     private boolean riqie;   //是否设置了日切 true 1 false 0
 

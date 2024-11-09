@@ -1,10 +1,12 @@
 package org.example.bot.accountBot.dto;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;
 import lombok.experimental.Accessors;
 
+import java.util.Date;
 import java.util.List;
 
 
@@ -22,7 +24,9 @@ public class ReturnFromType {
     private RateDTO rateData;
     @ApiModelProperty(value = "操作用户")
     private List<OperationUserDTO> operationData;
-
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
+    @ApiModelProperty("startTime")
+    private Date startTime;//日切开始时间
 
 
 }

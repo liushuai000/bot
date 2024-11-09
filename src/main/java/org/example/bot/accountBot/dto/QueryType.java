@@ -18,10 +18,13 @@ public class QueryType {
     @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", timezone = "GMT+8")
     @ApiModelProperty("addTime")
     private Date addTime;
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", timezone = "GMT+8")
+    @ApiModelProperty("addEndTime")
+    private Date addEndTime;
     @ApiModelProperty("findAll")
     private boolean findAll;
-    @ApiModelProperty("isOperation")
-    private boolean isOperation;//是否是操作人
+    @ApiModelProperty("operation")
+    private boolean operation;//是否是操作人
     @ApiModelProperty("username")
     private String username;//用户名
 
