@@ -60,19 +60,27 @@ public class AccountAssembler {
     }
 
     public RateDTO rateToDTO(Rate rate,List<AccountDTO> accountDTOList, List<IssueDTO> issueDTOList) {
-        // 计算 accountHandlerMoney 的总和
-        BigDecimal AccountMoney = accountDTOList.stream().map(AccountDTO::getAccountHandlerMoney)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-        BigDecimal IssueMoney = issueDTOList.stream().map(IssueDTO::getIssueHandlerMoney)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal AccountMoney=new BigDecimal(0);
+        BigDecimal total=new BigDecimal(0);
+        BigDecimal downing=new BigDecimal(0);
+        BigDecimal downed=new BigDecimal(0);
+        BigDecimal IssueMoney=new BigDecimal(0);
+        if (accountDTOList!= null){
+            // 计算 accountHandlerMoney 的总和
+            AccountMoney = accountDTOList.stream().map(AccountDTO::getAccountHandlerMoney)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+            total = accountDTOList.stream().map(AccountDTO::getTotal)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+            downing = accountDTOList.stream().map(AccountDTO::getDowning)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+        }
+        if (issueDTOList!= null){
+            IssueMoney = issueDTOList.stream().map(IssueDTO::getIssueHandlerMoney)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        BigDecimal downed = issueDTOList.stream().map(IssueDTO::getDowned)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);//总下发
-        BigDecimal total = accountDTOList.stream().map(AccountDTO::getTotal)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-        BigDecimal downing = accountDTOList.stream().map(AccountDTO::getDowning)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-
+            downed = issueDTOList.stream().map(IssueDTO::getDowned)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);//总下发
+        }
         return new RateDTO()
                 .setId(rate.getId()+"")
                 .setCount(total)

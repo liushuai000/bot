@@ -76,7 +76,7 @@ public class AccountServiceImpl implements AccountService {
             returnFromType.setAccountData(accountDTOList);
             List<IssueDTO> issueDTOList=this.getIssueDTO(addTime,addEndTime,username,groupId,findAll,operation,status);
             returnFromType.setIssueData(issueDTOList);
-//            if (accountDTOList==null)return returnFromType;
+            if (accountDTOList==null && issueDTOList==null)return returnFromType;
             List<CallbackUserDTO> callbackUserDTOList=this.getCallbackDTO(accountDTOList,issueDTOList);
             returnFromType.setCallbackData(callbackUserDTOList);
             List<OperationUserDTO> operationUserDTOList=this.getOperationUserDTO(accountDTOList,issueDTOList);
@@ -105,24 +105,27 @@ public class AccountServiceImpl implements AccountService {
     }
     private List<OperationUserDTO> getOperationUserDTO(List<AccountDTO> accountDTOList,List<IssueDTO> issueDTOList) {
         Map<String, OperationUserDTO> summaryMap = new ConcurrentHashMap<>();
-        accountDTOList.stream().filter(Objects::nonNull).filter(this::isCallBackUserIdNull)
-                .forEach(accountDTO -> {
-                    String userId = accountDTO.getUserId();
-                    BigDecimal total = accountDTO.getTotal();
-                    OperationUserDTO accountSummary = summaryMap.get(userId);
-                    if (accountSummary==null){
-                        accountSummary = new OperationUserDTO();
-                        accountSummary.addTotal(total);
-                        accountSummary.incrementCount();
-                        summaryMap.put(userId,accountSummary);
-                    }else {
-                        accountSummary.incrementCount();
-                        accountSummary.addTotal(total);
-                    }
-                    accountSummary.setGroupId(accountDTO.getGroupId());
-                    accountSummary.setOperationName(accountDTO.getUsername());
-                    accountSummary.setOperationFirstName(accountDTO.getFirstName());
-                });
+        if (accountDTOList!=null){
+            accountDTOList.stream().filter(Objects::nonNull).filter(this::isCallBackUserIdNull)
+                    .forEach(accountDTO -> {
+                        String userId = accountDTO.getUserId();
+                        BigDecimal total = accountDTO.getTotal();
+                        OperationUserDTO accountSummary = summaryMap.get(userId);
+                        if (accountSummary==null){
+                            accountSummary = new OperationUserDTO();
+                            accountSummary.addTotal(total);
+                            accountSummary.incrementCount();
+                            summaryMap.put(userId,accountSummary);
+                        }else {
+                            accountSummary.incrementCount();
+                            accountSummary.addTotal(total);
+                        }
+                        accountSummary.setGroupId(accountDTO.getGroupId());
+                        accountSummary.setOperationName(accountDTO.getUsername());
+                        accountSummary.setOperationFirstName(accountDTO.getFirstName());
+                    });
+        }
+       if (issueDTOList!=null){
         issueDTOList.stream().filter(Objects::nonNull).filter(this::isCallBackUserIdNullIssue)
                 .forEach(issueDTO -> {
                     String userId = issueDTO.getUserId();
@@ -143,6 +146,7 @@ public class AccountServiceImpl implements AccountService {
                     accountSummary.setOperationName(issueDTO.getUsername());
                     accountSummary.setOperationFirstName(issueDTO.getFirstName());
                 });
+       }
         List<OperationUserDTO> result = new ArrayList<>(summaryMap.values());
         result.forEach(System.out::println);
         return result;
@@ -150,45 +154,49 @@ public class AccountServiceImpl implements AccountService {
 
     private List<CallbackUserDTO> getCallbackDTO(List<AccountDTO> accountDTOList,List<IssueDTO> issueDTOList) {
         Map<String, CallbackUserDTO> summaryMap = new ConcurrentHashMap<>();
-        accountDTOList.stream().filter(Objects::nonNull).filter(this::isCallBackUserIdNoNull)
-                .forEach(accountDTO -> {
-                    String userId = accountDTO.getUserId();
-                    BigDecimal total = accountDTO.getTotal();
-                    CallbackUserDTO accountSummary = summaryMap.get(userId);
-                    if (accountSummary==null){
-                        accountSummary = new CallbackUserDTO();
-                        accountSummary.addTotal(total);
-                        accountSummary.incrementCount();
-                        summaryMap.put(userId,accountSummary);
-                    }else {
-                        accountSummary.incrementCount();
-                        accountSummary.addTotal(total);
-                    }
+        if (accountDTOList!=null){
+            accountDTOList.stream().filter(Objects::nonNull).filter(this::isCallBackUserIdNoNull)
+                    .forEach(accountDTO -> {
+                        String userId = accountDTO.getUserId();
+                        BigDecimal total = accountDTO.getTotal();
+                        CallbackUserDTO accountSummary = summaryMap.get(userId);
+                        if (accountSummary==null){
+                            accountSummary = new CallbackUserDTO();
+                            accountSummary.addTotal(total);
+                            accountSummary.incrementCount();
+                            summaryMap.put(userId,accountSummary);
+                        }else {
+                            accountSummary.incrementCount();
+                            accountSummary.addTotal(total);
+                        }
 //                    accountSummary.setDown(accountDTO.get);
-                    accountSummary.setGroupId(accountDTO.getGroupId());
-                    accountSummary.setCallBackName(accountDTO.getCallBackName());
-                    accountSummary.setCallBackName(accountDTO.getCallBackFirstName());
-                });
-        issueDTOList.stream().filter(Objects::nonNull).filter(this::isCallBackUserIdNoNullIssue)
-                .forEach(issueDTO -> {
-                    String userId = issueDTO.getUserId();
-                    BigDecimal total = issueDTO.getDowned();
-                    BigDecimal down = issueDTO.getDown();//未下发
-                    CallbackUserDTO accountSummary = summaryMap.get(userId);
-                    if (accountSummary==null){
-                        accountSummary = new CallbackUserDTO();
-                        accountSummary.addIssueTotal(total);
-                        accountSummary.IssueIncrementCount();
-                        summaryMap.put(userId,accountSummary);
-                    }else {
-                        accountSummary.IssueIncrementCount();
-                        accountSummary.addIssueTotal(total);
-                    }
-                    accountSummary.setDown(down);
-                    accountSummary.setGroupId(issueDTO.getGroupId());
-                    accountSummary.setCallBackName(issueDTO.getCallBackName());
-                    accountSummary.setCallBackName(issueDTO.getCallBackFirstName());
-                });
+                        accountSummary.setGroupId(accountDTO.getGroupId());
+                        accountSummary.setCallBackName(accountDTO.getCallBackName());
+                        accountSummary.setCallBackName(accountDTO.getCallBackFirstName());
+                    });
+        }
+        if (issueDTOList!=null){
+            issueDTOList.stream().filter(Objects::nonNull).filter(this::isCallBackUserIdNoNullIssue)
+                    .forEach(issueDTO -> {
+                        String userId = issueDTO.getUserId();
+                        BigDecimal total = issueDTO.getDowned();
+                        BigDecimal down = issueDTO.getDown();//未下发
+                        CallbackUserDTO accountSummary = summaryMap.get(userId);
+                        if (accountSummary==null){
+                            accountSummary = new CallbackUserDTO();
+                            accountSummary.addIssueTotal(total);
+                            accountSummary.IssueIncrementCount();
+                            summaryMap.put(userId,accountSummary);
+                        }else {
+                            accountSummary.IssueIncrementCount();
+                            accountSummary.addIssueTotal(total);
+                        }
+                        accountSummary.setDown(down);
+                        accountSummary.setGroupId(issueDTO.getGroupId());
+                        accountSummary.setCallBackName(issueDTO.getCallBackName());
+                        accountSummary.setCallBackName(issueDTO.getCallBackFirstName());
+                    });
+        }
         List<CallbackUserDTO> result = new ArrayList<>(summaryMap.values());
         result.forEach(System.out::println);
         return result;
@@ -203,11 +211,8 @@ public class AccountServiceImpl implements AccountService {
         }
         if (status!=null){
             if (status.isRiqie()){
-//                queryWrapper.eq("riqie", status.isRiqie());
-            }else {//如果没有开启日切查全部
-
+                queryWrapper.eq("riqie", status.isRiqie());
             }
-
         }
         queryWrapper.orderByDesc("add_time");
         List<Issue> issues = issueMapper.selectList(queryWrapper);
@@ -264,11 +269,8 @@ public class AccountServiceImpl implements AccountService {
         }
         if (status!=null){
             if (status.isRiqie()){
-//                queryWrapper.eq("riqie", status.isRiqie());
-            }else {//如果没有开启日切查全部
-
+                queryWrapper.eq("riqie", status.isRiqie());
             }
-
         }
         queryWrapper.orderByDesc("add_time");
         List<Account> accounts = accountMapper.selectList(queryWrapper);
