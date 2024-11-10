@@ -240,6 +240,7 @@ public class PaperPlaneBotSinglePerson {
                 user.setValidFree(true);
                 userService.updateUserValidTime(user,validTime);
             }
+
             accountBot.sendMessage(sendMessage,"用户ID: "+userId+" 有效期:"+tomorrow.getYear()+"年"+tomorrow.getMonthValue()+ "月"+
                     tomorrow.getDayOfMonth()+"日"+ tomorrow.getHour()+"时"+tomorrow.getMinute()+"分" +tomorrow.getSecond()+"秒");
             return;
@@ -279,8 +280,6 @@ public class PaperPlaneBotSinglePerson {
     //获取用户信息
     private void getUserInfoMessage(Message message, SendMessage sendMessage, UserDTO userDTO) {
         User user = userService.findByUserId(userDTO.getUserId());
-        String  firstName=userDTO.getFirstName()==null?"":userDTO.getFirstName();
-        String  lastName=userDTO.getLastName()==null?"":userDTO.getLastName();
         if (user==null){
             user = new User();
             LocalDateTime tomorrow = LocalDateTime.now().plusHours(6);
@@ -301,17 +300,19 @@ public class PaperPlaneBotSinglePerson {
             user.setValidTime(validTime);
             user.setNormal(false);//默认操作权限管理员
             user.setSuperiorsUserId(userDTO.getUserId());
-            user.setValidFree(true);//是否使用过免费6小时
+            user.setValidFree(true);//是使用过免费6小时
             userService.updateUser(user);
-            //
         }
-
         LocalDateTime t= LocalDateTime.ofInstant(user.getValidTime().toInstant(), ZoneId.systemDefault());
         String   time=" 有效期:"+t.getYear()+"年"+t.getMonthValue()+ "月"+
                 t.getDayOfMonth()+"日"+ t.getHour()+"时"+t.getMinute()+"分" +t.getSecond()+"秒";
-        String replayMessage="用户名:"+userDTO.getUsername()+
-                " 用户ID:"+userDTO.getUserId()+ " 用户昵称:"+firstName+lastName+"\n"+ time;
-        accountBot.sendMessage(sendMessage,replayMessage);
+        String message1="<b>账号个人信息</b>✅：\n" +
+                "\n" +
+                "<b>用户名：</b>@"+userDTO.getUsername()+" \n" +
+                "<b>用户ID：</b><code>"+userDTO.getUserId()+"</code>\n" +
+                "<b>用户昵称：</b>"+userDTO.getFirstName()+userDTO.getLastName()+"\n" +
+                "<b>有效期：</b>"+time;
+        accountBot.tronAccountMessageTextHtml(sendMessage,userDTO.getUserId(),message1);
     }
 
 

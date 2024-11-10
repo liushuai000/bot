@@ -53,7 +53,7 @@ public class SettingOperatorPerson{
         ButtonList buttonList = new ButtonList();
         boolean isShowAdminMessage = false;
         if (split1[0].equals("设置操作员")||split1[0].equals("设置操作人")){
-            if (user1.isNormal()){
+            if (user1.isNormal()){//是普通权限
                 accountBot.sendMessage(sendMessage,"您没有设置操作员权限! 只能管理设置");
                 return;
             }
@@ -68,7 +68,7 @@ public class SettingOperatorPerson{
                 for (String usernameTemp : userNames) {
                     User user2 = userService.findByUsername(usernameTemp);
                     UserAuthority userAuthority = userAuthorityService.findByUsername(usernameTemp, userDTO.getGroupId());
-                    if (userDTO.getUsername().equals(adminUserId) ||user2!=null && usernameTemp.equals(user2.getUsername())){
+                    if (user2!=null && usernameTemp.equals(user2.getUsername())){
                         if (userAuthority!=null && userAuthority.isOperation()){//是操作员
                             isShowAdminMessage = true;
                         }else {
@@ -76,7 +76,6 @@ public class SettingOperatorPerson{
                             userAuthority.setOperation(true);//是操作员
                             userAuthority.setUsername(usernameTemp);
                             userAuthority.setGroupId(userDTO.getGroupId());
-//                            userAuthority.setUserId(userDTO.getUserId());
 
                             user2.setSuperiorsUserId(userDTO.getUserId());
                             UserAuthority repeat = userAuthorityService.repeat(userAuthority,userDTO.getGroupId());
@@ -169,7 +168,7 @@ public class SettingOperatorPerson{
             List<UserAuthority> userAuthorities=userAuthorityService.selectByUserOperator(userDTO.getGroupId(),true);
             List<User> userNormalList = new ArrayList<>();
             userAuthorities.stream().filter(Objects::nonNull).forEach(ua->{
-                userNormalList.add(userService.selectUserNameOrUserId(ua));
+                userNormalList.add(userService.selectUserNameOrUserId(ua.getUsername(),ua.getUserId()));
             });
             for (int i = 0; i < userNormalList.size(); i++) {
                 String lastName = userNormalList.get(i).getLastName()==null?"":userNormalList.get(i).getLastName();

@@ -33,11 +33,6 @@ public class IssueService {
         QueryWrapper<Issue> queryWrapper = new QueryWrapper<>();
         if (riqie){//开启日切则查今日的日切数据
             queryWrapper.eq("riqie",riqie);//查询没有开启日切的
-//            queryWrapper.ge("set_time",setTime);//查询大于等于日切时间的账单
-            LocalDateTime startOfDay = LocalDateTime.now().withHour(0).withMinute(0).withSecond(0);
-            LocalDateTime endOfDay = LocalDateTime.now().withHour(23).withMinute(59).withSecond(59);
-            queryWrapper.ge("set_time", Date.from(startOfDay.atZone(ZoneId.systemDefault()).toInstant()))
-                    .le("set_time", Date.from(endOfDay.atZone(ZoneId.systemDefault()).toInstant()));
         }else {//如果关闭了日切则查全部的
             LocalDateTime startOfDay = LocalDateTime.now().withHour(0).withMinute(0).withSecond(0);
             LocalDateTime endOfDay = LocalDateTime.now().withHour(23).withMinute(59).withSecond(59);

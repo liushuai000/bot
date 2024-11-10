@@ -94,11 +94,10 @@ public class UserService {
         wrapper.set("valid_time", date);
         mapper.update(user,wrapper);
     }
-
-    public User selectUserNameOrUserId(UserAuthority ua) {
+    public User selectUserNameOrUserId(String username,String userId) {
         QueryWrapper<User> queryWrapper = new QueryWrapper<>();
-        queryWrapper.eq("username", ua.getUsername());
-        queryWrapper.or().eq("user_id", ua.getUserId());
+        queryWrapper.eq("username", username);
+        queryWrapper.or().eq("user_id", userId);
         return mapper.selectOne(queryWrapper);
     }
 }

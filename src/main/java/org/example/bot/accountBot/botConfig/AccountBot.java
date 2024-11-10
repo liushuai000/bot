@@ -215,7 +215,7 @@ public class AccountBot extends TelegramLongPollingBot {
                 if (repeat==null){
                     userAuthorityService.insertUserAuthority(userAuthority);
                 }
-                String message="感谢权限人把我添加到贵群 ❤\uFE0F\n" +
+                String message="<b>感谢权限人把我添加到贵群</b> ❤\uFE0F\n" +
                         "➖➖➖➖➖➖➖➖➖➖➖\n" +
                         "\n" +
                         "请根据需求先对机器人进行设置；\n" +
@@ -223,14 +223,14 @@ public class AccountBot extends TelegramLongPollingBot {
                         "汇率：设置汇率7\n" +
                         "注意：设置操作人 @*****\n" +
                         "\n" +
-                        "（本群默认开启日切北京时间中午12时）\n" +
-                        "（如没有日切需求发送：关闭日切）\n" +
+                        "<b>（本群默认开启日切北京时间中午12时）</b>\n" +
+                        "<b>（如没有日切需求发送：关闭日切）</b>\n" +
                         "\n" +
                         "我也可以查询TRC20地址如下：\n" +
                         "输入: 查询TEtYFxxxxxxxxj8W9pC\n" +
                         "\n" +
                         "➖➖➖➖➖➖➖➖➖➖➖\n" +
-                        "详情使用说明请私聊我 @Evipbot";
+                        "<b>详情使用说明请私聊我</b> @Evipbot";
                 update.getMessage();
                 SendMessage sendMessage = new SendMessage();
                 sendMessage.setChatId(chatId);
@@ -253,16 +253,6 @@ public class AccountBot extends TelegramLongPollingBot {
                 userNew.setValidTime(new Date());
                 userNew.setCreateTime(new Date());
                 userService.insertUser(userNew);
-
-                UserAuthority userAuthority = new UserAuthority();
-                userAuthority.setOperation(false);
-                userAuthority.setUserId(userDTO.getCallBackUserId());
-                userAuthority.setUsername(userDTO.getCallBackName()==null?"":userDTO.getCallBackName());
-                userAuthority.setGroupId(userDTO.getGroupId());
-                UserAuthority repeat = userAuthorityService.repeat(userAuthority,userDTO.getGroupId());
-                if (repeat==null){
-                    userAuthorityService.insertUserAuthority(userAuthority);
-                }
             }
         }
         //能发送消息userid就不为空 因为有一种空的用户名情况 但是没有空的userId情况
@@ -294,17 +284,6 @@ public class AccountBot extends TelegramLongPollingBot {
                 user.setFirstName(firstNameDTO);
                 userService.updateUserid(user);
 
-                UserAuthority userAuthority1 = new UserAuthority();
-                userAuthority1.setUserId(user.getUserId());
-                userAuthority1.setUsername(username);
-                UserAuthority userAuthority = userAuthorityService.repeat(userAuthority1,userDTO.getGroupId());
-                if(userAuthority==null){
-                    userAuthority=new UserAuthority();
-                    userAuthority.setUsername(username);
-                    userAuthority.setGroupId(userDTO.getGroupId());
-                    userAuthorityService.update(userAuthority);
-                }
-
             }
         } else if (byUsername!=null ){//设置完操作员  然后操作员也不说话 然后操作员直接修改了用户名 会有问题
             if (byUsername.getUsername()!=null){
@@ -314,11 +293,6 @@ public class AccountBot extends TelegramLongPollingBot {
                 byUsername.setLastName(lastNameDTO);
                 byUsername.setFirstName(firstNameDTO);
                 userService.updateUsername(byUsername);
-
-                UserAuthority userAuthority = userAuthorityService.findByUsername(byUsername.getUsername(), userDTO.getGroupId());
-                userAuthority.setUserId(userDTO.getUserId());
-                userAuthority.setGroupId(userDTO.getGroupId());
-                userAuthorityService.update(userAuthority);
             }
         }else {
             User userNew = new User();
@@ -329,15 +303,6 @@ public class AccountBot extends TelegramLongPollingBot {
             userNew.setValidTime(new Date());
             userNew.setCreateTime(new Date());
             userService.insertUser(userNew);
-            UserAuthority userAuthority = new UserAuthority();
-            userAuthority.setOperation(false);
-            userAuthority.setUserId(userDTO.getUserId());
-            userAuthority.setUsername(userDTO.getUsername()==null?"":userDTO.getUsername());
-            userAuthority.setGroupId(userDTO.getGroupId());
-            UserAuthority repeat = userAuthorityService.repeat(userAuthority,userDTO.getGroupId());
-            if (repeat==null){
-                userAuthorityService.insertUserAuthority(userAuthority);
-            }
         }
     }
     protected void tronAccountMessageText(SendMessage sendMessage,String chatId, String text) {
