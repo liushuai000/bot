@@ -142,18 +142,21 @@ public class AccountBot extends TelegramLongPollingBot {
                 !BaseConstant.getMessageContentIsContain(message.getText()) ) {
             return ;
         }
-        User user = userService.findByUserId(user1.getSuperiorsUserId());
-        if (user1.getSuperiorsUserId()!=null || userAuthorityName1==null){
-            //根据群组id查询不是空的ValidTime
-            if (user==null||user.getValidTime().compareTo(new Date())<0){
+        if (userAuthorityName1==null){
+            String format = String.format("<a href=\"tg://user?id=%d\">%s</a>", Long.parseLong(adminUserId), "超级管理");
+            this.sendMessage(sendMessage,"管理员无效或不在有效期内!请联系: "+format);
+            return;
+        }else {
+            //如果有效期没过期
+            if (new Date().compareTo(user1.getValidTime())>=0){
                 String format = String.format("<a href=\"tg://user?id=%d\">%s</a>", Long.parseLong(adminUserId), "超级管理");
-                this.sendMessage(sendMessage,"管理员无效或不在有效期内!请联系: "+format);
+                this.sendMessage(sendMessage,"不在有效期内!请联系: "+format);
                 return;
             }
-        }
-        if (user==null && !userAuthorityName1.isOperation()){
-            this.sendMessage(sendMessage,"不是操作员 请联系管理员!");
-            return;
+            if (!userAuthorityName1.isOperation()){
+                this.sendMessage(sendMessage,"不是操作员 请联系管理员!");
+                return;
+            }
         }
         String[] split1 = message.getText().split(" ");
         String[] split2 = message.getText().split("\\+");
@@ -167,20 +170,13 @@ public class AccountBot extends TelegramLongPollingBot {
         issue.setGroupId(userDTO.getGroupId());
         //没有用户名的情况下
         if (StringUtils.isEmpty(userDTO.getUsername()))userDTO.setUsername("");
-        //查询最新数据用这个 dateOperator.selectIsRiqie
+        //查询最新数据用这个 dateOperator.selectIsRiqie dateOperator.checkRiqie
+        dateOperator.checkRiqie(sendMessage,status);//检查日切时间
         List<Account> accountList=dateOperator.selectIsRiqie(sendMessage,status,userDTO.getGroupId());
         List<Issue> issueList=dateOperator.selectIsIssueRiqie(sendMessage,status,userDTO.getGroupId());
         //设置日切 如果日切时间没结束 第二次设置日切 也需要修改账单的日切时间
         dateOperator.isOver24HourCheck(message, sendMessage, userDTO, status,accountList,issueList);
-        accountList =dateOperator.checkRiqie(sendMessage,status,accountList);
-        issueList =dateOperator.checkRiqieIssue(sendMessage,status,issueList);
-        if (status.isRiqie()){
-            //如果日切时间小于等于当前时间
-            if (status.getSetTime().compareTo(new Date())<=0) {
-                this.sendMessage(sendMessage,"日切时间已更新，当前日切时间为 ：每天:"+status.getSetTime().getHours()+"时"+
-                        status.getSetTime().getMinutes()+"分"+status.getSetTime().getSeconds()+"秒");
-            }
-        }
+
         //设置操作人员
         settingOperatorPerson.setHandle(split1, sendMessage,message.getText(),userDTO,user1,status);
         //设置费率/汇率
@@ -197,6 +193,8 @@ public class AccountBot extends TelegramLongPollingBot {
         //通知功能
         notificationService.inform(message.getText(),sendMessage);
     }
+
+
     //拉取机器人进群处理
     public void onJinQunMessage(Update update){
         if (update.hasMyChatMember()) {

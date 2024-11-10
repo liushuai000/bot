@@ -306,11 +306,13 @@ public class PaperPlaneBotSinglePerson {
         LocalDateTime t= LocalDateTime.ofInstant(user.getValidTime().toInstant(), ZoneId.systemDefault());
         String   time=" 有效期:"+t.getYear()+"年"+t.getMonthValue()+ "月"+
                 t.getDayOfMonth()+"日"+ t.getHour()+"时"+t.getMinute()+"分" +t.getSecond()+"秒";
+        String firstName=userDTO.getFirstName()==null?"": userDTO.getFirstName();
+        String lastName=userDTO.getLastName()==null?"":userDTO.getLastName();
         String message1="<b>账号个人信息</b>✅：\n" +
                 "\n" +
                 "<b>用户名：</b>@"+userDTO.getUsername()+" \n" +
                 "<b>用户ID：</b><code>"+userDTO.getUserId()+"</code>\n" +
-                "<b>用户昵称：</b>"+userDTO.getFirstName()+userDTO.getLastName()+"\n" +
+                "<b>用户昵称：</b>"+firstName+lastName+"\n" +
                 "<b>有效期：</b>"+time;
         accountBot.tronAccountMessageTextHtml(sendMessage,userDTO.getUserId(),message1);
     }
