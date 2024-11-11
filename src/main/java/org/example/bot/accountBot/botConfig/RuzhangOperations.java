@@ -233,8 +233,8 @@ public class RuzhangOperations{
                 issue.setRiqie(status.isRiqie());
                 issue.setSetTime(status.getSetTime());
                 User byUserId = userService.findByUserId(userDTO.getUserId());
+                issueService.insertIssue(issue);
                 if (byUserId!=null){
-                    issueService.insertIssue(issue);
                     accountService.updateDown(updateAccount.getDowning().subtract(num),userDTO.getGroupId());
                     log.info("执行了issue.getHandle()!=null issue--:{}",issue);
                 }
@@ -243,6 +243,10 @@ public class RuzhangOperations{
         //重新获取最新的数据
         List<Account> accounts = dateOperator.selectIsRiqie(sendMessage,status,userDTO.getGroupId());
         List<Issue> issues = dateOperator.selectIsIssueRiqie(sendMessage,status,userDTO.getGroupId());
+        if (issues.isEmpty()){
+            issueService.selectIssueRiqie(status.isRiqie(),status.getSetTime(),userDTO.getGroupId());
+            System.err.println("是空!");
+        }
         log.info("issues,,{}",issues);
         //获取时间数据方便后续操作
         List<String> newAccountList = new ArrayList<>();

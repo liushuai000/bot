@@ -119,6 +119,7 @@ public class DateOperator{
                 }else if (issue.getAddTime().compareTo(status.getSetStartTime())>=0){
                     issues.add(issue);
                 }
+
             }else{
                 issues.add(issue);
             }
@@ -144,7 +145,6 @@ public class DateOperator{
                     if (account.getSetTime().compareTo(status.getSetTime())>0)
                     //如果日切时间小于 账单日切时间  就是老账单
                         accounts.get().add(account);
-
                 }
                 if (account.getAddTime().compareTo(status.getSetStartTime()) >=0 ){
                     accounts.get().add(account);

@@ -50,7 +50,13 @@ public class Status {
     private boolean riqie;   //是否设置了日切 true 1 false 0
 
     public Date parseDate(){
-        LocalDateTime tomorrow=LocalDateTime.now().plusDays(1).withHour(12).withMinute(0).withSecond(0).withNano(0);
+        Date date = new Date();
+        LocalDateTime tomorrow;
+        if (date.getHours()>12){
+            tomorrow=LocalDateTime.now().plusDays(1).withHour(12).withMinute(0).withSecond(0).withNano(0);
+        }else {
+            tomorrow=LocalDateTime.now().plusDays(0).withHour(12).withMinute(0).withSecond(0).withNano(0);
+        }
         return Date.from(tomorrow.atZone(ZoneId.systemDefault()).toInstant());
     }
 

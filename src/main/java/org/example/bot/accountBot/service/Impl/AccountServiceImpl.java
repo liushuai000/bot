@@ -264,10 +264,18 @@ public class AccountServiceImpl implements AccountService {
     public List<AccountDTO> getAccountDTO(Date addTime,Date addEndTime, String username, String groupId, boolean findAll, boolean operation,Status status) {
         QueryWrapper<Account> queryWrapper = new QueryWrapper<>();
         queryWrapper.eq("group_id", groupId);
-        if (!findAll) {
-            queryWrapper.ge("add_time", addTime).le("add_time", addEndTime);
-        }
-        if (status!=null){
+        if (!findAll) {//不查询全部数据
+            //第一次查询需要使用setStartTime
+            if (status.isRiqie()){
+                if (addTime!=status.getSetStartTime()){
+                    queryWrapper.ge("add_time", addTime).le("add_time", addEndTime);
+                }else{
+                    queryWrapper.ge("add_time", status.getSetStartTime()).le("add_time", addEndTime);
+                }
+            }else {
+                queryWrapper.ge("add_time", addTime).le("add_time", addEndTime);
+            }
+        }else {
             if (status.isRiqie()){
                 queryWrapper.eq("riqie", status.isRiqie());
             }

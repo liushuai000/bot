@@ -3,16 +3,13 @@ package org.example.bot.accountBot.service;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang3.StringUtils;
 import org.example.bot.accountBot.mapper.UserMapper;
 
 import org.example.bot.accountBot.pojo.User;
-import org.example.bot.accountBot.pojo.UserAuthority;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.stereotype.Service;
 
-import java.math.BigDecimal;
 import java.util.Date;
 import java.util.List;
 
@@ -70,13 +67,7 @@ public class UserService {
         wrapper.eq("user_id", user.getUserId());
         mapper.update(user,wrapper);
     }
-//    public void updateUserByNormal(User user) {
-//        UpdateWrapper<User> wrapper= new UpdateWrapper<>();
-//        wrapper.eq("username", user.getUsername());
-//        wrapper.eq("user_id", user.getUserId());
-//        wrapper.set("is_normal", user.isNormal());
-//        mapper.update(user,wrapper);
-//    }
+
     public void updateUser(User user) {
         mapper.updateById(user);
     }

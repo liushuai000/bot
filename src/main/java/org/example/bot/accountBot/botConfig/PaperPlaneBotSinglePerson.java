@@ -1,18 +1,20 @@
 package org.example.bot.accountBot.botConfig;
 
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang3.StringUtils;
 import org.example.bot.accountBot.config.RestTemplateConfig;
 import org.example.bot.accountBot.dto.TronAccountDTO;
 import org.example.bot.accountBot.dto.TronHistoryDTO;
 import org.example.bot.accountBot.dto.UserDTO;
 import org.example.bot.accountBot.pojo.User;
-import org.example.bot.accountBot.pojo.UserAuthority;
+import org.example.bot.accountBot.pojo.UserNormal;
+import org.example.bot.accountBot.pojo.UserOperation;
 import org.example.bot.accountBot.pojo.WalletListener;
-import org.example.bot.accountBot.service.UserAuthorityService;
+import org.example.bot.accountBot.service.UserNormalService;
+import org.example.bot.accountBot.service.UserOperationService;
 import org.example.bot.accountBot.service.UserService;
 import org.example.bot.accountBot.service.WalletListenerService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
@@ -48,7 +50,7 @@ public class PaperPlaneBotSinglePerson {
     @Value("${telegram.bot.username}")
     protected String username;
     @Autowired
-    UserAuthorityService userAuthorityService;
+    UserNormalService userAuthorityService;
     @Autowired
     WalletListenerService walletListenerService;
     @Value("${tranAccountUrl}")
@@ -62,6 +64,9 @@ public class PaperPlaneBotSinglePerson {
 
     // 定时任务调度器
     private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
+    @Qualifier("userOperationService")
+    @Autowired
+    private UserOperationService userOperationService;
 
     @PostConstruct
     public void init() {
@@ -166,10 +171,6 @@ public class PaperPlaneBotSinglePerson {
     //设置机器人在群组内的有效时间 默认免费使用日期6小时. 机器人底部按钮 获取个人信息 获取最新用户名 获取个人id 使用日期;
     protected void handleNonGroupMessage(Message message, SendMessage sendMessage, UserDTO userDTO) {
         String text = userDTO.getText();
-        if (text.startsWith("授权-")&&!userDTO.getUserId().equals(adminUserId)){
-            accountBot.sendMessage(sendMessage,"您不是超级管理!无权限设置管理员!");
-            return;
-        }
         //授权-123456789-30  用户id -30
         PaperPlaneBotButton buttonList = new PaperPlaneBotButton();
         ReplyKeyboardMarkup replyKeyboardMarkup = buttonList.sendReplyKeyboard();
@@ -181,6 +182,9 @@ public class PaperPlaneBotSinglePerson {
             return;
         }else if (text.equals("监听列表")){
             this.getListening(message,sendMessage,userDTO);
+            return;
+        }else if (text.equals("使用说明")){
+            this.useInfo(message,sendMessage,userDTO);
             return;
         }else if (text.contains("##") &&text.length()>=37){
             // 使用 split 方法分割字符串
@@ -199,6 +203,10 @@ public class PaperPlaneBotSinglePerson {
             return;
         }
         if (text.contains("授权")){
+            if (text.startsWith("授权-")&&!userDTO.getUserId().equals(adminUserId)){
+                accountBot.sendMessage(sendMessage,"您不是超级管理!无权限设置管理员!");
+                return;
+            }
             boolean matches = text.matches(regex);
             String validTimeText = "";
             String userId=split3[1];
@@ -211,36 +219,53 @@ public class PaperPlaneBotSinglePerson {
             }
             LocalDateTime tomorrow= LocalDateTime.now().plusDays(Long.parseLong(validTimeText));
             Date validTime = Date.from(tomorrow.atZone(ZoneId.systemDefault()).toInstant());
-
             if (user == null) {
                 user = new User();
                 user.setUserId(userId);
                 user.setUsername(userDTO.getUsername());
                 user.setFirstName(userDTO.getFirstName());
                 user.setLastName(userDTO.getLastName());
-                user.setNormal(false);//默认操作权限管理员
                 user.setCreateTime(new Date());
+                user.setSuperAdmin(true);//是管理员
+                user.setValidFree(true);
                 user.setValidTime(validTime);
-                user.setValidFree(true);//是否使用过免费6小时
-                user.setSuperiorsUserId(userId);
                 userService.insertUser(user);
-
-                UserAuthority userAuthority = new UserAuthority();
-                userAuthority.setUserId(userId);
-                userAuthority.setOperation(true);
-                userAuthority.setUsername(userDTO.getUsername());
-                UserAuthority repeat = userAuthorityService.repeat(userAuthority,userDTO.getGroupId());
-                if (repeat==null){
-                    userAuthorityService.insertUserAuthority(userAuthority);
-                }
+                UserNormal userNormal = new UserNormal();
+                userNormal.setAdmin(true);
+                userNormal.setGroupId(message.getChatId().toString());
+                userNormal.setUserId(userDTO.getUserId());
+                userNormal.setCreateTime(new Date());
+                userNormal.setUsername(userDTO.getUsername());
+                userAuthorityService.insertUserNormal(userNormal);
+                UserOperation userOperation = new UserOperation();
+                userOperation.setAdminUserId(userDTO.getUserId());
+                userOperation.setOperation(true);
+                userOperation.setUserId(userDTO.getUserId());
+                userOperation.setUsername(userDTO.getUsername());
+                userOperation.setGroupId(message.getChatId().toString());
+                userOperation.setCreateTime(new Date());
+                userOperationService.insertUserOperation(userOperation);
             }else {
-                user.setNormal(false);//默认操作权限管理员
+                user.setSuperAdmin(true);//默认操作权限管理员
                 user.setValidTime(validTime);
-                user.setSuperiorsUserId(userId);
                 user.setValidFree(true);
                 userService.updateUserValidTime(user,validTime);
+                UserNormal userNormal = new UserNormal();
+                userNormal.setAdmin(true);
+                userNormal.setGroupId(message.getChatId().toString());
+                userNormal.setUserId(userDTO.getUserId());
+                userNormal.setCreateTime(new Date());
+                userNormal.setUsername(userDTO.getUsername());
+                userAuthorityService.insertUserNormal(userNormal);
+                UserOperation userOperation = new UserOperation();
+                userOperation.setAdminUserId(userDTO.getUserId());
+                userOperation.setOperation(true);
+                userOperation.setUserId(userDTO.getUserId());
+                userOperation.setUsername(userDTO.getUsername());
+                userOperation.setGroupId(message.getChatId().toString());
+                userOperation.setCreateTime(new Date());
+                userOperationService.insertUserOperation(userOperation);
             }
-
             accountBot.sendMessage(sendMessage,"用户ID: "+userId+" 有效期:"+tomorrow.getYear()+"年"+tomorrow.getMonthValue()+ "月"+
                     tomorrow.getDayOfMonth()+"日"+ tomorrow.getHour()+"时"+tomorrow.getMinute()+"分" +tomorrow.getSecond()+"秒");
             return;
@@ -258,6 +283,63 @@ public class PaperPlaneBotSinglePerson {
                 "\n" +
                 "<b>联系客服：</b>@vipkefu\n" +
                 "<b>双向客服：</b>@yewuvipBot");
+    }
+    //使用说明
+    private void useInfo(Message message, SendMessage sendMessage, UserDTO userDTO) {
+        accountBot.sendMessage(sendMessage,"①增加机器人进群。群右上角--Add member-输入  @iiiivipbot\n" +
+                "②输入”设置费率X.X“\n" +
+                "③输入”设置汇率X.X“\n" +
+                "④取消命令：  撤销入款        撤销下发\n" +
+                "\n" +
+                "设置操作人 @***** ，注意：@前面有个空格 。\n" +
+                "显示操作人\n" +
+                "删除操作人 @***** ，注意：@前面有个空格 。\n" +
+                "\n" +
+                "\n" +
+                "清理今天数据：删除账单  \n" +
+                "\n" +
+                "删除所有账单(关闭日切模式使用)\n" +
+                "\n" +
+                "Z0：火币网商家实时交易汇率top10\n" +
+                "\n" +
+                "计算器功能：\n" +
+                "（100+100）（1000*0.05）\n" +
+                "（1000/5）   （1000-5）\n" +
+                "\n" +
+                "临时入款汇率：+金额/汇率      演示公式： +100/5\n" +
+                "\n" +
+                "*注：\n" +
+                "\n" +
+                "“设置记账时间12”：设置记账时间+（0到23之间的整数）\n" +
+                "（日切数据默认北京时间中午12点重置）\n" +
+                "\n" +
+                "单笔手续费：\n" +
+                "“设置入款单笔手续费“关键字 ： 设置入款单笔手续费5\n" +
+                "“设置下发单笔手续费“关键字 ： 设置下发单笔手续费5\n" +
+                "\n" +
+                "电报界面显示命令：\n" +
+                "显示操作人名字（显示操作人名字）\n" +
+                "显示回复人名字（显示回复人名字）\n" +
+                "隐藏名字\n" +
+                "显示明细\n" +
+                "隐藏明细\n" +
+                "显示分类\n" +
+                "隐藏分类\n" +
+                "显示余额\n" +
+                "显示USDT\n" +
+                "显示usdt\n" +
+                "显示全部\n" +
+                "显示1条\n" +
+                "显示3条\n" +
+                "显示5条\n" +
+                "关闭日切\n" +
+                "开启日切\n" +
+                "显示手续费\n" +
+                "隐藏手续费\n" +
+                "通知所有人（ 操作员发送才可生效 ）\n" +
+                "查询地址余额：群内发送 查询+地址\n" +
+                "\n" +
+                "售后客服： @vipkefu"  );
     }
 
     private void getListening(Message message, SendMessage sendMessage, UserDTO userDTO) {
@@ -288,18 +370,18 @@ public class PaperPlaneBotSinglePerson {
             user.setUsername(userDTO.getUsername());
             user.setFirstName(userDTO.getFirstName());
             user.setLastName(userDTO.getLastName());
-            user.setNormal(false);//默认操作权限管理员
             user.setCreateTime(new Date());
+            user.setSuperAdmin(true);
             user.setValidTime(validTime);
-            user.setValidFree(true);//是否使用过免费6小时
-            user.setSuperiorsUserId(userDTO.getUserId());
+            user.setValidFree(true);//已经体验过会员
             userService.insertUser(user);
+
         }else if (!user.isValidFree()) {//还没有体验过免费6小时
             LocalDateTime tomorrow = LocalDateTime.now().plusHours(6);
             Date validTime = Date.from(tomorrow.atZone(ZoneId.systemDefault()).toInstant());
             user.setValidTime(validTime);
-            user.setNormal(false);//默认操作权限管理员
-            user.setSuperiorsUserId(userDTO.getUserId());
+            user.setSuperAdmin(true);//默认操作权限管理员
+            user.setValidTime(validTime);
             user.setValidFree(true);//是使用过免费6小时
             userService.updateUser(user);
         }
