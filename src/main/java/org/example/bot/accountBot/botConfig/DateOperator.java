@@ -72,7 +72,7 @@ public class DateOperator{
             long seconds = (differenceInMillis % (1000 * 60)) / 1000;
             //机器人进群  首次进群 如果有账单就查所有 没有就默认
             accountList.stream().filter(Objects::nonNull).forEach(a->accountService.updateSetTime(a.getId()+"",OverDue));
-            issueList.stream().filter(Objects::nonNull).forEach(a->issueService.updateLastUpdateRiqie(a.getId(),true,OverDue));
+            issueList.stream().filter(Objects::nonNull).forEach(a->issueService.updateLastUpdateRiqie(a.getId(),OverDue));
             accountBot.sendMessage(sendMessage,"设置成功 日切时间为每天:"+ tomorrow.getHour()+"时"+tomorrow.getMinute()+"分" +tomorrow.getSecond()+"秒!\n" +
                     "距离日切时间结束还有:"+ hours+"小时"+minutes+"分钟"+seconds+"秒");
         }
@@ -114,48 +114,49 @@ public class DateOperator{
                 // 获取减去一天后的新 Date 对象
                 Date newAddTime = calendar.getTime();
                 int hours = newAddTime.getHours();
-                if (hours>issue.getSetTime().getHours()){
+                if (hours>=status.getSetTime().getHours()){
                     issues.add(issue);
                 }else if (issue.getAddTime().compareTo(status.getSetStartTime())>=0){
                     issues.add(issue);
                 }
-
             }else{
                 issues.add(issue);
             }
         });
-        return issues;
+        return issues.stream().filter(issue1 -> {
+            if (issue1.isRiqie()) {
+                return issue1.getSetTime().compareTo(status.getSetTime()) >= 0;
+            } else {
+                return true; // 直接继续
+            }}).collect(Collectors.toList());
     }
     //如果日切时间超时
     public List<Account> selectIsRiqie(SendMessage sendMessage, Status status, String groupId) {
         List<Account> accountList=accountService.selectAccountRiqie(status.isRiqie(),status.getSetTime(),groupId);//status.getSetTime() 这个没有用
-        AtomicReference<List<Account>> accounts = new AtomicReference<>(new ArrayList<>());
+        List<Account> accounts = new ArrayList<>();
         accountList.stream().filter(Objects::nonNull).forEach(account -> {
             if (status.isRiqie()){
-                //17   13 hours >=setHours &&
-                int hours = status.getSetTime().getHours();//日切时间 12
-                int accountHours = account.getSetTime().getHours();//账单日切时间 18
-                if (hours>=accountHours){
-                    //如果日切时间大于 账单日切时间  就是新账单
-                    //日切时间大于账单的时间 并且日切开始时间大于 账单的添加时间
-                    if (status.getSetTime().compareTo(account.getSetTime())>=0 && status.getSetStartTime().compareTo(account.getAddTime())>=0){
-                        accounts.get().add(account);
-                    }
-                }else {
-                    if (account.getSetTime().compareTo(status.getSetTime())>0)
-                    //如果日切时间小于 账单日切时间  就是老账单
-                        accounts.get().add(account);
+                Calendar calendar = Calendar.getInstance();
+                calendar.setTime(account.getSetTime());
+                calendar.add(Calendar.DAY_OF_MONTH, -1);
+                // 获取减去一天后的新 Date 对象
+                Date newAddTime = calendar.getTime();
+                int hours = newAddTime.getHours();
+                if (hours>=status.getSetTime().getHours()){
+                    accounts.add(account);
+                }else if (account.getAddTime().compareTo(status.getSetStartTime())>=0){
+                    accounts.add(account);
                 }
-                if (account.getAddTime().compareTo(status.getSetStartTime()) >=0 ){
-                    accounts.get().add(account);
-                }
-                accounts.set(accounts.get().stream().filter(Objects::nonNull).filter(account1 -> account1.isRiqie()).filter(account1 ->
-                        account1.getSetTime().compareTo(status.getSetTime()) >= 0).collect(Collectors.toList()));
             }else{
-                accounts.get().add(account);
+                accounts.add(account);
             }
         });
-        return accounts.get();
+        return accounts.stream().filter(account1 -> {
+                    if (account1.isRiqie()) {
+                        return account1.getSetTime().compareTo(status.getSetTime()) >= 0;
+                    } else {
+                        return true; // 直接继续
+                    }}).collect(Collectors.toList());
     }
     //取今天的日切时间 +关闭日切后的账单 默认日切时间中午12点
     public void checkRiqie(SendMessage sendMessage,Status status) {

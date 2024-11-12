@@ -22,7 +22,7 @@ import java.util.Map;
 public class ButtonList {
     //protected String url="http://www.yaoke.cc/";//43.128.113.117 http://www.yaoke.cc/ 本地需要换端口
 
-    protected String url="http://192.168.0.16:8080/";
+    protected String url="http://192.168.0.2:8080/";
     //map key:buttonText value:callbackData
     public void sendButton(SendMessage sendMessage, String groupId, Map<String,String> buttonText) {
         InlineKeyboardMarkup markup = new InlineKeyboardMarkup();

@@ -143,7 +143,7 @@ public class AccountBot extends TelegramLongPollingBot {
         UserNormal userNormalTempAdmin =userAuthorityService.selectByGroupId(userDTO.getGroupId());//超级管理
         UserOperation userOperation = userOperationService.selectByUserIdAndName(user1.getUserId(), user1.getUsername(), userDTO.getGroupId());
         if (userOperation==null || !userOperation.isOperation()){
-            String format = String.format("<a href=\"tg://user?id=%d\">%s</a>", Long.parseLong(userNormalTempAdmin.getUserId()), "超级管理");
+            String format = String.format("<a href=\"tg://user?id=%d\">%s</a>", Long.parseLong(userNormalTempAdmin.getUserId()), "权限人");
             this.sendMessage(sendMessage,"没有使用权限，请联系本群权限人 @"+format);
             return;
         }else if(userOperation.isOperation()){
@@ -151,7 +151,7 @@ public class AccountBot extends TelegramLongPollingBot {
             if (userNormalTempAdmin.getUserId().equals(userDTO.getUserId())){
                 UserNormal userNormal = userAuthorityService.selectByUserId(userOperation.getUserId(), userDTO.getGroupId());
                 if (userNormal==null || !userNormal.isAdmin() ){
-                    String format = String.format("<a href=\"tg://user?id=%d\">%s</a>", Long.parseLong(adminUserId), "超级管理");
+                    String format = String.format("<a href=\"tg://user?id=%d\">%s</a>", Long.parseLong(adminUserId), "权限人");
                     this.sendMessage(sendMessage,"您在本群不是管理!请联系: "+format);
                     return;
                 }else {

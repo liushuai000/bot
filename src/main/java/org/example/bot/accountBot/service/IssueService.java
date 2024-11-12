@@ -84,11 +84,10 @@ public class IssueService {
         mapper.delete(updateWrapper);
     }
 
-    public void updateLastUpdateRiqie(int id,boolean riqie,Date updateTime) {
+    public void updateLastUpdateRiqie(int id,Date setTime) {
         UpdateWrapper<Issue> updateWrapper = new UpdateWrapper<>();
         updateWrapper.eq("id",id);
-        updateWrapper.set("update_time",updateTime);
-        updateWrapper.set("riqie",riqie);
+        updateWrapper.set("set_time",setTime);
         mapper.update(null,updateWrapper);
     }
 }

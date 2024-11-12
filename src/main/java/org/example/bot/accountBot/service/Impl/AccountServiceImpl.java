@@ -206,10 +206,23 @@ public class AccountServiceImpl implements AccountService {
     private List<IssueDTO> getIssueDTO(Date addTime,Date addEndTime, String username, String groupId, boolean findAll, boolean operation,Status status) {
         QueryWrapper<Issue> queryWrapper = new QueryWrapper<>();
         queryWrapper.eq("group_id", groupId);
-        if (!findAll) {
-            queryWrapper.ge("add_time", addTime).le("add_time", addEndTime);
-        }
-        if (status!=null){
+        if (!findAll) {//不查询全部数据
+            //第一次查询需要使用setStartTime
+            boolean isFirstQuery = true;
+            if (status.isRiqie()){
+                if (isFirstQuery && addTime.compareTo(status.getSetStartTime())==0){
+                    queryWrapper.ge("add_time", status.getSetStartTime()).le("add_time", addEndTime);
+                    isFirstQuery=false;
+                }else{
+                    queryWrapper.ge("add_time", addTime).le("add_time", addEndTime);
+                }
+            }else {
+                LocalDateTime startOfDay = LocalDateTime.now().withHour(0).withMinute(0).withSecond(0);
+                LocalDateTime endOfDay = LocalDateTime.now().withHour(23).withMinute(59).withSecond(59);
+                queryWrapper.ge("add_time", Date.from(startOfDay.atZone(ZoneId.systemDefault()).toInstant()))
+                        .le("add_time", Date.from(endOfDay.atZone(ZoneId.systemDefault()).toInstant()));
+            }
+        }else {
             if (status.isRiqie()){
                 queryWrapper.eq("riqie", status.isRiqie());
             }
@@ -267,13 +280,16 @@ public class AccountServiceImpl implements AccountService {
         if (!findAll) {//不查询全部数据
             //第一次查询需要使用setStartTime
             if (status.isRiqie()){
-                if (addTime!=status.getSetStartTime()){
-                    queryWrapper.ge("add_time", addTime).le("add_time", addEndTime);
-                }else{
+                if (addTime.compareTo(status.getSetStartTime())==0){
                     queryWrapper.ge("add_time", status.getSetStartTime()).le("add_time", addEndTime);
+                }else{
+                    queryWrapper.ge("add_time", addTime).le("add_time", addEndTime);
                 }
             }else {
-                queryWrapper.ge("add_time", addTime).le("add_time", addEndTime);
+                LocalDateTime startOfDay = LocalDateTime.now().withHour(0).withMinute(0).withSecond(0);
+                LocalDateTime endOfDay = LocalDateTime.now().withHour(23).withMinute(59).withSecond(59);
+                queryWrapper.ge("add_time", Date.from(startOfDay.atZone(ZoneId.systemDefault()).toInstant()))
+                        .le("add_time", Date.from(endOfDay.atZone(ZoneId.systemDefault()).toInstant()));
             }
         }else {
             if (status.isRiqie()){
