@@ -22,12 +22,21 @@ logging:
     org.example.bot.accountBot.mapper: debug
   pattern:
     console: '%d{YYYY-MM-dd HH:mm:ss.SSS} %clr(%-5level) --- [%-15thread]%cyan(%-50logger{50}):%msg%n'
-
+#这个是超级管理员 可以私聊别人设置管理员权限
+adminUserId: 6976772117
+vueUrl: http://localhost:80/
+#获取最新汇率
+getExchangeUrl: https://www.htx.com/-/x/otc/v1/data/trade-market
+tranAccountUrl: https://apilist.tronscanapi.com/api/accountv2?address=
+tranHistoryUrl: https://apilist.tronscanapi.com/api/filter/trc20/transfers?limit=10&start=0&sort=-timestamp&count=true&filterTokenValue=0&relatedAddress=
 telegram:
   bot:
     #测试
-    #token: 7174037873:AAFvDejFixb94JY66NHSr_ROB6fXG4LioRs
-    #username: zqzs18bot
+#    token: 7532424117:AAEieNRdj5lBvwUoEZbPV_CHKKvbbYv6uow
+#    username: ftfgg6543366bot
+    #正式环境
+#    token: 6736457256:AAHo8BBhs9E3hIG4xBkiAiZEYnVCcNoEKDM
+#    username: Evipbot
     #个人
-    token: 7532424117:AAEieNRdj5lBvwUoEZbPV_CHKKvbbYv6uow
-    username: ftfgg6543366bot
+    token: 7203617407:AAGq9fe9aZSEanFkOa3oa219bEnJI_4RKY4
+    username: my_niu_bot

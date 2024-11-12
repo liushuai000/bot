@@ -1,42 +1,38 @@
-//package org.example.bot.accountBot;
-//
-//import org.example.bot.accountBot.botConfig.AccountBot;
-//import org.springframework.context.annotation.ComponentScan;
-//import org.telegram.telegrambots.bots.DefaultBotOptions;
-//import org.telegram.telegrambots.meta.TelegramBotsApi;
-//import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
-//import org.telegram.telegrambots.updatesreceivers.DefaultBotSession;
-//@ComponentScan(basePackages = {"org.example.bot.accountBot.service"})
-//public class Main {
-//
-//    public static void main(String[] args) {
-//
-//
-//        String proxyHost = "127.0.0.2";
-//
-//        int proxyPort = 8080;
-//
-//        DefaultBotOptions botOptions = new DefaultBotOptions();
-//        botOptions.setProxyHost(proxyHost);
-//        botOptions.setProxyPort(proxyPort);
-//        //注意一下这里，ProxyType是个枚举，看源码你就知道有NO_PROXY,HTTP,SOCKS4,SOCKS5;
-//        botOptions.setProxyType(DefaultBotOptions.ProxyType.SOCKS5);
-//
-//        DefaultBotSession defaultBotSession = new DefaultBotSession();
-//        defaultBotSession.setOptions(botOptions);
-//        try {
-//            TelegramBotsApi telegramBotsApi = new TelegramBotsApi(defaultBotSession.getClass());
-//
-//
-//            //需要代理
-////            ExecBot bot = new ExecBot(botOptions);
-////            telegramBotsApi.registerBot(bot);
-//            //不需代理
-////            AccountBot bot2 = new AccountBot();
-////            telegramBotsApi.registerBot(bot2);
-//        } catch (TelegramApiException e) {
-//            e.printStackTrace();
-//        }
-//    }
-//
-//}
+package org.example.bot.accountBot;
+
+import org.example.bot.accountBot.config.RestTemplateConfig;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.annotation.AnnotationConfigApplicationContext;
+import org.springframework.context.annotation.ComponentScan;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.client.RestTemplate;
+
+@ComponentScan(basePackages = {"org.example.bot.accountBot.service"})
+public class Main {
+
+    @Value("${getExchangeUrl}")
+    private static String url;
+
+    public static void main(String[] args) {
+        // 创建 Spring 应用上下文
+        ApplicationContext context = new AnnotationConfigApplicationContext(Main.class);
+
+        // 从上下文中获取 RestTemplateConfig 实例
+        RestTemplateConfig restTemplateConfig = context.getBean(RestTemplateConfig.class);
+
+        // 确保 url 不为 null
+        if (url == null) {
+            throw new IllegalStateException("URL is not configured in the properties file.");
+        }
+
+        // 使用 RestTemplate 发送请求
+        RestTemplate restTemplate = restTemplateConfig.restTemplate();
+        ResponseEntity<?> forEntity = restTemplate.getForEntity(url + "?coinId=2&currency=172&tradeType=sell&currPage=1&payMethod=0&acceptOrder=0&country=" +
+                "&blockType=general&online=1&range=0&amount=&isThumbsUp=false&isMerchant=false" +
+                "&isTraded=false&onlyTradable=false&isFollowed=false&makerCompleteRate=0", Object.class);
+
+        Object body = forEntity.getBody();
+        System.err.println(body);
+    }
+}
