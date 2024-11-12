@@ -28,6 +28,8 @@ public class Notification {
     public String firstName;    //昵称 刘
     @TableField("last_name")
     public String lastName;    //昵称 小帅
+    @TableField("group_id")
+    private String groupId;//这个是发送消息的那个人的id
 
 
 }

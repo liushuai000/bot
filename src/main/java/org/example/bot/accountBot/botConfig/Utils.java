@@ -20,6 +20,9 @@ import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.Date;
+import java.util.Deque;
+import java.util.LinkedList;
+import java.util.Stack;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -246,51 +249,131 @@ public class Utils{
     //计算器的判断是否符合+-*/
     public  String calculate(String text) {
         try {
-            String result = evaluateExpression(text);
+            BigDecimal result = evaluateExpression(text);
             System.out.println("Result: " + result);
-            if (StringUtils.isNotBlank(result))  return text+"="+result;
+            if (result!=null)  return text+"="+result;
         } catch (Exception e) {
             System.out.println("Error evaluating expression: " + e.getMessage());
         }
         return null;
     }
-    public static String evaluateExpression(String expression) {
+    public static BigDecimal evaluateExpression(String expression) {
         // 移除空格
         expression = expression.replaceAll("\\s+", "");
 
         // 检查表达式是否符合要求
         if (isValidExpression(expression)) {
             try {
-                // 创建ScriptEngine
-                ScriptEngineManager manager = new ScriptEngineManager();
-                ScriptEngine engine = manager.getEngineByName("JavaScript");
-                return engine.eval(expression)+"";
-            } catch (ScriptException e) {
-                return "";
+                // 将中缀表达式转换为后缀表达式
+                Deque<String> postfix = infixToPostfix(expression);
+
+                // 计算后缀表达式
+                Stack<BigDecimal> stack = new Stack<>();
+                while (!postfix.isEmpty()) {
+                    String token = postfix.pollFirst();
+                    if (isNumber(token)) {
+                        stack.push(new BigDecimal(token));
+                    } else {
+                        BigDecimal b = stack.pop();
+                        BigDecimal a = stack.pop();
+                        switch (token) {
+                            case "+":
+                                stack.push(a.add(b));
+                                break;
+                            case "-":
+                                stack.push(a.subtract(b));
+                                break;
+                            case "*":
+                                stack.push(a.multiply(b));
+                                break;
+                            case "/":
+                                stack.push(a.divide(b, 2, RoundingMode.HALF_UP));
+                                break;
+                            default:
+                                throw new IllegalArgumentException("未知的运算符: " + token);
+                        }
+                    }
+                }
+
+                // 四舍五入
+                BigDecimal result = stack.pop().setScale(2, RoundingMode.HALF_UP);
+                return result;
+            } catch (Exception e) {
+                return null;
             }
         } else {
-            return "";
+            return null;
         }
     }
 
-    // 检查表达式是否只有两个数值和一个运算符
     private static boolean isValidExpression(String expression) {
-        String[] tokens = expression.split("(?<=[-+*/])|(?=[-+*/])"); // 按运算符分割
-
-        // 检查是否只有三个token：一个数值、一个运算符、另一个数值
-        return tokens.length == 3 &&
-                isNumber(tokens[0]) &&
-                isOperator(tokens[1]) &&
-                isNumber(tokens[2]);
+        // 这里可以添加更复杂的验证逻辑
+        return true;
     }
 
-    // 检查是否为数字
     private static boolean isNumber(String token) {
-        return token.matches("-?\\d+(\\.\\d+)?"); // 匹配整数或小数
+        try {
+            new BigDecimal(token);
+            return true;
+        } catch (NumberFormatException e) {
+            return false;
+        }
     }
 
-    // 检查是否为运算符
-    private static boolean isOperator(String token) {
-        return "+-*/".contains(token);
+    private static Deque<String> infixToPostfix(String expression) {
+        Deque<String> output = new LinkedList<>();
+        Deque<Character> operators = new LinkedList<>();
+
+        int i = 0;
+        while (i < expression.length()) {
+            char c = expression.charAt(i);
+            if (Character.isDigit(c) || c == '.') {
+                StringBuilder number = new StringBuilder();
+                while (i < expression.length() && (Character.isDigit(expression.charAt(i)) || expression.charAt(i) == '.')) {
+                    number.append(expression.charAt(i++));
+                }
+                output.offerLast(number.toString());
+            } else if (c == '(') {
+                operators.offerFirst(c);
+                i++;
+            } else if (c == ')') {
+                while (!operators.isEmpty() && operators.peekFirst() != '(') {
+                    output.offerLast(operators.pollFirst().toString());
+                }
+                operators.pollFirst(); // 移除 '('
+                i++;
+            } else if (isOperator(c)) {
+                while (!operators.isEmpty() && precedence(operators.peekFirst()) >= precedence(c)) {
+                    output.offerLast(operators.pollFirst().toString());
+                }
+                operators.offerFirst(c);
+                i++;
+            } else {
+                i++;
+            }
+        }
+
+        while (!operators.isEmpty()) {
+            output.offerLast(operators.pollFirst().toString());
+        }
+
+        return output;
+    }
+
+    private static boolean isOperator(char c) {
+        return c == '+' || c == '-' || c == '*' || c == '/';
+    }
+
+    private static int precedence(char operator) {
+        switch (operator) {
+            case '+':
+            case '-':
+                return 1;
+            case '*':
+            case '/':
+                return 2;
+            default:
+                return -1;
+        }
     }
 }

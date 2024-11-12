@@ -31,12 +31,13 @@ public class NotificationService {
 
     //通知功能实现/48 小时内在群组发言过的所有人
     public void inform(String text, SendMessage sendMessage) {
-        if (text.equals("通知")){
+        if (text.equals("通知")||text.equals("通知所有人")){
             // 计算 48 小时之前的时间
             Calendar calendar = Calendar.getInstance();
             calendar.add(Calendar.HOUR, -48);
             Date dateThreshold = calendar.getTime();
             QueryWrapper<Notification> queryWrapper = new QueryWrapper<>();
+            queryWrapper.eq("group_id", sendMessage.getChatId());
             queryWrapper.gt("add_time",dateThreshold);
             queryWrapper.lt("add_time",new Date());
             List<Notification> notifications = mapper.selectList(queryWrapper);
@@ -55,27 +56,32 @@ public class NotificationService {
     public void initNotification(UserDTO userDTO) {
         QueryWrapper<Notification> queryWrapper = new QueryWrapper<>();
         queryWrapper.eq("user_id", userDTO.getUserId());
+        queryWrapper.eq("group_id", userDTO.getGroupId());
         //需要加群组id
         Notification notification1 = mapper.selectOne(queryWrapper);
 
         QueryWrapper<Notification> wrapper = new QueryWrapper<>();
         wrapper.eq("username", userDTO.getUsername());
+        wrapper.eq("group_id", userDTO.getGroupId());
         Notification notification2 = mapper.selectOne(wrapper);
         if (notification1!=null){
             notification1.setAddTime(new Date());
             UpdateWrapper<Notification> updateWrapper = new UpdateWrapper<Notification>()
                     .eq("user_id", userDTO.getUserId())
+                    .eq("group_id", userDTO.getGroupId())
                     .set("add_time", notification1.getAddTime());
             mapper.update(notification1,updateWrapper);
         }else if (notification2 != null){
             notification2.setAddTime(new Date());
             UpdateWrapper<Notification> updateWrapper = new UpdateWrapper<Notification>()
                     .eq("username", userDTO.getUsername())
+                    .eq("group_id", userDTO.getGroupId())
                     .set("add_time", notification2.getAddTime());
             mapper.update(notification2,updateWrapper);
         }else {
             Notification notification = new Notification();
             notification.setUserId(userDTO.getUserId());
+            notification.setGroupId(userDTO.getGroupId());
             notification.setUsername(userDTO.getUsername());
             notification.setFirstName(userDTO.getFirstName());
             notification.setLastName(userDTO.getLastName());
