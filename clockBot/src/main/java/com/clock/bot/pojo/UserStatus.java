@@ -8,6 +8,8 @@ import io.swagger.annotations.ApiModel;
 import lombok.Data;
 import lombok.experimental.Accessors;
 
+import java.time.Duration;
+import java.time.Instant;
 import java.util.Date;
 
 /**
@@ -33,7 +35,7 @@ public class UserStatus {
     @TableField("status")
     private boolean status;   //true上班 false下班
     @TableField("return_home")
-    private boolean returnHome=false;//只有在执行活动的时候 回座才是true
+    private boolean returnHome=false;//false没有执行活动 true执行中
     @TableField("work_time")
     private Date workTime;//上班时间
     @TableField("work_down_time")
@@ -42,6 +44,10 @@ public class UserStatus {
     private Date createTime;
 
 
-
+    public Duration getDuration() {
+        Instant startInstant = workTime.toInstant();
+        Instant endInstant = workDownTime.toInstant();
+        return Duration.between(startInstant, endInstant);
+    }
 
 }

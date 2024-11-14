@@ -9,5 +9,13 @@ public interface UserOperationService {
 
     void insertUserOperation(UserOperation userOperation);
 
-    List<UserOperation> findByOperation(int id, String matchedCommand);
+    List<UserOperation> findByOperation(int userStatusId, String matchedCommand);
+
+    UserOperation findById(String userOperationId);
+
+    void updateUserOperation(UserOperation userOperation);
+
+    List<UserOperation> findByStatusId(String userStatusId);
+
+    List<UserOperation> findByUserStatusIds(List<Integer> userStatusIds);
 }

@@ -9,7 +9,11 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.stereotype.Service;
-import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
+
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.util.Date;
+import java.util.List;
 
 @Component
 @Service
@@ -39,5 +43,17 @@ public class UserStatusServiceImpl implements UserStatusService {
     @Override
     public void updateUserStatus(UserStatus userStatus) {
         userStatusMapper.updateById(userStatus);
+    }
+
+    @Override
+    public List<UserStatus> selectTodayUserStatus(String userId, String groupId) {
+        LocalDateTime startOfDay = LocalDateTime.now().withHour(0).withMinute(0).withSecond(0);
+        LocalDateTime endOfDay = LocalDateTime.now().withHour(23).withMinute(59).withSecond(59);
+        QueryWrapper<UserStatus> wrapper = new QueryWrapper<>();
+        wrapper.eq("user_id", userId);
+        wrapper.eq("group_id", groupId);
+        wrapper.ge("create_time", Date.from(startOfDay.atZone(ZoneId.systemDefault()).toInstant()))
+                .le("create_time", Date.from(endOfDay.atZone(ZoneId.systemDefault()).toInstant()));
+        return userStatusMapper.selectList(wrapper);
     }
 }

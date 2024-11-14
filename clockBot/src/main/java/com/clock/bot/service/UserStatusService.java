@@ -5,6 +5,8 @@ import com.clock.bot.pojo.User;
 import com.clock.bot.pojo.UserStatus;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 
+import java.util.List;
+
 public interface UserStatusService {
 
     UserStatus selectUserStatus(UserDTO userDTO);
@@ -12,4 +14,6 @@ public interface UserStatusService {
     void insertUserStatus(UserStatus userStatus);
 
     void updateUserStatus(UserStatus userStatus);
+
+    List<UserStatus> selectTodayUserStatus(String userId, String groupId);
 }

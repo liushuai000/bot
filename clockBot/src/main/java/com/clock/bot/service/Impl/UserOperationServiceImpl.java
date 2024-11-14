@@ -37,10 +37,34 @@ public class UserOperationServiceImpl implements UserOperationService {
         wrapper.eq("operation", matchedCommand);
         LocalDateTime startOfDay = LocalDateTime.now().withHour(0).withMinute(0).withSecond(0);
         LocalDateTime endOfDay = LocalDateTime.now().withHour(23).withMinute(59).withSecond(59);
-        wrapper.ge("add_time", Date.from(startOfDay.atZone(ZoneId.systemDefault()).toInstant()))
-                .le("add_time", Date.from(endOfDay.atZone(ZoneId.systemDefault()).toInstant()));
+        wrapper.ge("create_time", Date.from(startOfDay.atZone(ZoneId.systemDefault()).toInstant()))
+                .le("create_time", Date.from(endOfDay.atZone(ZoneId.systemDefault()).toInstant()));
         return userOperationMapper.selectList(wrapper);
 
+    }
+
+    @Override
+    public UserOperation findById(String userOperationId) {
+        return userOperationMapper.selectById(userOperationId);
+    }
+
+    @Override
+    public void updateUserOperation(UserOperation userOperation) {
+        userOperationMapper.updateById(userOperation);
+    }
+
+    @Override
+    public List<UserOperation> findByStatusId(String userStatusId) {
+        QueryWrapper<UserOperation> wrapper = new QueryWrapper<>();
+        wrapper.eq("user_status_id", userStatusId);
+        return userOperationMapper.selectList(wrapper);
+    }
+
+    @Override
+    public List<UserOperation> findByUserStatusIds(List<Integer> userStatusIds) {
+        QueryWrapper<UserOperation> wrapper = new QueryWrapper<>();
+        wrapper.in("user_status_id", userStatusIds);
+        return userOperationMapper.selectList(wrapper);
     }
 
 
