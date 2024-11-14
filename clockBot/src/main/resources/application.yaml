@@ -1,42 +1,5 @@
 server:
-  port: 8081
+  port: 8085
 spring:
-  devtools:
-    restart:
-      enabled: false
-  datasource:
-    driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://localhost:3306/bot?useUnicode=true&characterEncoding=UTF-8&autoReconnect=true&useSSL=false&zeroDateTimeBehavior=convertToNull&useTimezone=true&serverTimezone=GMT%2B8&allowMultiQueries=true
-    username: root
-    password: root
-  jackson:
-    date-format: yyyy-MM-dd HH:mm:ss
-    time-zone: GMT+8
-# mybatis??
-mybatis-plus:
-  mapper-locations: classpath*:mapper/*.xml
-  configuration:
-    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
-logging:
-  level:
-    org.example.bot.accountBot.mapper: debug
-  pattern:
-    console: '%d{YYYY-MM-dd HH:mm:ss.SSS} %clr(%-5level) --- [%-15thread]%cyan(%-50logger{50}):%msg%n'
-#这个是超级管理员 可以私聊别人设置管理员权限
-adminUserId: 6976772117
-vueUrl: http://localhost:80/
-#获取最新汇率
-getExchangeUrl: https://www.htx.com/-/x/otc/v1/data/trade-market
-tranAccountUrl: https://apilist.tronscanapi.com/api/accountv2?address=
-tranHistoryUrl: https://apilist.tronscanapi.com/api/filter/trc20/transfers?limit=10&start=0&sort=-timestamp&count=true&filterTokenValue=0&relatedAddress=
-telegram:
-  bot:
-    #测试
-#    token: 7532424117:AAEieNRdj5lBvwUoEZbPV_CHKKvbbYv6uow
-#    username: ftfgg6543366bot
-    #正式环境
-    token: 6736457256:AAHo8BBhs9E3hIG4xBkiAiZEYnVCcNoEKDM
-    username: Evipbot
-    #个人
-#    token: 7203617407:AAGq9fe9aZSEanFkOa3oa219bEnJI_4RKY4
-#    username: my_niu_bot
+  profiles:
+    active: test
