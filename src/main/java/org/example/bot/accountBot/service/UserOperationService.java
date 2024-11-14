@@ -55,11 +55,7 @@ public class UserOperationService {
         QueryWrapper<UserOperation> queryWrapper = new QueryWrapper<>();
         queryWrapper.eq("username", username).or().eq("user_id", userId).eq("group_id", groupId);
         queryWrapper.orderByDesc("create_time");
-        if (mapper.selectList(queryWrapper).isEmpty()){
-            return null;
-        }else {
-            return mapper.selectList(queryWrapper).get(0);
-        }
+        return mapper.selectOne(queryWrapper);
     }
 
     public List<UserOperation> selectByUserOperator(String groupId, boolean isOperator) {

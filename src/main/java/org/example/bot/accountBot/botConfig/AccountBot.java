@@ -35,6 +35,8 @@ public class AccountBot extends TelegramLongPollingBot {
     protected String botToken;
     @Value("${telegram.bot.username}")
     protected String username;
+    @Value("${botUserId}")
+    protected String botUserId;
     @Value("${adminUserId}")
     protected String adminUserId;
     @Autowired
@@ -151,17 +153,33 @@ public class AccountBot extends TelegramLongPollingBot {
             if (userNormalTempAdmin.getUserId().equals(userDTO.getUserId())){
                 UserNormal userNormal = userAuthorityService.selectByUserId(userOperation.getUserId(), userDTO.getGroupId());
                 if (userNormal==null || !userNormal.isAdmin() ){
-                    String format = String.format("<a href=\"tg://user?id=%d\">%s</a>", Long.parseLong(adminUserId), "权限人");
+                    String format = String.format("<a href=\"tg://user?id=%d\">%s</a>", Long.parseLong(adminUserId), "管理员");
                     this.sendMessage(sendMessage,"您在本群不是管理!请联系: "+format);
                     return;
                 }else {
                     User byUserId = userService.findByUserId(userDTO.getUserId());
                     //如果有效期没过期
-                    if (byUserId.getValidTime()==null || new Date().compareTo(byUserId.getValidTime())>=0){
-                        String format = String.format("<a href=\"tg://user?id=%d\">%s</a>", Long.parseLong("7203617407"), "记账机器人");
-                        this.sendMessage(sendMessage,"你现在没有使用权限,请私聊机器人 @"+format+" .点击获取个人信息获取权限.");
+                    if (byUserId.getValidTime()==null){
+                        String format = String.format("<a href=\"tg://user?id=%d\">%s</a>", Long.parseLong(botUserId), "记账机器人");
+                        this.sendMessage(sendMessage,"您现在没有使用权限,请私聊机器人 @"+format+" .点击获取个人信息获取权限.");
+                        return;
+                    }else if (new Date().compareTo(byUserId.getValidTime())>=0){
+                        String format = String.format("<a href=\"tg://user?id=%d\">%s</a>", Long.parseLong(adminUserId), "管理员");
+                        this.sendMessage(sendMessage,"您的使用期限已到期,请私聊管理员 @"+format);
                         return;
                     }
+                }
+            }else {
+                User userAuth = userService.findByUserId(userOperation.getAdminUserId());
+                //如果有效期没过期
+                if (userAuth.getValidTime()==null){
+                    String format = String.format("<a href=\"tg://user?id=%d\">%s</a>", Long.parseLong(botUserId), "记账机器人");
+                    this.sendMessage(sendMessage,"本群权限人现在没有使用权限,请私聊机器人 @"+format+" .点击获取个人信息获取权限.");
+                    return;
+                }else if (new Date().compareTo(userAuth.getValidTime())>=0){
+                    String format = String.format("<a href=\"tg://user?id=%d\">%s</a>", Long.parseLong(adminUserId), "管理员");
+                    this.sendMessage(sendMessage,"本群权限人的使用期限已到期,请私聊管理员 @"+format);
+                    return;
                 }
             }
         }
@@ -228,9 +246,7 @@ public class AccountBot extends TelegramLongPollingBot {
                 String chatId = chatMember.getChat().getId().toString();//群组id
                 sendMessage.setChatId(chatId);
                 this.tronAccountMessageTextHtml(sendMessage,chatId,message);
-            }
-            // 检查是否为机器人被添加到群组  left 移除
-            if (chatMember.getNewChatMember().getStatus().equals("member") || chatMember.getNewChatMember().getStatus().equals("left")) {
+            }else if (chatMember.getNewChatMember().getStatus().equals("member") || chatMember.getNewChatMember().getStatus().equals("left")) {
                 String chatId = chatMember.getChat().getId().toString();//群组id
                 Long id = chatMember.getFrom().getId();//拉机器人的用户
                 String username = chatMember.getFrom().getUserName();
@@ -246,32 +262,22 @@ public class AccountBot extends TelegramLongPollingBot {
                     byUser.setCreateTime(new Date());
                     byUser.setFirstName(firstName);
                     userService.insertUser(byUser);
-
-                    UserNormal userNormal = new UserNormal();
-                    userNormal.setAdmin(true);
-                    userNormal.setGroupId(chatId);
-                    userNormal.setUserId(id+"");
-                    userNormal.setCreateTime(new Date());
-                    userNormal.setUsername(username);
-                    userAuthorityService.insertUserNormal(userNormal);
-                    UserOperation userOperation=new UserOperation();
-                    userOperation.setUserId(id+"");
-                    userOperation.setOperation(true);
-                    userOperation.setAdminUserId(id+"");
-                    userOperation.setGroupId(chatId);
-                    userOperation.setUsername(username);
-                    userOperation.setCreateTime(new Date());
-                    userOperationService.insertUserOperation(userOperation);
-                }else if (byUser!=null){
-                    if (byUser.isSuperAdmin()){//只有是true 才能设置管理员
-                        UserNormal userNormal = new UserNormal();
+                    UserNormal userNormal = userAuthorityService.selectByUserAndGroupId(id + "", chatId);
+                    if (userNormal==null){
+                        userNormal = new UserNormal();
                         userNormal.setAdmin(true);
                         userNormal.setGroupId(chatId);
                         userNormal.setUserId(id+"");
-                        userNormal.setUsername(username);
                         userNormal.setCreateTime(new Date());
+                        userNormal.setUsername(username);
                         userAuthorityService.insertUserNormal(userNormal);
-                        UserOperation userOperation=new UserOperation();
+                    }else {
+                        userNormal.setAdmin(true);
+                        userAuthorityService.update(userNormal);
+                    }
+                    UserOperation userOperation = userOperationService.selectByUserAndGroupId(id + "", chatId);
+                    if (userOperation==null){
+                        userOperation=new UserOperation();
                         userOperation.setUserId(id+"");
                         userOperation.setOperation(true);
                         userOperation.setAdminUserId(id+"");
@@ -279,6 +285,39 @@ public class AccountBot extends TelegramLongPollingBot {
                         userOperation.setUsername(username);
                         userOperation.setCreateTime(new Date());
                         userOperationService.insertUserOperation(userOperation);
+                    }else {
+                        userOperation.setOperation(true);
+                        userOperationService.update(userOperation);
+                    }
+                }else if (byUser!=null){
+                    if (byUser.isSuperAdmin()){//只有是true 才能设置管理员
+                        UserNormal userNormal = userAuthorityService.selectByUserAndGroupId(id + "", chatId);
+                        if (userNormal==null){
+                            userNormal = new UserNormal();
+                            userNormal.setAdmin(true);
+                            userNormal.setGroupId(chatId);
+                            userNormal.setUserId(id+"");
+                            userNormal.setUsername(username);
+                            userNormal.setCreateTime(new Date());
+                            userAuthorityService.insertUserNormal(userNormal);
+                        }else {
+                            userNormal.setAdmin(true);
+                            userAuthorityService.update(userNormal);
+                        }
+                        UserOperation userOperation = userOperationService.selectByUserAndGroupId(id + "", chatId);
+                        if (userOperation==null){
+                            userOperation=new UserOperation();
+                            userOperation.setUserId(id+"");
+                            userOperation.setOperation(true);
+                            userOperation.setAdminUserId(id+"");
+                            userOperation.setGroupId(chatId);
+                            userOperation.setUsername(username);
+                            userOperation.setCreateTime(new Date());
+                            userOperationService.insertUserOperation(userOperation);
+                        }else {
+                            userOperation.setOperation(true);
+                            userOperationService.update(userOperation);
+                        }
                     }
                 }
                 String message="<b>感谢权限人把我添加到贵群</b> ❤\uFE0F\n" +

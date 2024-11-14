@@ -307,8 +307,12 @@ public class Utils{
     }
 
     private static boolean isValidExpression(String expression) {
-        // 这里可以添加更复杂的验证逻辑
-        return true;
+        String[] tokens = expression.split("(?<=[-+*/])|(?=[-+*/])"); // 按运算符分割
+        // 检查是否只有三个token：一个数值、一个运算符、另一个数值
+        return tokens.length == 3 &&
+                isNumber(tokens[0]) &&
+                isOperator(tokens[1].charAt(0)) &&
+                isNumber(tokens[2]);
     }
 
     private static boolean isNumber(String token) {

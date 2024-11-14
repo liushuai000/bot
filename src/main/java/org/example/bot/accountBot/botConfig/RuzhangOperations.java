@@ -49,7 +49,8 @@ public class RuzhangOperations{
     protected String username;
     @Autowired
     private ShowOperatorName showOperatorName;
-
+    @Autowired
+    ButtonList buttonList;
     //设置费/汇率
     protected void setRate(Message message,SendMessage sendMessage,Rate rates) {
         String text = message.getText();
@@ -263,7 +264,7 @@ public class RuzhangOperations{
             //发送要显示的消息
             sendText1 = getSendText(updateAccount, accounts,rate, num, newAccountList,newIssueList,issues,issue,status);
             sendMessage.setText(sendText1);
-            new ButtonList().implList( sendMessage,userDTO.getGroupId(),userDTO.getGroupTitle());
+            buttonList.implList( sendMessage,userDTO.getGroupId(),userDTO.getGroupTitle());
         }
         accountBot.sendMessage(sendMessage,sendText1);
     }

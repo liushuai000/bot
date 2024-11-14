@@ -41,6 +41,8 @@ public class SettingOperatorPerson{
     protected String username;
     @Value("${adminUserId}")
     protected String adminUserId;
+    @Autowired
+    ButtonList buttonList;
     /**
      * 设置操作人员
      * @param split1 传输的文本 是否是 设置操作员
@@ -49,7 +51,6 @@ public class SettingOperatorPerson{
      * @param text  消息文本 6976772117
      */
     public void setHandle(String[] split1, SendMessage sendMessage, String text, UserDTO userDTO, User user6, Status status) {
-        ButtonList buttonList = new ButtonList();
         boolean isShowAdminMessage = false;
         if (split1[0].equals("设置操作员")||split1[0].equals("设置操作人")){
             if (!user6.isSuperAdmin()){//是普通权限

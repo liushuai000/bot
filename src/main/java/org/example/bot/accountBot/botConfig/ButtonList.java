@@ -19,10 +19,12 @@ import java.util.List;
 import java.util.Map;
 
 @Slf4j
+@Component
 public class ButtonList {
-    //protected String url="http://www.yaoke.cc/";//43.128.113.117 http://www.yaoke.cc/ 本地需要换端口
+    @Value("${vueUrl}")
+    protected String url;//43.128.113.117 http://www.yaoke.cc/ 本地需要换端口
 
-    protected String url="http://192.168.0.2:8080/";
+//    protected String url="http://192.168.0.2:8080/";
     //map key:buttonText value:callbackData
     public void sendButton(SendMessage sendMessage, String groupId, Map<String,String> buttonText) {
         InlineKeyboardMarkup markup = new InlineKeyboardMarkup();
@@ -136,12 +138,12 @@ public class ButtonList {
         button1.setUrl(url+"Account?groupId="+groupId+"&groupTitle="+encodedGroupTitle);
 
         // 创建第二个按钮
-        InlineKeyboardButton button2 = new InlineKeyboardButton();
-        button2.setText("按钮二名称");
-        button2.setUrl("https://your-url-for-button-two.com");
+//        InlineKeyboardButton button2 = new InlineKeyboardButton();
+//        button2.setText("按钮二名称");
+//        button2.setUrl("https://your-url-for-button-two.com");
 
         rowInline.add(button1);
-        rowInline.add(button2);
+//        rowInline.add(button2);
         rowsInline.add(rowInline);
 
         markup.setKeyboard(rowsInline);
