@@ -112,13 +112,13 @@ public class AccountBot extends TelegramLongPollingBot {
     public void BusinessHandler(Message message,SendMessage sendMessage, String replyToText, UserDTO userDTO,Update update) {
         //私聊的机器人  处理个人消息
         if (message.getChat().isUserChat()){
-//            paperPlaneBotSinglePerson.handleTronAccountMessage(sendMessage,update,userDTO);//获取个人账户Linux不可以查询到
+            paperPlaneBotSinglePerson.handleTronAccountMessage(sendMessage,update,userDTO);//获取个人账户Linux不可以查询到
             paperPlaneBotSinglePerson.handleNonGroupMessage(message,sendMessage,userDTO);
             return;
         }
-//        if(userDTO.getText().startsWith("查询")){
-//            nowExchange.Query(sendMessage,update);
-//        }
+        if(userDTO.getText().startsWith("查询")){
+            nowExchange.Query(sendMessage,update);
+        }
         User userTemp = userService.findByUserId(userDTO.getUserId());
         User userTemp2 = userService.findByUsername(userDTO.getUsername());
         //改成sql查询username 和userId 不要全查了 并且isNormal是false
