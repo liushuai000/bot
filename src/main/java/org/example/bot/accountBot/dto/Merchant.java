@@ -14,7 +14,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 @Data
-@JsonIgnoreProperties
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class Merchant {
     private Long id;
     private Long uid;
@@ -26,7 +26,7 @@ public class Merchant {
     private Integer tradeType;
     private Integer blockType;
     private String payMethod;
-    @JsonIgnoreProperties
+    @JsonIgnoreProperties(ignoreUnknown = true)
     private List<PayMethod> payMethods;
     private Integer payTerm;
     @JsonDeserialize(using =PayNameDeserializer.class)
@@ -52,13 +52,13 @@ public class Merchant {
     private Boolean isVerifyCapital;
 
     @Data
-    @JsonIgnoreProperties
+    @JsonIgnoreProperties(ignoreUnknown = true)
     public static class PayName {
         private Integer bankType;
         private String bankName; // 添加此字段
         private Long id;
     }
-    @JsonIgnoreProperties
+    @JsonIgnoreProperties(ignoreUnknown = true)
     @Data
     public static class PayMethod {
         private Integer payMethodId;
@@ -66,7 +66,7 @@ public class Merchant {
         private String color;
         private Boolean isRecommend;
     }
-    @JsonIgnoreProperties
+    @JsonIgnoreProperties(ignoreUnknown = true)
     public static class PayNameDeserializer extends JsonDeserializer<List<PayName>> {
         @Override
         public List<PayName> deserialize(JsonParser p, DeserializationContext ctxt) throws IOException {

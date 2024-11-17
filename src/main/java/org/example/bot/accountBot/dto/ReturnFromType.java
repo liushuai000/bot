@@ -27,6 +27,8 @@ public class ReturnFromType {
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
     @ApiModelProperty("startTime")
     private Date startTime;//日切开始时间
-
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
+    @ApiModelProperty("startEndTime")
+    private Date startEndTime;//日切开始时间
 
 }

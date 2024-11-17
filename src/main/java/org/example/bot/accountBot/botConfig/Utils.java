@@ -58,21 +58,27 @@ public class Utils{
     //匹配+1000/7
     public static final Pattern pattern3 = Pattern.compile("([+-]?\\d+)/([+-]?\\d+)");
     public static void main(String[] args) {
-//        String input = "+1000*5/7"; // 示例输入
-//        // 正则表达式
-//        String regex = "([+-]?\\d+)[/]([+-]?\\d+)[/\\*]([+-]?(\\d*\\.\\d+|\\d+))";
-//        Pattern pattern = Pattern.compile(regex);
-//        Matcher matcher = pattern.matcher(input);
-//        while (matcher.find()) {
-//            // 输出提取的数字
-//            System.out.println("第一位 (整数): " + matcher.group(1).replaceAll("[+]", "")); // 去掉符号，获取的数：1000
-//            System.out.println("第二位 (整数): " + matcher.group(2)); // 获取的数：7
-//            System.out.println("第三位 (小数或整数): " + new BigDecimal(matcher.group(3))); // 获取的数：0.05或5
-//        }
+        // 原始字符串
+        String originalString = "-600";
 
-        Date date = new Date();
-        Date from = Date.from(LocalDateTime.now().plusDays(20).atZone(ZoneId.systemDefault()).toInstant());
-        System.err.println(date.compareTo(from)<0);//等于true
+        // 定义正则表达式
+        Pattern pattern = Pattern.compile("下发(\\d+)(u)?");
+        Matcher matcher = pattern.matcher(originalString);
+
+        // 使用 StringBuffer 来构建替换后的字符串
+        StringBuffer sb = new StringBuffer();
+
+        while (matcher.find()) {
+            String number = matcher.group(1); // 提取数字部分
+            String unit = matcher.group(2); // 提取单位部分（可能为空）
+            String replacement = "-" + number + (unit != null ? unit : "");
+            matcher.appendReplacement(sb, replacement);
+        }
+
+        matcher.appendTail(sb);
+        // 输出结果
+        String replacedString = sb.toString();
+        System.out.println(replacedString);
     }
     //入账操作2.0，匹配公式
     public  boolean calcRecorded(String text1, String messageUserId, String userName, String groupId, Account updateAccount, BigDecimal total, BigDecimal down, Issue issue,

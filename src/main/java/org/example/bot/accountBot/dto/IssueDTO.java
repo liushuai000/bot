@@ -46,5 +46,6 @@ public class IssueDTO{
     private BigDecimal down;//未下发
     @ApiModelProperty("issueHandlerMoney")
     private BigDecimal issueHandlerMoney=BigDecimal.ZERO;//全局下方手续费
-
+    @ApiModelProperty("downing")
+    private BigDecimal downing=BigDecimal.ZERO;  //已下发
 }

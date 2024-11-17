@@ -112,24 +112,22 @@ public class AccountBot extends TelegramLongPollingBot {
     public void BusinessHandler(Message message,SendMessage sendMessage, String replyToText, UserDTO userDTO,Update update) {
         //私聊的机器人  处理个人消息
         if (message.getChat().isUserChat()){
-            paperPlaneBotSinglePerson.handleTronAccountMessage(sendMessage,update,userDTO);
+//            paperPlaneBotSinglePerson.handleTronAccountMessage(sendMessage,update,userDTO);//获取个人账户Linux不可以查询到
             paperPlaneBotSinglePerson.handleNonGroupMessage(message,sendMessage,userDTO);
             return;
         }
-        if(userDTO.getText().startsWith("查询")){
-            nowExchange.Query(sendMessage,update);
-        }
+//        if(userDTO.getText().startsWith("查询")){
+//            nowExchange.Query(sendMessage,update);
+//        }
         User userTemp = userService.findByUserId(userDTO.getUserId());
         User userTemp2 = userService.findByUsername(userDTO.getUsername());
         //改成sql查询username 和userId 不要全查了 并且isNormal是false
         this.setIsAdminUser(sendMessage,userDTO,userTemp,userTemp2);
-        User user1;
+        User user1 = null;
         if (userTemp!=null){
             user1=userTemp;
         }else if (userTemp2!=null){
             user1=userTemp2;
-        }else {
-            user1=userService.findByUserId(userDTO.getUserId());
         }
         if (userDTO.getText().equals("z0")||userDTO.getText().equals("Z0")){
             Rate rate=rateService.getInitRate(userDTO.getGroupId());
@@ -143,7 +141,10 @@ public class AccountBot extends TelegramLongPollingBot {
             return ;
         }
         UserNormal userNormalTempAdmin =userAuthorityService.selectByGroupId(userDTO.getGroupId());//超级管理
-        UserOperation userOperation = userOperationService.selectByUserIdAndName(user1.getUserId(), user1.getUsername(), userDTO.getGroupId());
+        UserOperation userOperation = userOperationService.selectByUserAndGroupId(userDTO.getUserId(), userDTO.getGroupId());
+        if (userOperation==null){
+            userOperation= userOperationService.selectByUserName(userDTO.getUsername(), userDTO.getGroupId());
+        }
         if (userOperation==null || !userOperation.isOperation()){
             String format = String.format("<a href=\"tg://user?id=%d\">%s</a>", Long.parseLong(userNormalTempAdmin.getUserId()), "权限人");
             this.sendMessage(sendMessage,"没有使用权限，请联系本群权限人 @"+format);
@@ -195,13 +196,15 @@ public class AccountBot extends TelegramLongPollingBot {
         issue.setGroupId(userDTO.getGroupId());
         //没有用户名的情况下
         if (StringUtils.isEmpty(userDTO.getUsername()))userDTO.setUsername("");
+        if (message.getText().contains(BaseConstant.showArray[1])){
+            message.setText(BaseConstant.isXiFa(message.getText()));
+        }
         //查询最新数据用这个 dateOperator.selectIsRiqie dateOperator.checkRiqie
         dateOperator.checkRiqie(sendMessage,status);//检查日切时间
         List<Account> accountList=dateOperator.selectIsRiqie(sendMessage,status,userDTO.getGroupId());
         List<Issue> issueList=dateOperator.selectIsIssueRiqie(sendMessage,status,userDTO.getGroupId());
         //设置日切 如果日切时间没结束 第二次设置日切 也需要修改账单的日切时间
         dateOperator.isOver24HourCheck(message, sendMessage, userDTO, status,accountList,issueList);
-
         //设置操作人员
         settingOperatorPerson.setHandle(split1, sendMessage,message.getText(),userDTO,user1,status);
         //设置费率/汇率
@@ -210,11 +213,14 @@ public class AccountBot extends TelegramLongPollingBot {
         ruzhangOperations.repeal(message,sendMessage,accountList,replyToText,userDTO,issueList);
         //删除今日数据/关闭日切/
         dateOperator.deleteTodayData(message,sendMessage,userDTO.getGroupId(),status,accountList,issueList);
+        if (split3[0].contains(BaseConstant.showArray[1])){
+            split3=BaseConstant.isXiFa(message.getText()).split("-");
+        }
         //入账操作
         ruzhangOperations.inHandle(split2,message.getText(),  updateAccount,  sendMessage, accountList, message,split3,
                 rate,issue,issueList,userDTO,status);
         //删除操作人员
-        settingOperatorPerson.deleteHandle(message.getText(),sendMessage);
+        settingOperatorPerson.deleteHandle(message.getText(),sendMessage,userDTO);
         //通知功能
         notificationService.inform(message.getText(),sendMessage);
     }
@@ -290,7 +296,7 @@ public class AccountBot extends TelegramLongPollingBot {
                         userOperationService.update(userOperation);
                     }
                 }else if (byUser!=null){
-                    if (byUser.isSuperAdmin()){//只有是true 才能设置管理员
+//                    if (!byUser.isSuperAdmin()){
                         UserNormal userNormal = userAuthorityService.selectByUserAndGroupId(id + "", chatId);
                         if (userNormal==null){
                             userNormal = new UserNormal();
@@ -318,7 +324,7 @@ public class AccountBot extends TelegramLongPollingBot {
                             userOperation.setOperation(true);
                             userOperationService.update(userOperation);
                         }
-                    }
+//                    }
                 }
                 String message="<b>感谢权限人把我添加到贵群</b> ❤\uFE0F\n" +
                         "➖➖➖➖➖➖➖➖➖➖➖\n" +

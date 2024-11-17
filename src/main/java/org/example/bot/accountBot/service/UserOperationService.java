@@ -31,14 +31,6 @@ public class UserOperationService {
     public void insertUserOperation(UserOperation user) {
         mapper.insert(user);
     }
-    public UserOperation repeat(UserOperation ua,String groupId ){
-        QueryWrapper<UserOperation> queryWrapper = new QueryWrapper<>();
-        queryWrapper.eq("username", ua.getUsername()).or().eq("user_id", ua.getUserId());
-        queryWrapper.eq("group_id", groupId);
-        return mapper.selectOne(queryWrapper);
-    }
-
-
 
     public UserOperation findByUsername(String username, String groupId) {
         QueryWrapper<UserOperation> queryWrapper = new QueryWrapper<>();
@@ -51,10 +43,9 @@ public class UserOperationService {
         mapper.updateById(UserOperation);
     }
 
-    public UserOperation selectByUserIdAndName(String userId,String username,String groupId) {
+    public UserOperation selectByUserName(String username,String groupId) {
         QueryWrapper<UserOperation> queryWrapper = new QueryWrapper<>();
-        queryWrapper.eq("username", username).or().eq("user_id", userId).eq("group_id", groupId);
-        queryWrapper.orderByDesc("create_time");
+        queryWrapper.eq("username", username).eq("group_id", groupId);
         return mapper.selectOne(queryWrapper);
     }
 
@@ -63,5 +54,12 @@ public class UserOperationService {
         queryWrapper.eq("is_operation", isOperator);
         queryWrapper.eq("group_id", groupId);
         return mapper.selectList(queryWrapper);
+    }
+
+    public void deleteByUsername(String deleteName, String groupId) {
+        mapper.delete(new QueryWrapper<UserOperation>().eq("username", deleteName).eq("group_id", groupId));
+    }
+    public void deleteByUserId(String userId, String groupId) {
+        mapper.delete(new QueryWrapper<UserOperation>().eq("user_id", userId).eq("group_id", groupId));
     }
 }

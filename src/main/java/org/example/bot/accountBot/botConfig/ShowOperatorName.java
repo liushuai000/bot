@@ -78,17 +78,17 @@ public class ShowOperatorName {
     }
     //true 是0 显示账单
     public boolean isEmptyMoney(String text) {
-        if (text.startsWith("+0")){
+        if (text.equals("+0")){
             return true;
-        } else if (text.startsWith("-0")) {
+        } else if (text.equals("-0")) {
             return true;
-        } else if (text.startsWith("+0u")) {
+        } else if (text.equals("+0u")) {
             return true;
-        } else if (text.startsWith("-0u")) {
+        } else if (text.equals("-0u")) {
             return true;
-        } else if (text.startsWith("+0U")) {
+        } else if (text.equals("+0U")) {
             return true;
-        } else if (text.startsWith("-0U")) {
+        } else if (text.equals("-0U")) {
             return true;
         }else {
             return false;

@@ -31,7 +31,7 @@ public class Issue {
     @TableField("call_back_user_id")
     private String callBackUserId;//回复人id
     @TableField("downed")
-    private BigDecimal downed;    //已下发 已出帐
+    private BigDecimal downed;    //已出帐
     @TableField("down")
     private BigDecimal down;    //未下发
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")

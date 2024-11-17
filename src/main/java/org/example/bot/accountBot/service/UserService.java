@@ -28,11 +28,7 @@ public class UserService {
         queryWrapper.eq("user_id", UserId);
         return mapper.selectOne(queryWrapper);
     }
-    public List<User> selectByNormal(boolean isNormal) {
-        QueryWrapper<User> queryWrapper = new QueryWrapper<>();
-        queryWrapper.eq("is_normal", isNormal);
-        return mapper.selectList(queryWrapper);//显示操作人is_operation
-    }
+
     //查询是否已经在数据库的操作员
     public User findByUsername(String userName) {
         QueryWrapper<User> queryWrapper = new QueryWrapper<>();
@@ -71,13 +67,6 @@ public class UserService {
     public void updateUser(User user) {
         mapper.updateById(user);
     }
-//
-    public void updateIsNormal(boolean isNormal,String username,User user) {
-        UpdateWrapper<User> wrapper= new UpdateWrapper<>();
-        wrapper.eq("username", username);
-        wrapper.set("is_normal", isNormal);
-        mapper.update(user,wrapper);
-    }
 
     public void updateUserValidTime(User user, Date date) {
         UpdateWrapper<User> wrapper= new UpdateWrapper<>();
@@ -89,6 +78,12 @@ public class UserService {
         QueryWrapper<User> queryWrapper = new QueryWrapper<>();
         queryWrapper.eq("username", username);
         queryWrapper.or().eq("user_id", userId);
+        return mapper.selectOne(queryWrapper);
+    }
+
+    public User findByFirstName(String deleteName) {
+        QueryWrapper<User> queryWrapper = new QueryWrapper<>();
+        queryWrapper.eq("first_name", deleteName);
         return mapper.selectOne(queryWrapper);
     }
 }

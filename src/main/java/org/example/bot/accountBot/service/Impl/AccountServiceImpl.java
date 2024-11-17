@@ -68,8 +68,10 @@ public class AccountServiceImpl implements AccountService {
                     LocalDateTime tomorrow = LocalDateTime.now().plusDays(-1);
                     Date validTime = Date.from(tomorrow.atZone(ZoneId.systemDefault()).toInstant());
                     returnFromType.setStartTime(validTime);
+                    returnFromType.setStartEndTime(new Date());
                 }else {
                     returnFromType.setStartTime(status.getSetStartTime());//日切开始时间
+                    returnFromType.setStartEndTime(status.getSetTime());
                 }
             }
             List<AccountDTO> accountDTOList=this.getAccountDTO(addTime,addEndTime,username,groupId,findAll,operation,status);
@@ -77,11 +79,13 @@ public class AccountServiceImpl implements AccountService {
             List<IssueDTO> issueDTOList=this.getIssueDTO(addTime,addEndTime,username,groupId,findAll,operation,status);
             returnFromType.setIssueData(issueDTOList);
             if (accountDTOList==null && issueDTOList==null)return returnFromType;
+
             List<CallbackUserDTO> callbackUserDTOList=this.getCallbackDTO(accountDTOList,issueDTOList);
             returnFromType.setCallbackData(callbackUserDTOList);
+
             List<OperationUserDTO> operationUserDTOList=this.getOperationUserDTO(accountDTOList,issueDTOList);
-            returnFromType.setCallbackData(callbackUserDTOList);
             returnFromType.setOperationData(operationUserDTOList);
+
             Rate rate = rateService.selectRateList(groupId).get(0);
             returnFromType.setRateData(accountAssembler.rateToDTO(rate,accountDTOList,issueDTOList));
             return returnFromType;
@@ -106,17 +110,20 @@ public class AccountServiceImpl implements AccountService {
     private List<OperationUserDTO> getOperationUserDTO(List<AccountDTO> accountDTOList,List<IssueDTO> issueDTOList) {
         Map<String, OperationUserDTO> summaryMap = new ConcurrentHashMap<>();
         if (accountDTOList!=null){
-            accountDTOList.stream().filter(Objects::nonNull).filter(this::isCallBackUserIdNull)
+            accountDTOList.stream().filter(Objects::nonNull)
                     .forEach(accountDTO -> {
                         String userId = accountDTO.getUserId();
                         BigDecimal total = accountDTO.getTotal();
+                        BigDecimal downing = accountDTO.getDowning();
                         OperationUserDTO accountSummary = summaryMap.get(userId);
                         if (accountSummary==null){
                             accountSummary = new OperationUserDTO();
                             accountSummary.addTotal(total);
+                            accountSummary.addIssueDowning(downing);
                             accountSummary.incrementCount();
                             summaryMap.put(userId,accountSummary);
                         }else {
+                            accountSummary.addIssueDowning(downing);
                             accountSummary.incrementCount();
                             accountSummary.addTotal(total);
                         }
@@ -126,7 +133,7 @@ public class AccountServiceImpl implements AccountService {
                     });
         }
        if (issueDTOList!=null){
-        issueDTOList.stream().filter(Objects::nonNull).filter(this::isCallBackUserIdNullIssue)
+        issueDTOList.stream().filter(Objects::nonNull)
                 .forEach(issueDTO -> {
                     String userId = issueDTO.getUserId();
                     BigDecimal total = issueDTO.getDowned();
@@ -148,7 +155,7 @@ public class AccountServiceImpl implements AccountService {
                 });
        }
         List<OperationUserDTO> result = new ArrayList<>(summaryMap.values());
-        result.forEach(System.out::println);
+        result.stream().filter(Objects::nonNull).forEach(OperationUserDTO::calcDown);
         return result;
     }
 
@@ -159,20 +166,23 @@ public class AccountServiceImpl implements AccountService {
                     .forEach(accountDTO -> {
                         String userId = accountDTO.getUserId();
                         BigDecimal total = accountDTO.getTotal();
+                        BigDecimal downing = accountDTO.getDowning();
                         CallbackUserDTO accountSummary = summaryMap.get(userId);
                         if (accountSummary==null){
                             accountSummary = new CallbackUserDTO();
+                            accountSummary.addIssueDowning(downing);
                             accountSummary.addTotal(total);
                             accountSummary.incrementCount();
                             summaryMap.put(userId,accountSummary);
                         }else {
+                            accountSummary.addIssueDowning(downing);
                             accountSummary.incrementCount();
                             accountSummary.addTotal(total);
                         }
 //                    accountSummary.setDown(accountDTO.get);
                         accountSummary.setGroupId(accountDTO.getGroupId());
                         accountSummary.setCallBackName(accountDTO.getCallBackName());
-                        accountSummary.setCallBackName(accountDTO.getCallBackFirstName());
+                        accountSummary.setCallBackFirstName(accountDTO.getCallBackFirstName());
                     });
         }
         if (issueDTOList!=null){
@@ -181,24 +191,27 @@ public class AccountServiceImpl implements AccountService {
                         String userId = issueDTO.getUserId();
                         BigDecimal total = issueDTO.getDowned();
                         BigDecimal down = issueDTO.getDown();//未下发
+//                        BigDecimal downing = issueDTO.getDowning();
                         CallbackUserDTO accountSummary = summaryMap.get(userId);
                         if (accountSummary==null){
                             accountSummary = new CallbackUserDTO();
                             accountSummary.addIssueTotal(total);
+//                            accountSummary.addIssueDowning(downing);
                             accountSummary.IssueIncrementCount();
                             summaryMap.put(userId,accountSummary);
                         }else {
                             accountSummary.IssueIncrementCount();
+//                            accountSummary.addIssueDowning(downing);
                             accountSummary.addIssueTotal(total);
                         }
                         accountSummary.setDown(down);
                         accountSummary.setGroupId(issueDTO.getGroupId());
                         accountSummary.setCallBackName(issueDTO.getCallBackName());
-                        accountSummary.setCallBackName(issueDTO.getCallBackFirstName());
+                        accountSummary.setCallBackFirstName(issueDTO.getCallBackFirstName());
                     });
         }
         List<CallbackUserDTO> result = new ArrayList<>(summaryMap.values());
-        result.forEach(System.out::println);
+        result.stream().filter(Objects::nonNull).forEach(CallbackUserDTO::calcDown);
         return result;
 
     }
@@ -207,14 +220,11 @@ public class AccountServiceImpl implements AccountService {
         QueryWrapper<Issue> queryWrapper = new QueryWrapper<>();
         queryWrapper.eq("group_id", groupId);
         if (!findAll) {//不查询全部数据
-            //第一次查询需要使用setStartTime
-            boolean isFirstQuery = true;
             if (status.isRiqie()){
-                if (isFirstQuery && addTime.compareTo(status.getSetStartTime())==0){
-                    queryWrapper.ge("add_time", status.getSetStartTime()).le("add_time", addEndTime);
-                    isFirstQuery=false;
+                if (addTime==null){
+                    queryWrapper.ge("set_time", status.getSetStartTime()).le("set_time", status.getSetTime());
                 }else{
-                    queryWrapper.ge("add_time", addTime).le("add_time", addEndTime);
+                    queryWrapper.ge("set_time", addTime).le("set_time", addEndTime);
                 }
             }else {
                 LocalDateTime startOfDay = LocalDateTime.now().withHour(0).withMinute(0).withSecond(0);
@@ -280,10 +290,10 @@ public class AccountServiceImpl implements AccountService {
         if (!findAll) {//不查询全部数据
             //第一次查询需要使用setStartTime
             if (status.isRiqie()){
-                if (addTime.compareTo(status.getSetStartTime())==0){
-                    queryWrapper.ge("add_time", status.getSetStartTime()).le("add_time", addEndTime);
+                if (addTime==null){
+                    queryWrapper.ge("set_time", status.getSetStartTime()).le("set_time", status.getSetTime());
                 }else{
-                    queryWrapper.ge("add_time", addTime).le("add_time", addEndTime);
+                    queryWrapper.ge("set_time", addTime).le("set_time", addEndTime);
                 }
             }else {
                 LocalDateTime startOfDay = LocalDateTime.now().withHour(0).withMinute(0).withSecond(0);

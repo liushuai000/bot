@@ -9,6 +9,7 @@ import org.example.bot.accountBot.pojo.Rate;
 import org.example.bot.accountBot.pojo.User;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.List;
 
 /**
@@ -24,7 +25,7 @@ public class AccountAssembler {
         accountDTO.setAccountHandlerMoney(account.getAccountHandlerMoney());
         accountDTO.setFirstName(user.getFirstName()+user.getLastName());
         accountDTO.setTotal(account.getTotal());
-        accountDTO.setDowning(account.getDowning());
+        accountDTO.setDowning(account.getDowning());//.divide(rate.getExchange(), 2, RoundingMode.HALF_UP)
         accountDTO.setRate(rate.getRate());
         accountDTO.setExchange(rate.getExchange());
         accountDTO.setAddTime(account.getAddTime());

@@ -33,9 +33,9 @@ public class AccountDTO{
     @ApiModelProperty("callBackUserId")
     private String callBackUserId;
     @ApiModelProperty("callBackName")
-    private String callBackName;//操作账户
+    private String callBackName;//账户
     @ApiModelProperty("callBackFirstName")
-    private String callBackFirstName;//操作人名称  是firstName+lastName
+    private String callBackFirstName;//名称  是firstName+lastName
     @TableField("is_matcher")
     private boolean isMatcher=false;
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")

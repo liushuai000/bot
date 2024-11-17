@@ -139,7 +139,6 @@ public class RuzhangOperations{
             showOperatorName.replay(sendMessage,userDTO,updateAccount,rate,issueList,issue,text,status);
             return;
         }
-        // 如果 text 的第一个字符是 '+'，或者 '-'，或者 orNo1 为 true，则继续执行
         if (text.charAt(0) != '+' && text.charAt(0) != '-')  return;
         BigDecimal num = new BigDecimal(0);
         Rate rate1 = null;
@@ -353,7 +352,7 @@ public class RuzhangOperations{
         List<String> accountCallBackNames = this.forAccountCallBackName(accounts,accountCallBackStatus);
         List<String> accountDetails = this.forAccountShowDetail(accounts,accountDetailStatus);
         BigDecimal yingxiafa=this.forYingxiafa(accounts);//应下方
-        BigDecimal yixiafa=this.forYixiafa(issuesList);//已下方
+        BigDecimal yixiafa=this.forYixiafa(issuesList);//已下发
         if (!accounts.isEmpty()){
             //已下发
             BigDecimal downed = issuesList.stream().filter(Objects::nonNull).map(Issue::getDowned).reduce(BigDecimal.ZERO, BigDecimal::add);
@@ -532,7 +531,7 @@ public class RuzhangOperations{
             String callBackLastName =  byUserId.getLastName()  == null ? "" :  byUserId.getLastName();
             //显示回复人
             String callBackName= callBackStatus ==0 ? callBackFirstName+callBackLastName : "";
-            String format = String.format("<a href=\"tg://user?id=%d\">%s</a>", Long.parseLong(accounts.get(i).getUserId()), callBackName);
+            String format = String.format("<a href=\"tg://user?id=%d\">%s</a>", Long.parseLong(byUserId.getUserId()), callBackName);
             callBackNameList.add(format);
         }
         return callBackNameList;
@@ -555,7 +554,7 @@ public class RuzhangOperations{
             String isCalc=!rate.isCalcU()?"*"+ rate.getRate().setScale(2, RoundingMode.HALF_UP):"";
             //显示明细
             String showDetail = detailStatus == 0 ? "/ "+ rate.getExchange().setScale(2, RoundingMode.HALF_UP)+isCalc+"=" +
-                    total2.divide(exchange,2, RoundingMode.HALF_UP): "";//-不涉及费率
+                    total2.divide(exchange,2, RoundingMode.HALF_UP)+"U": "";//-不涉及费率
             showDetailList.add(showDetail);
         }
         return showDetailList;
@@ -586,7 +585,7 @@ public class RuzhangOperations{
             String callBackLastName = byUserId.getLastName() == null ? "" :  byUserId.getLastName();
             //显示回复人
             String callBackName= callBackStatus ==0 ? callBackFirstName+callBackLastName : "";
-            String format = String.format("<a href=\"tg://user?id=%d\">%s</a>", Long.parseLong(issuesList.get(i).getUserId()), callBackName);
+            String format = String.format("<a href=\"tg://user?id=%d\">%s</a>", Long.parseLong(byUserId.getUserId()), callBackName);
             callBackNameList.add(format);
         }
         return callBackNameList;
@@ -599,7 +598,7 @@ public class RuzhangOperations{
             BigDecimal total = issuesList.get(i).getDowned().setScale(2, RoundingMode.HALF_UP);
             //显示明细
             String showDetail = detailStatus == 0 ? "/ "+ rate.getExchange().setScale(2, RoundingMode.HALF_UP)+
-                    "=" + total.divide(exchange,2, RoundingMode.HALF_UP): "";
+                    "=" + total.divide(exchange,2, RoundingMode.HALF_UP)+"U": "";
             if (isNotBlank(showDetail)) {
                 showDetailList.add(showDetail);
             }
