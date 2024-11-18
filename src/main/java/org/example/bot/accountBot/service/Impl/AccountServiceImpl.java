@@ -79,15 +79,15 @@ public class AccountServiceImpl implements AccountService {
             List<IssueDTO> issueDTOList=this.getIssueDTO(addTime,addEndTime,username,groupId,findAll,operation,status);
             returnFromType.setIssueData(issueDTOList);
             if (accountDTOList==null && issueDTOList==null)return returnFromType;
-
+            Rate rate = rateService.selectRateList(groupId).get(0);
+            returnFromType.setRateData(accountAssembler.rateToDTO(rate,accountDTOList,issueDTOList));
             List<CallbackUserDTO> callbackUserDTOList=this.getCallbackDTO(accountDTOList,issueDTOList);
             returnFromType.setCallbackData(callbackUserDTOList);
 
             List<OperationUserDTO> operationUserDTOList=this.getOperationUserDTO(accountDTOList,issueDTOList);
             returnFromType.setOperationData(operationUserDTOList);
 
-            Rate rate = rateService.selectRateList(groupId).get(0);
-            returnFromType.setRateData(accountAssembler.rateToDTO(rate,accountDTOList,issueDTOList));
+
             return returnFromType;
         } catch (Exception e) {
             // 记录日志或返回空列表
@@ -107,6 +107,7 @@ public class AccountServiceImpl implements AccountService {
     private boolean isCallBackUserIdNoNullIssue(IssueDTO issueDTO) {
         return issueDTO != null && issueDTO.getCallBackUserId() != null;
     }
+    //accountSummary.setExchange(exchange);//如果需要在前端显示  直接在后端计算好USDT在前端显示
     private List<OperationUserDTO> getOperationUserDTO(List<AccountDTO> accountDTOList,List<IssueDTO> issueDTOList) {
         Map<String, OperationUserDTO> summaryMap = new ConcurrentHashMap<>();
         if (accountDTOList!=null){
@@ -115,6 +116,8 @@ public class AccountServiceImpl implements AccountService {
                         String userId = accountDTO.getUserId();
                         BigDecimal total = accountDTO.getTotal();
                         BigDecimal downing = accountDTO.getDowning();
+                        BigDecimal exchange = accountDTO.getExchange();
+                        BigDecimal rate = accountDTO.getRate();
                         OperationUserDTO accountSummary = summaryMap.get(userId);
                         if (accountSummary==null){
                             accountSummary = new OperationUserDTO();
@@ -127,6 +130,8 @@ public class AccountServiceImpl implements AccountService {
                             accountSummary.incrementCount();
                             accountSummary.addTotal(total);
                         }
+                        accountSummary.setRate(rate);
+                        accountSummary.setExchange(exchange);
                         accountSummary.setGroupId(accountDTO.getGroupId());
                         accountSummary.setOperationName(accountDTO.getUsername());
                         accountSummary.setOperationFirstName(accountDTO.getFirstName());
@@ -138,6 +143,8 @@ public class AccountServiceImpl implements AccountService {
                     String userId = issueDTO.getUserId();
                     BigDecimal total = issueDTO.getDowned();
                     BigDecimal down = issueDTO.getDown();//未下发
+                    BigDecimal exchange = issueDTO.getExchange();
+//                    BigDecimal rate = issueDTO.getRate();
                     OperationUserDTO accountSummary = summaryMap.get(userId);
                     if (accountSummary==null){
                         accountSummary = new OperationUserDTO();
@@ -149,6 +156,7 @@ public class AccountServiceImpl implements AccountService {
                         accountSummary.addIssueTotal(total);
                     }
                     accountSummary.setDown(down);
+                    accountSummary.setExchange(exchange);
                     accountSummary.setGroupId(issueDTO.getGroupId());
                     accountSummary.setOperationName(issueDTO.getUsername());
                     accountSummary.setOperationFirstName(issueDTO.getFirstName());
@@ -167,6 +175,8 @@ public class AccountServiceImpl implements AccountService {
                         String userId = accountDTO.getUserId();
                         BigDecimal total = accountDTO.getTotal();
                         BigDecimal downing = accountDTO.getDowning();
+                        BigDecimal exchange = accountDTO.getExchange();
+                        BigDecimal rate = accountDTO.getRate();
                         CallbackUserDTO accountSummary = summaryMap.get(userId);
                         if (accountSummary==null){
                             accountSummary = new CallbackUserDTO();
@@ -179,7 +189,8 @@ public class AccountServiceImpl implements AccountService {
                             accountSummary.incrementCount();
                             accountSummary.addTotal(total);
                         }
-//                    accountSummary.setDown(accountDTO.get);
+                        accountSummary.setExchange(exchange);
+                        accountSummary.setRate(rate);
                         accountSummary.setGroupId(accountDTO.getGroupId());
                         accountSummary.setCallBackName(accountDTO.getCallBackName());
                         accountSummary.setCallBackFirstName(accountDTO.getCallBackFirstName());
@@ -192,6 +203,8 @@ public class AccountServiceImpl implements AccountService {
                         BigDecimal total = issueDTO.getDowned();
                         BigDecimal down = issueDTO.getDown();//未下发
 //                        BigDecimal downing = issueDTO.getDowning();
+                        BigDecimal exchange = issueDTO.getExchange();
+//                        BigDecimal rate = issueDTO.getRate();// 出账没有费率
                         CallbackUserDTO accountSummary = summaryMap.get(userId);
                         if (accountSummary==null){
                             accountSummary = new CallbackUserDTO();
@@ -204,6 +217,7 @@ public class AccountServiceImpl implements AccountService {
 //                            accountSummary.addIssueDowning(downing);
                             accountSummary.addIssueTotal(total);
                         }
+                        accountSummary.setExchange(exchange);
                         accountSummary.setDown(down);
                         accountSummary.setGroupId(issueDTO.getGroupId());
                         accountSummary.setCallBackName(issueDTO.getCallBackName());

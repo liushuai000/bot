@@ -286,7 +286,7 @@ public class PaperPlaneBotSinglePerson {
     }
     //使用说明
     private void useInfo(Message message, SendMessage sendMessage, UserDTO userDTO) {
-        accountBot.sendMessage(sendMessage,"①增加机器人进群。群右上角--Add member-输入  @iiiivipbot\n" +
+        accountBot.sendMessage(sendMessage,"①增加机器人进群。群右上角--Add member-输入  @Evipbot\n" +
                 "②输入”设置费率X.X“\n" +
                 "③输入”设置汇率X.X“\n" +
                 "④取消命令：  撤销入款        撤销下发\n" +
@@ -337,7 +337,7 @@ public class PaperPlaneBotSinglePerson {
                 "显示手续费\n" +
                 "隐藏手续费\n" +
                 "通知所有人（ 操作员发送才可生效 ）\n" +
-//                "查询地址余额：群内发送 查询+地址\n" +
+                "查询地址余额：群内发送 查询+地址\n" +
                 "\n" +
                 "售后客服： @vipkefu"  );
     }

@@ -2,6 +2,8 @@ package org.example.bot.accountBot.dto;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.Data;
+
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
 
@@ -30,24 +32,24 @@ public class TronAccountDTO {
     private List<String> exchanges;
     private Frozen frozen;
     private int transactions;
-    private int delegatedFrozenV2BalanceForEnergy;
+//    private int delegatedFrozenV2BalanceForEnergy;
     private String name;
-    private int frozenForEnergy;
+//    private int frozenForEnergy;
     private double energyCost;
     private List<ActivePermission> activePermissions;
-    private int acquiredDelegatedFrozenV2BalanceForBandwidth;
+//    private int acquiredDelegatedFrozenV2BalanceForBandwidth;
     private double netCost;
-    private int acquiredDelegateFrozenForBandWidth;
+//    private int acquiredDelegateFrozenForBandWidth;
     private String greyTag;
     private String publicTag;
     private List<WithPriceToken> withPriceTokens;
-    private int unfreezeV2;
+//    private int unfreezeV2;
     private boolean feedbackRisk;
-    private int voteTotal;
-    private int totalFrozen;
+    private BigDecimal voteTotal;
+    private BigDecimal totalFrozen;
     private long latest_operation_time;
-    private int frozenForBandWidth;
-    private int reward;
+//    private int frozenForBandWidth;
+//    private int reward;
     private String addressTagLogo;
     private String address;
     private List<Object> frozen_supply;
@@ -102,13 +104,13 @@ public class TronAccountDTO {
     @Data
     public static class WithPriceToken {
         private String amount;
-        private int tokenPriceInTrx;
+        private BigDecimal tokenPriceInTrx;
         private String tokenId;
         private String balance;
         private String tokenName;
         private int tokenDecimal;
         private String tokenAbbr;
-        private int tokenCanShow;
+        private BigDecimal tokenCanShow;
         private String tokenType;
         private boolean vip;
         private String tokenLogo;

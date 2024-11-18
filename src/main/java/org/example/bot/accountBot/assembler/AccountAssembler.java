@@ -85,7 +85,7 @@ public class AccountAssembler {
         return new RateDTO()
                 .setId(rate.getId()+"")
                 .setCount(total)
-                .setDown(total.subtract(downed))
+                .setDown(downing.subtract(downed))
                 .setDowned(downed)
                 .setGroupId(rate.getGroupId())
                 .setExchange(rate.getExchange())

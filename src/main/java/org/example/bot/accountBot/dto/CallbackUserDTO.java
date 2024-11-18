@@ -14,6 +14,10 @@ import java.util.concurrent.atomic.AtomicReference;
 public class CallbackUserDTO {
     @ApiModelProperty("group_id")
     private String groupId;
+    @ApiModelProperty("exchange")
+    private BigDecimal exchange=BigDecimal.ONE;    //汇率
+    @ApiModelProperty("rate")
+    private BigDecimal rate=BigDecimal.ZERO;    //费率出账没有费率
     @ApiModelProperty("count")
     private AtomicReference<BigDecimal> count = new AtomicReference<>(BigDecimal.ZERO);//总入款
     @ApiModelProperty("countDowned")
@@ -32,7 +36,7 @@ public class CallbackUserDTO {
     private AtomicReference<BigDecimal> downing = new AtomicReference<>(BigDecimal.ZERO);//应下发
 
     public void calcDown() {
-        this.down=this.count.get().subtract(this.countDowned.get());
+        this.down=this.downing.get().subtract(this.countDowned.get());
     }
     public void addTotal(BigDecimal amount) {
         if (amount != null) {

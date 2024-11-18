@@ -16,6 +16,10 @@ public class OperationUserDTO {
     private String groupId;
     @ApiModelProperty("count")
     private AtomicReference<BigDecimal> count = new AtomicReference<>(BigDecimal.ZERO);//总入款
+    @ApiModelProperty("exchange")
+    private BigDecimal exchange=BigDecimal.ONE;    //汇率
+    @ApiModelProperty("rate")
+    private BigDecimal rate=BigDecimal.ZERO;    //费率
     @ApiModelProperty("countDowned")
     private AtomicReference<BigDecimal> countDowned = new AtomicReference<>(BigDecimal.ZERO);
     @ApiModelProperty("countCishu")
@@ -32,7 +36,7 @@ public class OperationUserDTO {
     private AtomicReference<BigDecimal> downing = new AtomicReference<>(BigDecimal.ZERO);//应下发
 
     public void calcDown() {
-        this.down=this.count.get().subtract(this.countDowned.get());
+        this.down=this.downing.get().subtract(this.countDowned.get());
     }
     public void addTotal(BigDecimal amount) {
         if (amount != null) {

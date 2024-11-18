@@ -380,6 +380,7 @@ public class AccountBot extends TelegramLongPollingBot {
                             +"用户:"+user.getUsername()+"\n"
                             +"⬇\uFE0F\n"
                             +userDTO.getUsername();
+                    user.setUsername(username);
                     sendMessage(sendMessage,message);
                 }
                 if (!name.equals(nameDTO)){
@@ -387,13 +388,11 @@ public class AccountBot extends TelegramLongPollingBot {
                             +"用户:"+name+"\n"
                             +"⬇\uFE0F\n"
                             +nameDTO;
-                    sendMessage(sendMessage,message);
+                    user.setLastName(lastNameDTO);
+                    user.setFirstName(firstNameDTO);
                     sendMessage(sendMessage,message);
                 }
-                user.setLastName(lastNameDTO);
-                user.setFirstName(firstNameDTO);
                 userService.updateUserid(user);
-
             }
         } else if (byUsername!=null ){//设置完操作员  然后操作员也不说话 然后操作员直接修改了用户名 会有问题
             if (byUsername.getUsername()!=null){

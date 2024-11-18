@@ -25,6 +25,22 @@ import java.util.List;
 public class RateService {
     @Autowired
     RateMapper mapper;
+
+
+
+    public List<Rate> webSelectRateList(String groupId) {
+        QueryWrapper<Rate> queryWrapper = new QueryWrapper();
+        //只查询不是公式入账的的rate 因为要获取最新的并且不是公式入账的汇率和费率计算
+        queryWrapper.eq("group_id", groupId);
+        queryWrapper.eq("is_matcher", false);
+        queryWrapper.eq("calc_u", false);
+        queryWrapper.orderByDesc("add_time");
+        queryWrapper.last("LIMIT 1");
+        return mapper.selectList(queryWrapper);
+    }
+
+
+
     public Rate selectRateByID(int rateId) {
         return mapper.selectById(rateId);//需要order by addTime 吗
     }

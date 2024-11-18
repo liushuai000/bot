@@ -14,6 +14,8 @@ CREATE TABLE `user` (
                         PRIMARY KEY (`id`)
 ) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4;
 DROP TABLE IF EXISTS Accounts;
+
+ALTER TABLE accounts MODIFY downing DECIMAL(38, 2);
 CREATE TABLE `accounts` (
                             `id` int NOT NULL AUTO_INCREMENT,
                             `total` decimal(11,2) NOT NULL DEFAULT '0.00',
