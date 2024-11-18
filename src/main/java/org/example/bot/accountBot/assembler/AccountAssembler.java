@@ -24,7 +24,7 @@ public class AccountAssembler {
         accountDTO.setUsername(user.getUsername());
         accountDTO.setAccountHandlerMoney(account.getAccountHandlerMoney());
         accountDTO.setFirstName(user.getFirstName()+user.getLastName());
-        accountDTO.setTotal(account.getTotal());
+        accountDTO.setTotal(account.getTotal().subtract(account.getTotal().multiply(rate.getRate().multiply(BigDecimal.valueOf(0.01)))));
         accountDTO.setDowning(account.getDowning());//.divide(rate.getExchange(), 2, RoundingMode.HALF_UP)
         accountDTO.setRate(rate.getRate());
         accountDTO.setExchange(rate.getExchange());
@@ -66,13 +66,22 @@ public class AccountAssembler {
         BigDecimal downing=new BigDecimal(0);
         BigDecimal downed=new BigDecimal(0);
         BigDecimal IssueMoney=new BigDecimal(0);
+        BigDecimal totalUSDT=new BigDecimal(0);
+        BigDecimal downingUSDT=new BigDecimal(0);
+        BigDecimal downedUSDT=new BigDecimal(0);
         if (accountDTOList!= null){
             // 计算 accountHandlerMoney 的总和
             AccountMoney = accountDTOList.stream().map(AccountDTO::getAccountHandlerMoney)
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
             total = accountDTOList.stream().map(AccountDTO::getTotal)
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
+            totalUSDT = accountDTOList.stream()
+                    .map(accountDTO -> accountDTO.getTotal().divide(accountDTO.getExchange()))
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
             downing = accountDTOList.stream().map(AccountDTO::getDowning)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+            downingUSDT = accountDTOList.stream()
+                    .map(accountDTO -> accountDTO.getDowning().divide(accountDTO.getExchange()))
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
         }
         if (issueDTOList!= null){
@@ -81,14 +90,20 @@ public class AccountAssembler {
 
             downed = issueDTOList.stream().map(IssueDTO::getDowned)
                     .reduce(BigDecimal.ZERO, BigDecimal::add);//总下发
+            downedUSDT = issueDTOList.stream()
+                    .map(issueDTO -> issueDTO.getDowned().divide(issueDTO.getExchange()))
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
         }
         return new RateDTO()
-                .setId(rate.getId()+"")
-                .setCount(total)
+                .setCount(total)//.subtract(total.multiply(rate.getRate())).multiply(BigDecimal.valueOf(0.01))
                 .setDown(downing.subtract(downed))
                 .setDowned(downed)
                 .setGroupId(rate.getGroupId())
                 .setExchange(rate.getExchange())
+                .setCountUSDT(totalUSDT)
+                .setDownedUSDT(downedUSDT)
+                .setDownUSDT(downingUSDT.subtract(downedUSDT))
+                .setDowningUSDT(downingUSDT)
                 .setDowning(downing)//应下方
                 .setRate(rate.getRate())
                 .setCountHandlerMoney(IssueMoney.add(AccountMoney));

@@ -36,8 +36,13 @@ public class RateDTO {
     private BigDecimal count=BigDecimal.ZERO;//总入款
     @ApiModelProperty("CountHandlerMoney")
     private BigDecimal CountHandlerMoney=BigDecimal.ZERO;//全局入款手续费 account+issue 里的手续费
-
-
-
+    @ApiModelProperty("downing")
+    private BigDecimal downingUSDT=BigDecimal.ZERO;    //应下发
+    @ApiModelProperty("downed")
+    private BigDecimal downedUSDT=BigDecimal.ZERO;    //已下发
+    @ApiModelProperty("down")
+    private BigDecimal downUSDT=BigDecimal.ZERO;    //未下发
+    @ApiModelProperty("count")
+    private BigDecimal countUSDT=BigDecimal.ZERO;//总入款
 
 }

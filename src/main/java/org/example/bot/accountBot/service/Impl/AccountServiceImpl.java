@@ -130,7 +130,7 @@ public class AccountServiceImpl implements AccountService {
                             accountSummary.incrementCount();
                             accountSummary.addTotal(total);
                         }
-                        accountSummary.setRate(rate);
+                        accountSummary.setRate(rate.multiply(BigDecimal.valueOf(0.01)));
                         accountSummary.setExchange(exchange);
                         accountSummary.setGroupId(accountDTO.getGroupId());
                         accountSummary.setOperationName(accountDTO.getUsername());
@@ -190,7 +190,7 @@ public class AccountServiceImpl implements AccountService {
                             accountSummary.addTotal(total);
                         }
                         accountSummary.setExchange(exchange);
-                        accountSummary.setRate(rate);
+                        accountSummary.setRate(rate.multiply(BigDecimal.valueOf(0.01)));
                         accountSummary.setGroupId(accountDTO.getGroupId());
                         accountSummary.setCallBackName(accountDTO.getCallBackName());
                         accountSummary.setCallBackFirstName(accountDTO.getCallBackFirstName());
