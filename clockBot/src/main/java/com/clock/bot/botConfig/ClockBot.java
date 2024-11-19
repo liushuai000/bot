@@ -7,6 +7,7 @@ import com.clock.bot.pojo.UserStatus;
 import com.clock.bot.service.UserOperationService;
 import com.clock.bot.service.UserService;
 import com.clock.bot.service.UserStatusService;
+import com.clock.bot.utils.DateUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -20,6 +21,7 @@ import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardMarkup;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
+import java.text.SimpleDateFormat;
 import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicLong;
@@ -43,6 +45,9 @@ public class ClockBot extends TelegramLongPollingBot {
     private UserStatusService userStatusService;
     @Autowired
     private UserOperationService userOperationService;
+    @Autowired
+    private ButtonList buttonList;
+
     @Override
     public String getBotUsername() {
         return username;
@@ -52,6 +57,8 @@ public class ClockBot extends TelegramLongPollingBot {
         return botToken;
     }
     static String[] command = {"吃饭","上厕所","抽烟","其它"};
+    SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+    DateUtils dateUtils=new DateUtils();
     public static String getMatchedCommand( String input) {
         for (String cmd : command) {
             if (cmd.equals(input)) {
@@ -84,7 +91,6 @@ public class ClockBot extends TelegramLongPollingBot {
         SendMessage sendMessage = new SendMessage();
         //点击按钮回调用
         if (update.hasCallbackQuery()){
-
 //            nowExchange.CallbackQuery(message,sendMessage,rate,update);
             return;
         }
@@ -110,14 +116,17 @@ public class ClockBot extends TelegramLongPollingBot {
         String dateFromat =workTime.getMonth()+"/"+workTime.getDay()+" "+workTime.getHours()+":"+workTime.getMinutes()+"\n";
         Date date = new Date();
         String nowTime =date.getMonth()+"/"+date.getDay()+" "+date.getHours()+":"+date.getMinutes()+"\n";
-        if (text.equals("上班")){
+        if (text.equals("上班")||text.equals("/work")){
             result=this.work(userStatus,user,userDTO,result,name,dateFromat);
-        }else if (text.equals("下班")){
+        }else if (text.equals("下班")||text.equals("/offwork")){
             result=this.downWork(userStatus,user,userDTO,result,name,nowTime);
-        } else if (text.equals("回座")) {
+        } else if (text.equals("回座")||text.equals("/back")) {
             result=this.callback(userStatus,user,userDTO,result,name,nowTime);
-        } else if (Arrays.asList(command).contains(text)) {
+        } else if (Arrays.asList(command).contains(text)||text.equals("/work")) {
             result=this.activity(userStatus,user,userDTO,result,name,nowTime);
+        }
+        if (text.equals("查询记录")){
+            buttonList.implList(sendMessage,userDTO.getGroupId(),userDTO.getGroupTitle());
         }
         this.sendMessage(sendMessage,result);
     }
@@ -161,31 +170,31 @@ public class ClockBot extends TelegramLongPollingBot {
                     if (operation.getOperation().equals("吃饭")){
                         eat.updateAndGet(v -> v + 1);
                         Duration between = Duration.between(operation.getStartTime().toInstant(), operation.getEndTime().toInstant());
-                        eatSeconds.set(between.getSeconds());
+                        eatSeconds.addAndGet(between.getSeconds());
                     }else if (operation.getOperation().equals("上厕所")) {
                         wc.updateAndGet(v -> v + 1);
                         Duration between = Duration.between(operation.getStartTime().toInstant(), operation.getEndTime().toInstant());
-                        wcSeconds.set(between.getSeconds());
+                        wcSeconds.addAndGet(between.getSeconds());
                     }else if (operation.getOperation().equals("抽烟")) {
                         smoking.updateAndGet(v -> v + 1);
                         Duration between = Duration.between(operation.getStartTime().toInstant(), operation.getEndTime().toInstant());
-                        smokingSeconds.set(between.getSeconds());
+                        smokingSeconds.addAndGet(between.getSeconds());
                     }else if (operation.getOperation().equals("其它")) {
                         other.updateAndGet(v -> v + 1);
                         Duration between = Duration.between(operation.getStartTime().toInstant(), operation.getEndTime().toInstant());
-                        otherSeconds.set(between.getSeconds());
+                        otherSeconds.addAndGet(between.getSeconds());
                     }
                     Duration between = Duration.between(operation.getStartTime().toInstant(), operation.getEndTime().toInstant());
-                    seconds.set(between.getSeconds());
+                    seconds.addAndGet(between.getSeconds());
                 });
                 String eatText=eat.get()==0?"":"本日吃饭："+eat.get()+" 次\n";
                 String wcText=wc.get()==0?"":"本日上厕所："+wc.get()+" 次\n";
                 String smokingText=smoking.get()==0?"":"本日抽烟："+smoking.get()+" 次\n";
                 String otherText=other.get()==0?"":"本日其它："+other.get()+" 次\n";
-                String o1 = eatSeconds.get() == 0 ? "" : "今日累计吃饭时间："+eatSeconds.get();
-                String o2 = wcSeconds.get() == 0 ? "" : "今日累计上厕所时间："+wcSeconds.get();
-                String o3 = smokingSeconds.get() == 0 ? "" : "今日累计抽烟时间："+smokingSeconds.get();
-                String o4 = otherSeconds.get() == 0 ? "" : "今日累计其它时间："+otherSeconds.get();
+                String o1 = eatSeconds.get() == 0 ? "" : "今日累计吃饭时间："+eatSeconds.get()+"\n";
+                String o2 = wcSeconds.get() == 0 ? "" : "今日累计上厕所时间："+wcSeconds.get()+"\n";
+                String o3 = smokingSeconds.get() == 0 ? "" : "今日累计抽烟时间："+smokingSeconds.get()+"\n";
+                String o4 = otherSeconds.get() == 0 ? "" : "今日累计其它时间："+otherSeconds.get()+"\n";
                 String text1;
                 if (eatSeconds.get()==0&&wcSeconds.get()==0&&smokingSeconds.get()==0&&otherSeconds.get()==0){
                     text1="";
@@ -198,16 +207,19 @@ public class ClockBot extends TelegramLongPollingBot {
                 }else {
                     text=eatText+wcText+smokingText+otherText+"------------------------\n" ;
                 }
-                long l = totalDuration.getSeconds() - seconds.get();//纯工作时间
+                long pureWorkTimeSeconds = totalDuration.getSeconds() - seconds.get(); // 纯工作时间
+                String pureWorkTimeString = dateUtils.formatDuration(pureWorkTimeSeconds);
+                String todayWorkTime =dateUtils.formatDuration(totalDuration.getSeconds());
+                String huodong=seconds.get()==0?"":"今日累计活动总时间：" +dateUtils.formatDuration(seconds.get())+"\n";
                 result = "用户：" + name + "\n" +
                         "用户标识：<code>" + user.getUserId() + "</code>\n" +
-                        "✅ 打卡成功：下班 - <code>"+dateFromat+"</code>\n" +
+                        "✅ 打卡成功：下班 - <code>" + dateFromat + "</code>\n" +
                         "提示：本日工作时间已结算\n" +
-                        "今日工作总计："+ totalDuration.toHours() + "时 " + totalDuration.toMinutes() + "分 " + totalDuration.getSeconds() + "秒"+"\n" +
-                        "纯工作时间："+new Date(l)+ "秒\n" +
+                        "今日工作总计：" +todayWorkTime+ "\n" +
+                        "纯工作时间：" + pureWorkTimeString + "\n" +
                         "------------------------\n" +
-                        "今日累计活动总时间："+new Date(seconds.get())+"\n" +
-                        text1+text+
+                        huodong+
+                        text1 + text +
                         "点此联系客服升级至独享版";
             }
         }else if (!userStatus.isStatus()){//下班状态
@@ -252,49 +264,50 @@ public class ClockBot extends TelegramLongPollingBot {
                     if (operation.getOperation().equals("吃饭")){
                         eat.updateAndGet(v -> v + 1);
                         Duration between = Duration.between(operation.getStartTime().toInstant(), operation.getEndTime().toInstant());
-                        eatSeconds.set(between.getSeconds());
+                        eatSeconds.addAndGet(between.getSeconds());
                     }else if (operation.getOperation().equals("上厕所")) {
                         wc.updateAndGet(v -> v + 1);
                         Duration between = Duration.between(operation.getStartTime().toInstant(), operation.getEndTime().toInstant());
-                        wcSeconds.set(between.getSeconds());
+                        wcSeconds.addAndGet(between.getSeconds());
                     }else if (operation.getOperation().equals("抽烟")) {
                         smoking.updateAndGet(v -> v + 1);
                         Duration between = Duration.between(operation.getStartTime().toInstant(), operation.getEndTime().toInstant());
-                        smokingSeconds.set(between.getSeconds());
+                        smokingSeconds.addAndGet(between.getSeconds());
                     }else if (operation.getOperation().equals("其它")) {
                         other.updateAndGet(v -> v + 1);
                         Duration between = Duration.between(operation.getStartTime().toInstant(), operation.getEndTime().toInstant());
-                        otherSeconds.set(between.getSeconds());
+                        otherSeconds.addAndGet(between.getSeconds());
                     }
                     Duration between = Duration.between(operation.getStartTime().toInstant(), operation.getEndTime().toInstant());
-                    seconds.set(between.getSeconds());
+                    seconds.addAndGet(between.getSeconds());
                 });
                 String eatText=eat.get()==0?"":"本日吃饭："+eat.get()+" 次\n";
                 String wcText=wc.get()==0?"":"本日上厕所："+wc.get()+" 次\n";
                 String smokingText=smoking.get()==0?"":"本日抽烟："+smoking.get()+" 次\n";
                 String otherText=other.get()==0?"":"本日其它："+other.get()+" 次\n";
-                String o1 = eatSeconds.get() == 0 ? "" : "今日累计吃饭时间："+eatSeconds.get();
-                String o2 = wcSeconds.get() == 0 ? "" : "今日累计上厕所时间："+wcSeconds.get();
-                String o3 = smokingSeconds.get() == 0 ? "" : "今日累计抽烟时间："+smokingSeconds.get();
-                String o4 = otherSeconds.get() == 0 ? "" : "今日累计其它时间："+otherSeconds.get();
+                String o1 = eatSeconds.get() == 0 ? "" : "今日累计吃饭时间："+dateUtils.formatDuration(eatSeconds.get())+"\n";
+                String o2 = wcSeconds.get() == 0 ? "" : "今日累计上厕所时间："+dateUtils.formatDuration(wcSeconds.get())+"\n";
+                String o3 = smokingSeconds.get() == 0 ? "" : "今日累计抽烟时间："+dateUtils.formatDuration(smokingSeconds.get())+"\n";
+                String o4 = otherSeconds.get() == 0 ? "" : "今日累计其它时间："+dateUtils.formatDuration(otherSeconds.get())+"\n";
                 String text1;
                 if (eatSeconds.get()==0&&wcSeconds.get()==0&&smokingSeconds.get()==0&&otherSeconds.get()==0){
                     text1="";
                 }else {
-                    text1=o1+o2+o3+o4+"------------------------\n" ;
+                    text1=o1+o2+o3+o4+"\n------------------------\n" ;
                 }
                 String text;
                 if (eat.get()==0&&wc.get()==0&&smoking.get()==0&&other.get()==0){
                     text="";
                 }else {
-                    text=eatText+wcText+smokingText+otherText+"------------------------\n" ;
+                    text=eatText+wcText+smokingText+otherText+"\n------------------------\n" ;
                 }
                 Duration between = Duration.between(userOperation.getStartTime().toInstant(), userOperation.getEndTime().toInstant());
+                String huodong=seconds.get()==0?"":"今日累计活动总时间：" +dateUtils.formatDuration(seconds.get())+"\n";
                 result="用户："+name+"\n" +
                         "用户标识："+user.getUserId()+"\n" +
                         "✅ "+dateFromat+" 回座打卡成功："+userOperation.getOperation()+"\n" +
                         "提示：本次活动时间已结算\n" +
-                        "本次活动耗时："+between.getSeconds()+" 秒\n" + text1+text+"今日累计活动总时间："+seconds+" 秒\n"+
+                        "本次活动耗时："+dateUtils.formatDuration(between.getSeconds())+" 秒\n" + text1+huodong+text+
                         "获取安全知识，电报使用技巧，欢迎关注： t.me/ttj817_channel";
             }else if (!userStatus.isReturnHome()){
                 result="用户："+name+"\n" +
@@ -418,6 +431,23 @@ public class ClockBot extends TelegramLongPollingBot {
     }
     //拉取机器人进群的处理  检测本群内 近三天上线过的人
     private void onJinQunMessage(Update update) {
+        // 检查是否有新成员加入
+        if (update != null && update.getMessage() != null && update.getMessage().getNewChatMembers() != null) {
+            List<org.telegram.telegrambots.meta.api.objects.User> newMembers = update.getMessage().getNewChatMembers();
+            for (org.telegram.telegrambots.meta.api.objects.User user : newMembers) {
+                // 处理新加入的成员
+                log.info("新成员加入: {}", user.getFirstName());
+                // 可以在这里发送欢迎消息或其他操作
+                String stats="状态：<code>已开启便捷回复键盘</code>";
+                SendMessage sendMessage = new SendMessage();
+                PaperPlaneBotButton buttonList = new PaperPlaneBotButton();
+                ReplyKeyboardMarkup replyKeyboardMarkup = buttonList.sendReplyKeyboard();
+                sendMessage.setReplyMarkup(replyKeyboardMarkup);//是否在onUpdateReceived设置
+                String chatId = update.getMessage().getChat().getId().toString();//群组id
+                sendMessage.setChatId(chatId);
+                this.tronAccountMessageTextHtml(sendMessage,chatId,stats);
+            }
+        }
         if (update.hasMyChatMember()) { //获取个人信息和授权的时候才是admin
             ChatMemberUpdated chatMember = update.getMyChatMember();
 //            if (chatMember.getNewChatMember().getStatus().equals("administrator")){

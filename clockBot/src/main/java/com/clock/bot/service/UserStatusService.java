@@ -1,5 +1,7 @@
 package com.clock.bot.service;
 
+import com.clock.bot.dto.QueryType;
+import com.clock.bot.dto.ReturnClockFromType;
 import com.clock.bot.dto.UserDTO;
 import com.clock.bot.pojo.User;
 import com.clock.bot.pojo.UserStatus;
@@ -16,4 +18,6 @@ public interface UserStatusService {
     void updateUserStatus(UserStatus userStatus);
 
     List<UserStatus> selectTodayUserStatus(String userId, String groupId);
+
+    List<ReturnClockFromType> findClockList(QueryType queryType);
 }

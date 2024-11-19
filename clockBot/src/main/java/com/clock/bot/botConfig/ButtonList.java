@@ -2,6 +2,8 @@ package com.clock.bot.botConfig;
 
 
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageText;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
@@ -15,10 +17,11 @@ import java.util.List;
 import java.util.Map;
 
 @Slf4j
+@Component
 public class ButtonList {
-    protected String url="http://www.yaoke.cc/";//43.128.113.117 http://www.yaoke.cc/ 本地需要换端口
+    @Value("${vueUrl}")
+    protected String url;
 
-//    protected String url="http://192.168.0.2:8080/";
     //map key:buttonText value:callbackData
     public void sendButton(SendMessage sendMessage, String groupId, Map<String,String> buttonText) {
         InlineKeyboardMarkup markup = new InlineKeyboardMarkup();
@@ -45,7 +48,7 @@ public class ButtonList {
         List<InlineKeyboardButton> rowInline = new ArrayList<>();
 
         InlineKeyboardButton button1 = new InlineKeyboardButton();
-        button1.setText("网页账单");
+        button1.setText("网页打卡记录");
         String encodedGroupTitle;
         try {
             encodedGroupTitle = URLEncoder.encode(groupTitle, StandardCharsets.UTF_8.toString());

@@ -4,13 +4,13 @@ spring:
       enabled: false
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://localhost:3306/clockBot?useUnicode=true&characterEncoding=UTF-8&autoReconnect=true&useSSL=false&zeroDateTimeBehavior=convertToNull&useTimezone=true&serverTimezone=GMT%2B8&allowMultiQueries=true
+    url: jdbc:mysql://localhost:3306/clockbot?useUnicode=true&characterEncoding=UTF-8&autoReconnect=true&useSSL=false&zeroDateTimeBehavior=convertToNull&useTimezone=true&serverTimezone=GMT%2B8&allowMultiQueries=true
     username: root
-    password: root
+    password: root@Liu332331
   jackson:
     date-format: yyyy-MM-dd HH:mm:ss
     time-zone: GMT+8
-# mybatis??
+# mybatis
 mybatis-plus:
   mapper-locations: classpath*:mapper/*.xml
   configuration:
@@ -22,6 +22,7 @@ logging:
     console: '%d{YYYY-MM-dd HH:mm:ss.SSS} %clr(%-5level) --- [%-15thread]%cyan(%-50logger{50}):%msg%n'
 #这个是超级管理员 可以私聊别人设置管理员权限
 adminUserId: 6976772117
+vueUrl: http://www.yaoke.cc/
 telegram:
   bot:
     #测试
@@ -31,5 +32,5 @@ telegram:
 #    token: 6736457256:AAHo8BBhs9E3hIG4xBkiAiZEYnVCcNoEKDM
 #    username: Evipbot
     #个人
-    token: 7203617407:AAGq9fe9aZSEanFkOa3oa219bEnJI_4RKY4
-    username: my_niu_bot
+    token: 6796265375:AAFidGpg5xGJpcmC9sx78bvGknd1HtkyGKU
+    username: Fvipbot
