@@ -116,16 +116,17 @@ public class ClockBot extends TelegramLongPollingBot {
         String dateFromat =workTime.getMonth()+"/"+workTime.getDay()+" "+workTime.getHours()+":"+workTime.getMinutes()+"\n";
         Date date = new Date();
         String nowTime =date.getMonth()+"/"+date.getDay()+" "+date.getHours()+":"+date.getMinutes()+"\n";
-        if (text.equals("上班")||text.equals("/work")){
+        if (text.equals("上班")||text.contains("/work")){
             result=this.work(userStatus,user,userDTO,result,name,dateFromat);
-        }else if (text.equals("下班")||text.equals("/offwork")){
+        }else if (text.equals("下班")||text.contains("/offwork")){
             result=this.downWork(userStatus,user,userDTO,result,name,nowTime);
-        } else if (text.equals("回座")||text.equals("/back")) {
+        } else if (text.equals("回座")||text.contains("/back")) {
             result=this.callback(userStatus,user,userDTO,result,name,nowTime);
         } else if (Arrays.asList(command).contains(text)||text.equals("/work")) {
             result=this.activity(userStatus,user,userDTO,result,name,nowTime);
         }
         if (text.equals("查询记录")){
+            result="点击此链接打开网页打卡记录";
             buttonList.implList(sendMessage,userDTO.getGroupId(),userDTO.getGroupTitle());
         }
         this.sendMessage(sendMessage,result);
@@ -447,17 +448,8 @@ public class ClockBot extends TelegramLongPollingBot {
                 sendMessage.setChatId(chatId);
                 this.tronAccountMessageTextHtml(sendMessage,chatId,stats);
             }
-        }
-        if (update.hasMyChatMember()) { //获取个人信息和授权的时候才是admin
+        }else if (update.hasMyChatMember()) { //获取个人信息和授权的时候才是admin
             ChatMemberUpdated chatMember = update.getMyChatMember();
-//            if (chatMember.getNewChatMember().getStatus().equals("administrator")){
-//                String message="";
-//                update.getMessage();
-//                SendMessage sendMessage = new SendMessage();
-//                String chatId = chatMember.getChat().getId().toString();//群组id
-//                sendMessage.setChatId(chatId);
-//                this.tronAccountMessageTextHtml(sendMessage,chatId,message);
-//            }
             // 检查是否为机器人被添加到群组  left 移除
             if (chatMember.getNewChatMember().getStatus().equals("member") || chatMember.getNewChatMember().getStatus().equals("left")) {
                 String chatId = chatMember.getChat().getId().toString();//群组id
@@ -469,7 +461,7 @@ public class ClockBot extends TelegramLongPollingBot {
                 String format = String.format("<a href=\"tg://user?id=%d\">%s</a>", id, id);
                 String message="您好，"+format+"，机器人已检测到加入了新群组，正在初始化新群组，请稍候...";
                 String message1="<b>请【群组的创建者】将机器人设置为群组管理员，否则可能影响机器人功能！</b>";
-                String stats="状态：<code>已开启便捷回复键盘</code>";
+//                String stats="状态：<code>已开启便捷回复键盘</code>";
                 update.getMessage();
                 SendMessage sendMessage = new SendMessage();
                 PaperPlaneBotButton buttonList = new PaperPlaneBotButton();
@@ -478,7 +470,7 @@ public class ClockBot extends TelegramLongPollingBot {
                 sendMessage.setChatId(chatId);
                 this.sendMessage(sendMessage,message);
                 this.sendMessage(sendMessage,message1);
-                this.tronAccountMessageTextHtml(sendMessage,chatId,stats);
+//                this.tronAccountMessageTextHtml(sendMessage,chatId,stats);
             }
         }
 

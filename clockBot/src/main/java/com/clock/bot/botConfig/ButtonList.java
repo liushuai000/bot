@@ -55,7 +55,7 @@ public class ButtonList {
         } catch (UnsupportedEncodingException e) {
             throw new RuntimeException(e);
         }
-        button1.setUrl(url+"Account?groupId="+groupId+"&groupTitle="+encodedGroupTitle);
+        button1.setUrl(url+"Clock?groupId="+groupId+"&groupTitle="+encodedGroupTitle);
 
         rowInline.add(button1);
 //        rowInline.add(button2);
