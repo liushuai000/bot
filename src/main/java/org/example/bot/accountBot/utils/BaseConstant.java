@@ -8,7 +8,7 @@ import java.util.regex.Pattern;
 public class BaseConstant {
     //SettingOperatorPerson也需要加 同步的
     public final static String[] array={
-            "通知","设置日切","开启日切","关闭日切","设置费率",
+            "通知","设置日切","开启日切","关闭日切","设置费率","通知所有人",
             "设置汇率","设置入款单笔手续费","取消",
             "删除操作员", "删除操作人","设置操作员", "设置操作人",
             "关闭回复人显示","隐藏回复人显示",

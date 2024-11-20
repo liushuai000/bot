@@ -71,7 +71,7 @@ public class PaperPlaneBotSinglePerson {
     @PostConstruct
     public void init() {
         // 启动定时任务，首次立即执行，之后每隔30秒执行一次
-        scheduler.scheduleAtFixedRate(this::fetchAndCacheData, 0, 10, TimeUnit.SECONDS);
+        scheduler.scheduleAtFixedRate(this::fetchAndCacheData, 0, 9, TimeUnit.SECONDS);
     }
     //
     private void fetchAndCacheData() {
@@ -81,7 +81,8 @@ public class PaperPlaneBotSinglePerson {
             List<TronHistoryDTO> historyTrading = restTemplateConfig.getForObjectHistoryTrading(url, Map.class);
             historyTrading.stream().filter(Objects::nonNull).findFirst().ifPresent(t -> { // 在这里处理第一个非空的 HistoryTrading 对象
                 long difference = Math.abs(new Date().getTime() - t.getBlock_ts()); // 计算两个时间戳之间的差值
-                long thirtySecondsInMilliseconds = 10 * 1000; // 30 秒转换为毫秒
+                long thirtySecondsInMilliseconds = 18 * 1000; // 30 秒转换为毫秒
+                System.out.println("两个时间相差 " + difference/ 1000 + " 秒");
                 //如果当前时间相差大于30秒，则进行 通知用户否则不通知
                 if (difference <= thirtySecondsInMilliseconds){
                     String result="";
@@ -92,17 +93,17 @@ public class PaperPlaneBotSinglePerson {
                     if (t.getTo_address().equals(w.getAddress())==true){
                         result="交易金额： "+bigDecimal+t.getTokenInfo().getTokenAbbr()+" 已确认 #"+type+"\n" +
                                 "交易币种： ❇\uFE0F #"+t.getTokenInfo().getTokenAbbr()+"\n" +
-                                "收款地址： "+t.getTo_address()+" (https://tronscan.org/#/address/TEtYFNQCaDWZXsjoMwxxJ9tymhXxj8W9pC/transfers)\n" +
-                                "支付地址： "+t.getFrom_address()+" (https://tronscan.org/#/address/TBbR4ppdfYBzTmLX9aa2fEPN7DgXweBc4E/transfers)\n" +
-                                "交易哈希： "+t.getTransaction_id()+" (https://tronscan.org/#/transaction/7bfe09c4f5ee12dfe56b40ff3806d1a5269437b417917a1025f36525cc7c2c63)\n" +
-                                "转账时间：2024-07-29 23:20:36\n" +
+                                "收款地址： "+t.getTo_address()+" (https://tronscan.org/#/address/"+t.getTo_address()+"/transfers)\n" +
+                                "支付地址： "+t.getFrom_address()+" (https://tronscan.org/#/address/"+t.getTo_address()+"/transfers)\n" +
+                                "交易哈希： "+t.getTransaction_id()+" (https://tronscan.org/#/transaction/"+t.getTransaction_id()+")\n" +
+                                "转账时间："+sdf.format(new Date(t.getBlock_ts()))+"\n" +
                                 "\uD83D\uDCE3 监控地址 ("+w.getAddress()+")" ;
                     }else {
                         result="交易金额： "+bigDecimal+t.getTokenInfo().getTokenAbbr()+" 已确认 #"+type+"\n" +
                                 "交易币种： ❇\uFE0F #"+t.getTokenInfo().getTokenAbbr()+"\n" +
-                                "收款地址： "+t.getTo_address()+" (https://tronscan.org/#/address/TEtYFNQCaDWZXsjoMwxxJ9tymhXxj8W9pC/transfers)\n" +
-                                "支付地址： "+t.getFrom_address()+" (https://tronscan.org/#/address/TBbR4ppdfYBzTmLX9aa2fEPN7DgXweBc4E/transfers)\n" +
-                                "交易哈希： "+t.getTransaction_id()+" (https://tronscan.org/#/transaction/7bfe09c4f5ee12dfe56b40ff3806d1a5269437b417917a1025f36525cc7c2c63)\n" +
+                                "收款地址： "+t.getTo_address()+" (https://tronscan.org/#/address/"+t.getTo_address()+"/transfers)\n" +
+                                "支付地址： "+t.getFrom_address()+" (https://tronscan.org/#/address/"+t.getTo_address()+"/transfers)\n" +
+                                "交易哈希： "+t.getTransaction_id()+" (https://tronscan.org/#/transaction/"+t.getTransaction_id()+")\n" +
                                 "转账时间："+sdf.format(new Date(t.getBlock_ts()))+"\n" +
                                 "\uD83D\uDCE3 监控地址 ("+w.getAddress()+")";
                     }

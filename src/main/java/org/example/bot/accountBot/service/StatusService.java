@@ -49,7 +49,6 @@ public class StatusService {
             status = new Status();
             //初始化状态信息
             status.setGroupId(groupId);
-            status.setGroupTitle(groupId);
             status.setHandleStatus(1);
             status.setGroupTitle(groupTitle);
             status.setCallBackStatus(1);

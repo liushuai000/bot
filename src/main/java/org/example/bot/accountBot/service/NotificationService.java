@@ -31,7 +31,7 @@ public class NotificationService {
 
     //通知功能实现/48 小时内在群组发言过的所有人
     public void inform(String text, SendMessage sendMessage) {
-        if (text.equals("通知")||text.equals("通知所有人")){
+        if (text.equals("通知所有人")||text.equals("通知")){
             // 计算 48 小时之前的时间
             Calendar calendar = Calendar.getInstance();
             calendar.add(Calendar.HOUR, -48);
