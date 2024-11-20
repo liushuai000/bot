@@ -23,6 +23,16 @@ logging:
 #这个是超级管理员 可以私聊别人设置管理员权限
 adminUserId: 6102261377 #教父
 vueUrl: http://192.168.0.12:8080/
+#每隔一分钟检查一次
+scheduler:
+  fixed-rate: 60000
+
+#吃饭超时时间 单位秒
+eatOutTime: 60
+wcOutTime: 120
+smokingOutTime: 60
+otherOutTime: 180
+
 telegram:
   bot:
     #测试

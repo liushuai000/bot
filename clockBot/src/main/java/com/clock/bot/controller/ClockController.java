@@ -1,5 +1,6 @@
 package com.clock.bot.controller;
 
+import com.clock.bot.dto.OperationType;
 import com.clock.bot.dto.QueryType;
 import com.clock.bot.service.UserStatusService;
 import com.clock.bot.utils.JsonResult;
@@ -18,11 +19,17 @@ public class ClockController {
     @Autowired
     UserStatusService userStatusService;
 
-
-
     @ApiOperation("获取所有账单信息")
     @PostMapping("/findClockList")
     public JsonResult findClockList(@RequestBody QueryType queryType) {
         return new JsonResult(userStatusService.findClockList(queryType));
     }
+
+    @ApiOperation("获取所有账单信息")
+    @PostMapping("/findOperationList")
+    public JsonResult findOperationList(@RequestBody OperationType queryType) {
+        return new JsonResult(userStatusService.findOperationList(queryType));
+    }
+
+
 }

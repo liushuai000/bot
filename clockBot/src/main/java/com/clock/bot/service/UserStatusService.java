@@ -1,8 +1,6 @@
 package com.clock.bot.service;
 
-import com.clock.bot.dto.QueryType;
-import com.clock.bot.dto.ReturnClockFromType;
-import com.clock.bot.dto.UserDTO;
+import com.clock.bot.dto.*;
 import com.clock.bot.pojo.User;
 import com.clock.bot.pojo.UserStatus;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
@@ -19,5 +17,11 @@ public interface UserStatusService {
 
     List<UserStatus> selectTodayUserStatus(String userId, String groupId);
 
-    List<ReturnClockFromType> findClockList(QueryType queryType);
+    List<StatusFromType> findClockList(QueryType queryType);
+
+    List<OperationFromType> findOperationList(OperationType queryType);
+
+    List<UserStatus> findUserStatusWithUserOperationId();
+
+    List<UserStatus> findByGroupId(String groupId);
 }

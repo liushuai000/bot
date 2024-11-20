@@ -17,7 +17,7 @@ import java.util.Date;
 @Data
 @TableName(value = "user_operation", schema = "clockbot", autoResultMap = true)
 public class UserOperation {
-//    private String  status;   //上班 下班 吃饭 上厕所 抽烟 其他 回座
+
     @TableId(type= IdType.AUTO,value = "id")
     public int id; //主键id
     @TableField("operation")
@@ -30,7 +30,8 @@ public class UserOperation {
     private Date endTime;//操作结束时间   回座的时候更新
     @TableField("create_time")
     private Date createTime;//创建时间
-
+    @TableField("reminder_count")
+    private int reminderCount; // 新增字段，记录提醒次数
 
 
 

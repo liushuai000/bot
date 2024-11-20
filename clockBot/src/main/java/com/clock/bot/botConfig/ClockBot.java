@@ -1,14 +1,17 @@
 package com.clock.bot.botConfig;
 
 import com.clock.bot.dto.UserDTO;
+import com.clock.bot.pojo.Status;
 import com.clock.bot.pojo.User;
 import com.clock.bot.pojo.UserOperation;
 import com.clock.bot.pojo.UserStatus;
+import com.clock.bot.service.StatusService;
 import com.clock.bot.service.UserOperationService;
 import com.clock.bot.service.UserService;
 import com.clock.bot.service.UserStatusService;
 import com.clock.bot.utils.DateUtils;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -23,6 +26,8 @@ import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
 import java.text.SimpleDateFormat;
 import java.time.Duration;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
@@ -47,6 +52,9 @@ public class ClockBot extends TelegramLongPollingBot {
     private UserOperationService userOperationService;
     @Autowired
     private ButtonList buttonList;
+    @Autowired
+    private StatusService statusService;
+
 
     @Override
     public String getBotUsername() {
@@ -104,14 +112,18 @@ public class ClockBot extends TelegramLongPollingBot {
         sendMessage.setChatId(String.valueOf(message.getChatId()==null?"":message.getChatId()));
         if (update.hasMessage() && update.getMessage().hasText()) this.BusinessHandler(message,sendMessage,replyToText,userDTO,update);
     }
-    //
+
     private void BusinessHandler(Message message, SendMessage sendMessage, String replyToText, UserDTO userDTO, Update update) {
         String text = userDTO.getText();//查状态需要groupId
         User user = this.isNullUser(userDTO);
         String result="";
         UserStatus userStatus=userStatusService.selectUserStatus(userDTO);
+        Status status=statusService.getInitStatus(userDTO.getGroupId(),userDTO.getGroupTitle());
+        setStatusRiqie(userDTO,status,null,sendMessage);
+        this.checkRiqie(sendMessage,status,userStatus);
         String firstLastName = user.getFirstLastName();
         String name = String.format("<a href=\"tg://user?id=%d\">%s</a>", Long.parseLong(user.getUserId()), firstLastName);
+
         Date workTime=userStatus!=null?userStatus.getWorkTime():new Date();
         String dateFromat =workTime.getMonth()+"/"+workTime.getDay()+" "+workTime.getHours()+":"+workTime.getMinutes()+"\n";
         Date date = new Date();
@@ -131,6 +143,59 @@ public class ClockBot extends TelegramLongPollingBot {
         }
         this.sendMessage(sendMessage,result);
     }
+    //设置日切时间
+    public void setStatusRiqie(UserDTO userDTO, Status status,UserStatus userStatus,SendMessage sendMessage){
+        if ( userDTO.getText().length()>=4 && userDTO.getText().substring(0,4).equals("设置日切")){
+            Integer setHours = Integer.parseInt(userDTO.getText().substring(4, userDTO.getText().length()));
+            LocalDateTime tomorrow = LocalDateTime.now().plusDays(1).withHour(setHours).withMinute(0).withSecond(0).withNano(1);
+            Date OverDue = Date.from(tomorrow.atZone(ZoneId.systemDefault()).toInstant());
+            status.setRiqie(true);//是否开启日切 是
+            status.setSetCutOffTime(OverDue);//设置日切时间
+            status.setSetStartTime(new Date());//日切开始时间
+            statusService.update(status);//accountList 更新账单日切时间
+            Date currentCutOffTime = status.getCurrentCutOffTime();
+            sendMessage(sendMessage,"设置成功 日切时间为每天:"+ tomorrow.getHour()+"时"+tomorrow.getMinute()+"分" +tomorrow.getSecond()+"秒!\n" +
+                    "下次日切时间结束:"+ OverDue.getHours()+"小时"+OverDue.getMinutes()+"分钟"+OverDue.getSeconds()+"秒!\n"+
+                    "此次日切时间结束:"+ currentCutOffTime.getHours()+"小时"+currentCutOffTime.getMinutes()+"分钟"+currentCutOffTime.getSeconds()+"秒"
+            );
+        }
+    }
+
+    //取今天的日切时间 +关闭日切后的账单 默认日切时间中午12点
+    public void checkRiqie(SendMessage sendMessage, Status status,UserStatus userStatus) {
+        //当前时间小于日切时间
+        if (status.isRiqie() ){
+            if (status.getCurrentCutOffTime().compareTo(new Date())<=0){
+                Date setTime = status.getCurrentCutOffTime();
+                Calendar calendar = Calendar.getInstance();
+                calendar.setTime(setTime);
+                calendar.add(Calendar.HOUR_OF_DAY, 24);
+                setTime = calendar.getTime();
+                status.setSetTime(setTime);
+                status.setSetStartTime(new Date());
+                statusService.update(status);
+
+                //如果 userOperationId 不为空，说明该用户正在做某项操作，强制结束
+                if (StringUtils.isNotBlank(userStatus.getUserOperationId())){
+                    UserOperation byId = userOperationService.findById(userStatus.getUserOperationId());
+                    if (byId.getEndTime()==null){
+                        byId.setEndTime(byId.getEndTime());
+                        userOperationService.updateUserOperation(byId);
+                    }
+                }
+                userStatus.setStatus(false);//更新下班状态 和活动结束
+                userStatus.setReturnHome(false);
+                // 更新 workDownTime 为当前时间
+                userStatus.setWorkDownTime(new Date());
+                userStatusService.updateUserStatus(userStatus);
+
+                //日切时间已更新，当前日切时间为 ：每天:11时59分59秒
+                sendMessage(sendMessage,"日切时间已更新，当前日切时间为 ：每天:"+status.getSetTime().getHours()+"时"+
+                        status.getSetTime().getMinutes()+"分"+status.getSetTime().getSeconds()+"秒");
+            }
+        }
+    }
+
     //下班
     private String downWork(UserStatus userStatus, User user, UserDTO userDTO, String result, String name, String dateFromat) {
         if (userStatus==null) {
@@ -192,10 +257,10 @@ public class ClockBot extends TelegramLongPollingBot {
                 String wcText=wc.get()==0?"":"本日上厕所："+wc.get()+" 次\n";
                 String smokingText=smoking.get()==0?"":"本日抽烟："+smoking.get()+" 次\n";
                 String otherText=other.get()==0?"":"本日其它："+other.get()+" 次\n";
-                String o1 = eatSeconds.get() == 0 ? "" : "今日累计吃饭时间："+eatSeconds.get()+"\n";
-                String o2 = wcSeconds.get() == 0 ? "" : "今日累计上厕所时间："+wcSeconds.get()+"\n";
-                String o3 = smokingSeconds.get() == 0 ? "" : "今日累计抽烟时间："+smokingSeconds.get()+"\n";
-                String o4 = otherSeconds.get() == 0 ? "" : "今日累计其它时间："+otherSeconds.get()+"\n";
+                String o1 = eatSeconds.get() == 0 ? "" : "今日累计吃饭时间："+dateUtils.formatDuration(eatSeconds.get())+"\n";
+                String o2 = wcSeconds.get() == 0 ? "" : "今日累计上厕所时间："+dateUtils.formatDuration(wcSeconds.get())+"\n";
+                String o3 = smokingSeconds.get() == 0 ? "" : "今日累计抽烟时间："+dateUtils.formatDuration(smokingSeconds.get())+"\n";
+                String o4 = otherSeconds.get() == 0 ? "" : "今日累计其它时间："+dateUtils.formatDuration(otherSeconds.get())+"\n";
                 String text1;
                 if (eatSeconds.get()==0&&wcSeconds.get()==0&&smokingSeconds.get()==0&&otherSeconds.get()==0){
                     text1="";
