@@ -38,7 +38,7 @@ public class StatusFromType {
     @ApiModelProperty(value = "抽烟时间")
     public String smokingTime;
 
-    @ApiModelProperty(value = "其他时间")
+    @ApiModelProperty(value = "其它时间")
     public String otherTime;
 
     @ApiModelProperty(value = "吃饭次数")
@@ -47,8 +47,12 @@ public class StatusFromType {
     public Integer toilet;
     @ApiModelProperty(value = "抽烟次数")
     public Integer smoking;
-    @ApiModelProperty(value = "其他次数")
+    @ApiModelProperty(value = "其它次数")
     public Integer other;
-
-
+    @ApiModelProperty(value = "有效工作时长")
+    public String pureWorkTimeString;
+    @ApiModelProperty(value = "上班时长")
+    public String shangbanTime;
+    @ApiModelProperty(value = "总活动时长")
+    public String  huoDongTime;
 }

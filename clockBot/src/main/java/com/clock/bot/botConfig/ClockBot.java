@@ -26,6 +26,7 @@ import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
 import java.text.SimpleDateFormat;
 import java.time.Duration;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.*;
@@ -123,11 +124,13 @@ public class ClockBot extends TelegramLongPollingBot {
         this.checkRiqie(sendMessage,status,userStatus);
         String firstLastName = user.getFirstLastName();
         String name = String.format("<a href=\"tg://user?id=%d\">%s</a>", Long.parseLong(user.getUserId()), firstLastName);
-
         Date workTime=userStatus!=null?userStatus.getWorkTime():new Date();
-        String dateFromat =workTime.getMonth()+"/"+workTime.getDay()+" "+workTime.getHours()+":"+workTime.getMinutes()+"\n";
+        LocalDate localDate = workTime.toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
+        int month = localDate.getMonthValue();
+        int day = localDate.getDayOfMonth();
+        String dateFromat =month+"/"+day+" "+workTime.getHours()+":"+workTime.getMinutes()+"\n";
         Date date = new Date();
-        String nowTime =date.getMonth()+"/"+date.getDay()+" "+date.getHours()+":"+date.getMinutes()+"\n";
+        String nowTime =month+"/"+day+" "+date.getHours()+":"+date.getMinutes()+"\n";
         if (text.equals("上班")||text.contains("/work")){
             result=this.work(userStatus,user,userDTO,result,name,dateFromat);
         }else if (text.equals("下班")||text.contains("/offwork")){
@@ -154,9 +157,9 @@ public class ClockBot extends TelegramLongPollingBot {
             status.setSetStartTime(new Date());//日切开始时间
             statusService.update(status);//accountList 更新账单日切时间
             Date currentCutOffTime = status.getCurrentCutOffTime();
-            sendMessage(sendMessage,"设置成功 日切时间为每天:"+ tomorrow.getHour()+"时"+tomorrow.getMinute()+"分" +tomorrow.getSecond()+"秒!\n" +
-                    "下次日切时间结束:"+ OverDue.getHours()+"小时"+OverDue.getMinutes()+"分钟"+OverDue.getSeconds()+"秒!\n"+
-                    "此次日切时间结束:"+ currentCutOffTime.getHours()+"小时"+currentCutOffTime.getMinutes()+"分钟"+currentCutOffTime.getSeconds()+"秒"
+            sendMessage(sendMessage,"设置成功 日切时间为北京时间每天:"+ tomorrow.getHour()+"时"+tomorrow.getMinute()+"分" +tomorrow.getSecond()+"秒!\n" +
+                    "此次日切时间结束:"+ currentCutOffTime.getHours()+"小时"+currentCutOffTime.getMinutes()+"分钟"+currentCutOffTime.getSeconds()+"秒\n"+
+                    "下次日切时间结束:"+ OverDue.getHours()+"小时"+OverDue.getMinutes()+"分钟"+OverDue.getSeconds()+"秒!\n"
             );
         }
     }
@@ -522,11 +525,10 @@ public class ClockBot extends TelegramLongPollingBot {
                 String username = chatMember.getFrom().getUserName();
                 String firstName = chatMember.getFrom().getFirstName();
                 String lastName = chatMember.getFrom().getLastName();
-
                 String format = String.format("<a href=\"tg://user?id=%d\">%s</a>", id, id);
-                String message="您好，"+format+"，机器人已检测到加入了新群组，正在初始化新群组，请稍候...";
+                String message="您好，"+format+"，机器人已检测到加入了新群组，正在初始化新群组，请稍候...\n"+
+                        "当前上班时间为每天0点到0点，如果有日切需求可自行更改：日切格式：设置日切12（默认北京时间）✅";
                 String message1="<b>请【群组的创建者】将机器人设置为群组管理员，否则可能影响机器人功能！</b>";
-//                String stats="状态：<code>已开启便捷回复键盘</code>";
                 update.getMessage();
                 SendMessage sendMessage = new SendMessage();
                 PaperPlaneBotButton buttonList = new PaperPlaneBotButton();
@@ -535,7 +537,6 @@ public class ClockBot extends TelegramLongPollingBot {
                 sendMessage.setChatId(chatId);
                 this.sendMessage(sendMessage,message);
                 this.sendMessage(sendMessage,message1);
-//                this.tronAccountMessageTextHtml(sendMessage,chatId,stats);
             }
         }
 

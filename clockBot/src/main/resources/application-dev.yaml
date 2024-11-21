@@ -25,20 +25,8 @@ adminUserId: 6976772117
 vueUrl: http://www.yaoke.cc/
 #每隔一分钟检查一次
 scheduler:
-  fixed-rate: 60000
-#吃饭超时时间 单位秒
-eatOutTime: 60
-wcOutTime: 120
-smokingOutTime: 60
-otherOutTime: 180
+  fixed-rate: 10000
 telegram:
   bot:
-    #测试
-#    token: 7532424117:AAEieNRdj5lBvwUoEZbPV_CHKKvbbYv6uow
-#    username: ftfgg6543366bot
-    #正式环境
-#    token: 6736457256:AAHo8BBhs9E3hIG4xBkiAiZEYnVCcNoEKDM
-#    username: Evipbot
-    #个人
     token: 6796265375:AAFidGpg5xGJpcmC9sx78bvGknd1HtkyGKU
     username: Fvipbot

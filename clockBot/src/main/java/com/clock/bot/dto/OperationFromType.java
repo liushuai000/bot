@@ -22,18 +22,18 @@ public class OperationFromType {
     @ApiModelProperty("吃饭")
     private String eat;//2022-11-18 13:30:00-14:30:00  操作开始和结束时间
     @ApiModelProperty("上厕所")
-    private String toilet;//0无活动: 1:吃饭 2:上厕所 3:抽烟 4:其他
+    private String toilet;//0无活动: 1:吃饭 2:上厕所 3:抽烟 4:其它
     @ApiModelProperty("抽烟时间")
-    private String smoking;//0无活动: 1:吃饭 2:上厕所 3:抽烟 4:其他
-    @ApiModelProperty("其他")
-    private String other;//0无活动: 1:吃饭 2:上厕所 3:抽烟 4:其他
+    private String smoking;//0无活动: 1:吃饭 2:上厕所 3:抽烟 4:其它
+    @ApiModelProperty("其它")
+    private String other;//0无活动: 1:吃饭 2:上厕所 3:抽烟 4:其它
     @ApiModelProperty(value = "吃饭时间")
     public String eatDateText;//2分30秒
     @ApiModelProperty(value = "上厕所时间")
     public String toiletDateText;
     @ApiModelProperty(value = "抽烟时间")
     public String smokingDateText;
-    @ApiModelProperty(value = "其他时间")
+    @ApiModelProperty(value = "其它时间")
     public String otherDateText;
     @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd HH:mm:ss")
     @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss")

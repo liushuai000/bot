@@ -21,7 +21,7 @@ public class UserOperation {
     @TableId(type= IdType.AUTO,value = "id")
     public int id; //主键id
     @TableField("operation")
-    private String operation;//0无活动: 1:吃饭 2:上厕所 3:抽烟 4:其他
+    private String operation;//0无活动: 1:吃饭 2:上厕所 3:抽烟 4:其它
     @TableField("user_status_id")
     private String userStatusId;//UserStatus表里的 数据
     @TableField("start_time")

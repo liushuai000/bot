@@ -12,5 +12,5 @@ public interface StatusService {
 
     void update(Status status);
 
-    List<Status> selcectStatusList();
+    List<Status> selectStatusList();
 }

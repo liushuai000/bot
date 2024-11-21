@@ -40,7 +40,7 @@ public class StatusServiceImpl implements StatusService {
     }
 
     @Override
-    public List<Status> selcectStatusList() {
+    public List<Status> selectStatusList() {
         return statusMapper.selectList(null);
     }
 

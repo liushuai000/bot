@@ -58,7 +58,17 @@ public class UserStatusServiceImpl implements UserStatusService {
         }
         List<OperationFromType> fromTypeList=new ArrayList<>();
         List<UserStatus> userStatuses = userStatusMapper.selectList(queryWrapper);
+        Map<String, AtomicLong > huoDongTimeMap = new HashMap<>();//总活动时长
+        Map<String, AtomicLong > pureWorkTimeMap = new HashMap<>();//总工作时长  -总活动时长=有效工作时长
         userStatuses.stream().filter(Objects::nonNull).forEach(status->{
+            if (status.getWorkDownTime()!=null){
+                // 计算总工作时间
+                Duration totalDuration = Duration.between(status.getWorkTime().toInstant(), status.getWorkDownTime().toInstant());
+                AtomicLong wcTemp =pureWorkTimeMap.getOrDefault(status.getUserId(), new AtomicLong(0L)); // 纯工作时间
+                wcTemp.addAndGet(totalDuration.getSeconds());
+                pureWorkTimeMap.put(status.getUserId(), wcTemp);
+            }
+
             QueryWrapper<UserOperation> wrapper = new QueryWrapper<>();
             wrapper.eq("user_status_id", status.getId());
             List<UserOperation> operationList = userOperationMapper.selectList(wrapper);
@@ -72,22 +82,28 @@ public class UserStatusServiceImpl implements UserStatusService {
                 operationFromType.setFirstname(user.getFirstName()+user.getLastName()==null?"":user.getLastName());
                 operationFromType.setWorkTime(status.getWorkTime());
                 operationFromType.setWorkDownTime(status.getWorkDownTime());
-                if (operation.getOperation().equals("吃饭")){
+                if (operation.getOperation().equals("吃饭") && operation.getEndTime()!=null){
                     operationFromType.setEat(sdf.format(operation.getStartTime())+"至"+sdf.format(operation.getEndTime()));
                     Duration between = Duration.between(operation.getStartTime().toInstant(), operation.getEndTime().toInstant());
                     operationFromType.setEatDateText(dateUtils.formatDuration(between.getSeconds()));
-                } else if (operation.getOperation().equals("上厕所")) {
+                } else if (operation.getOperation().equals("上厕所") && operation.getEndTime()!=null) {
                     operationFromType.setToilet(sdf.format(operation.getStartTime())+"至"+sdf.format(operation.getEndTime()));
                     Duration between = Duration.between(operation.getStartTime().toInstant(), operation.getEndTime().toInstant());
                     operationFromType.setToiletDateText(dateUtils.formatDuration(between.getSeconds()));
-                } else if (operation.getOperation().equals("抽烟")) {
+                } else if (operation.getOperation().equals("抽烟") && operation.getEndTime()!=null) {
                     operationFromType.setSmoking(sdf.format(operation.getStartTime())+"至"+sdf.format(operation.getEndTime()));
                     Duration between = Duration.between(operation.getStartTime().toInstant(), operation.getEndTime().toInstant());
                     operationFromType.setSmokingDateText(dateUtils.formatDuration(between.getSeconds()));
-                }else if (operation.getOperation().equals("其他")) {
+                }else if (operation.getOperation().equals("其它") && operation.getEndTime()!=null) {
                     operationFromType.setOther(sdf.format(operation.getStartTime())+"至"+sdf.format(operation.getEndTime()));
                     Duration between = Duration.between(operation.getStartTime().toInstant(), operation.getEndTime().toInstant());
                     operationFromType.setOtherDateText(dateUtils.formatDuration(between.getSeconds()));
+                }
+                if (operation.getEndTime()!=null){
+                    Duration between = Duration.between(operation.getStartTime().toInstant(), operation.getEndTime().toInstant());
+                    AtomicLong wcTemp = huoDongTimeMap.getOrDefault(status.getUserId(), new AtomicLong(0L));
+                    wcTemp.addAndGet(between.getSeconds());
+                    huoDongTimeMap.put(status.getUserId(),wcTemp);
                 }
                 fromTypeList.add(operationFromType);
             });
@@ -139,6 +155,8 @@ public class UserStatusServiceImpl implements UserStatusService {
         Map<String, AtomicLong > wcTimeMap = new HashMap<>();
         Map<String, AtomicLong > smokingTimeMap = new HashMap<>();
         Map<String, AtomicLong > otherTimeMap = new HashMap<>();
+        Map<String, AtomicLong > huoDongTimeMap = new HashMap<>();//总活动时长
+        Map<String, AtomicLong > pureWorkTimeMap = new HashMap<>();//总工作时长  -总活动时长=有效工作时长
         Map<String, StatusFromType> statusFromTypeMap = new HashMap<>();
         Map<String,Date> workFirstTimeMap = new HashMap<>();
         Map<String,Date> workEndDownTimeMap = new HashMap<>();
@@ -147,7 +165,15 @@ public class UserStatusServiceImpl implements UserStatusService {
             QueryWrapper<UserOperation> wrapper = new QueryWrapper<>();
             wrapper.eq("user_status_id", status.getId());
             List<UserOperation> operationList = userOperationMapper.selectList(wrapper);
-            this.assemblerOperationList(status.getUserId(),operationList, eatCountMap,wcCountMap,smokingCountMap,otherCountMap,eatTimeMap,wcTimeMap,smokingTimeMap,otherTimeMap);
+            this.assemblerOperationList(status.getUserId(),operationList, eatCountMap,wcCountMap,smokingCountMap,otherCountMap,
+                    eatTimeMap,wcTimeMap,smokingTimeMap,otherTimeMap,huoDongTimeMap);
+            if (status.getWorkDownTime()!=null){
+                // 计算总工作时间
+                Duration totalDuration = Duration.between(status.getWorkTime().toInstant(), status.getWorkDownTime().toInstant());
+                AtomicLong wcTemp =pureWorkTimeMap.getOrDefault(status.getUserId(), new AtomicLong(0L)); // 纯工作时间
+                wcTemp.addAndGet(totalDuration.getSeconds());
+                pureWorkTimeMap.put(status.getUserId(), wcTemp);
+            }
             QueryWrapper<User> userWrapper = new QueryWrapper<>();
             userWrapper.eq("user_id", status.getUserId());
             User user = userMapper.selectOne(userWrapper);
@@ -163,12 +189,15 @@ public class UserStatusServiceImpl implements UserStatusService {
                     workFirstTimeMap.put(status.getUserId(), currentWorkTime);
                 }
             }
-            // 处理最晚工作时间
-            Date existingWorkEndDownTime = workEndDownTimeMap.get(status.getUserId());
-            if (existingWorkEndDownTime == null || currentWorkTime.after(existingWorkEndDownTime)) {
-                workEndDownTimeMap.put(status.getUserId(), currentWorkTime);
+            // 处理最早工作时间
+            Date currentWorkDownTime = status.getWorkDownTime();
+            if (currentWorkDownTime != null) {
+                // 处理最晚工作时间
+                Date existingWorkEndDownTime = workEndDownTimeMap.get(status.getUserId());
+                if (existingWorkEndDownTime == null || currentWorkDownTime.after(existingWorkEndDownTime)) {
+                    workEndDownTimeMap.put(status.getUserId(), currentWorkDownTime);
+                }
             }
-
             if (!statusFromTypeMap.containsKey(status.getUserId())) {
                 statusFromTypeMap.put(status.getUserId(), statusFromType);
             }
@@ -186,10 +215,15 @@ public class UserStatusServiceImpl implements UserStatusService {
             AtomicLong wc = wcTimeMap.getOrDefault(userId, new AtomicLong(0L));
             AtomicLong smoking = smokingTimeMap.getOrDefault(userId, new AtomicLong(0L));
             AtomicLong other = otherTimeMap.getOrDefault(userId, new AtomicLong(0L));
+            AtomicLong pureWork = pureWorkTimeMap.getOrDefault(userId, new AtomicLong(0L));
+            AtomicLong huoDong = huoDongTimeMap.getOrDefault(userId, new AtomicLong(0L));
             statusFromType.setEatTime(dateUtils.formatDuration(eat.get()));
             statusFromType.setToiletTime(dateUtils.formatDuration(wc.get()));
             statusFromType.setSmokingTime(dateUtils.formatDuration(smoking.get()));
             statusFromType.setOtherTime(dateUtils.formatDuration(other.get()));
+            statusFromType.setPureWorkTimeString(dateUtils.formatDuration(pureWork.get()-huoDong.get()));
+            statusFromType.setHuoDongTime(dateUtils.formatDuration(huoDong.get()));
+            statusFromType.setShangbanTime(dateUtils.formatDuration(pureWork.get()));
             statusFromType.setWorkFirstTime(workFirstTimeMap.get(userId));
             statusFromType.setWorkEndDownTime(workEndDownTimeMap.get(userId));
             fromTypeList.add(statusFromType);
@@ -197,45 +231,56 @@ public class UserStatusServiceImpl implements UserStatusService {
         return fromTypeList;
     }
 
-    public void assemblerOperationList(String userId, List<UserOperation> operations,
-                                       Map<String, Integer> eatCountMap, Map<String, Integer> wcMap, Map<String, Integer> smokingMap, Map<String, Integer> otherMap,
-                                       Map<String, AtomicLong > eatTimeMap, Map<String, AtomicLong> wcTimeMap, Map<String, AtomicLong > smokingTimeMap, Map<String, AtomicLong> otherTimeMap){
-        AtomicLong seconds = new AtomicLong();
+    public void assemblerOperationList(String userId, List<UserOperation> operations, Map<String, Integer> eatCountMap, Map<String, Integer> wcMap,
+                                       Map<String, Integer> smokingMap, Map<String, Integer> otherMap, Map<String, AtomicLong > eatTimeMap,
+                                       Map<String, AtomicLong> wcTimeMap, Map<String, AtomicLong > smokingTimeMap, Map<String, AtomicLong> otherTimeMap,
+                                        Map<String, AtomicLong > huoDongTimeMap){
         operations.stream().filter(Objects::nonNull).forEach(operation->{
             //"吃饭","上厕所","抽烟","其它"
             if (operation.getOperation().equals("吃饭")){
                 int eatCount = eatCountMap.getOrDefault(userId, 0) + 1;
                 eatCountMap.put(userId, eatCount);
-                Duration between = Duration.between(operation.getStartTime().toInstant(), operation.getEndTime().toInstant());
-                AtomicLong wcTemp = eatTimeMap.getOrDefault(userId, new AtomicLong(0L));
-                wcTemp.addAndGet(between.getSeconds());
-                eatTimeMap.put(userId, wcTemp);
+                if (operation.getEndTime()!=null){
+                    Duration between = Duration.between(operation.getStartTime().toInstant(), operation.getEndTime().toInstant());
+                    AtomicLong wcTemp = eatTimeMap.getOrDefault(userId, new AtomicLong(0L));
+                    wcTemp.addAndGet(between.getSeconds());
+                    eatTimeMap.put(userId, wcTemp);
+                }
             }else if (operation.getOperation().equals("上厕所")) {
                 int eatCount = wcMap.getOrDefault(userId, 0) + 1;
                 wcMap.put(userId, eatCount);
-                Duration between = Duration.between(operation.getStartTime().toInstant(), operation.getEndTime().toInstant());
-                AtomicLong wcTemp = wcTimeMap.getOrDefault(userId, new AtomicLong(0L));
-                wcTemp.addAndGet(between.getSeconds());
-                wcTimeMap.put(userId, wcTemp);
+                if (operation.getEndTime()!=null){
+                    Duration between = Duration.between(operation.getStartTime().toInstant(), operation.getEndTime().toInstant());
+                    AtomicLong wcTemp = wcTimeMap.getOrDefault(userId, new AtomicLong(0L));
+                    wcTemp.addAndGet(between.getSeconds());
+                    wcTimeMap.put(userId, wcTemp);
+                }
             }else if (operation.getOperation().equals("抽烟")) {
                 int eatCount = smokingMap.getOrDefault(userId, 0) + 1;
                 smokingMap.put(userId, eatCount);
+                if (operation.getEndTime()!=null){
+                    Duration between = Duration.between(operation.getStartTime().toInstant(), operation.getEndTime().toInstant());
+                    AtomicLong wcTemp = smokingTimeMap.getOrDefault(userId, new AtomicLong(0L));
+                    wcTemp.addAndGet(between.getSeconds());
+                    smokingTimeMap.put(userId, wcTemp);
+                }
 
-                Duration between = Duration.between(operation.getStartTime().toInstant(), operation.getEndTime().toInstant());
-                AtomicLong wcTemp = smokingTimeMap.getOrDefault(userId, new AtomicLong(0L));
-                wcTemp.addAndGet(between.getSeconds());
-                smokingTimeMap.put(userId, wcTemp);
             }else if (operation.getOperation().equals("其它")) {
                 int eatCount = otherMap.getOrDefault(userId, 0) + 1;
                 otherMap.put(userId, eatCount);
-
-                Duration between = Duration.between(operation.getStartTime().toInstant(), operation.getEndTime().toInstant());
-                AtomicLong wcTemp = otherTimeMap.getOrDefault(userId, new AtomicLong(0L));
-                wcTemp.addAndGet(between.getSeconds());
-                otherTimeMap.put(userId, wcTemp);
+                if (operation.getEndTime()!=null){
+                    Duration between = Duration.between(operation.getStartTime().toInstant(), operation.getEndTime().toInstant());
+                    AtomicLong wcTemp = otherTimeMap.getOrDefault(userId, new AtomicLong(0L));
+                    wcTemp.addAndGet(between.getSeconds());
+                    otherTimeMap.put(userId, wcTemp);
+                }
             }
-            Duration between = Duration.between(operation.getStartTime().toInstant(), operation.getEndTime().toInstant());
-            seconds.addAndGet(between.getSeconds());
+            if (operation.getEndTime()!=null){
+                Duration between = Duration.between(operation.getStartTime().toInstant(), operation.getEndTime().toInstant());
+                AtomicLong wcTemp = huoDongTimeMap.getOrDefault(userId, new AtomicLong(0L));
+                wcTemp.addAndGet(between.getSeconds());
+                huoDongTimeMap.put(userId,wcTemp);
+            }
         });
     }
 
