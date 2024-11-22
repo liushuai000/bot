@@ -32,8 +32,6 @@ public class SettingOperatorPerson{
     @Autowired
     StatusService statusService;
     @Autowired
-    UserNormalService userAuthorityService;
-    @Autowired
     UserOperationService userOperationService;
     @Autowired
     AccountBot accountBot;

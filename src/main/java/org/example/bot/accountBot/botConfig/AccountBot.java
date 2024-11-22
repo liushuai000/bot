@@ -60,7 +60,7 @@ public class AccountBot extends TelegramLongPollingBot {
     @Autowired
     protected PaperPlaneBotSinglePerson paperPlaneBotSinglePerson;
     @Autowired
-    private UserNormalService userAuthorityService;
+    private UserNormalService userNormalService;
     @Autowired
     private UserOperationService userOperationService;
     @Autowired
@@ -112,7 +112,7 @@ public class AccountBot extends TelegramLongPollingBot {
     public void BusinessHandler(Message message,SendMessage sendMessage, String replyToText, UserDTO userDTO,Update update) {
         //私聊的机器人  处理个人消息
         if (message.getChat().isUserChat()){
-            paperPlaneBotSinglePerson.handleTronAccountMessage(sendMessage,update,userDTO);//获取个人账户Linux不可以查询到
+            paperPlaneBotSinglePerson.handleTronAccountMessage(sendMessage,update,userDTO);
             paperPlaneBotSinglePerson.handleNonGroupMessage(message,sendMessage,userDTO);
             return;
         }
@@ -140,7 +140,7 @@ public class AccountBot extends TelegramLongPollingBot {
                 !BaseConstant.getMessageContentIsContain(message.getText()) ) {
             return ;
         }
-        UserNormal userNormalTempAdmin =userAuthorityService.selectByGroupId(userDTO.getGroupId());//超级管理
+        UserNormal userNormalTempAdmin =userNormalService.selectByGroupId(userDTO.getGroupId());//超级管理
         UserOperation userOperation = userOperationService.selectByUserAndGroupId(userDTO.getUserId(), userDTO.getGroupId());
         if (userOperation==null){
             userOperation= userOperationService.selectByUserName(userDTO.getUsername(), userDTO.getGroupId());
@@ -152,7 +152,7 @@ public class AccountBot extends TelegramLongPollingBot {
         }else if(userOperation.isOperation()){
             //如果是本群权限人
             if (userNormalTempAdmin.getUserId().equals(userDTO.getUserId())){
-                UserNormal userNormal = userAuthorityService.selectByUserId(userOperation.getUserId(), userDTO.getGroupId());
+                UserNormal userNormal = userNormalService.selectByUserId(userOperation.getUserId(), userDTO.getGroupId());
                 if (userNormal==null || !userNormal.isAdmin() ){
                     String format = String.format("<a href=\"tg://user?id=%d\">%s</a>", Long.parseLong(adminUserId), "管理员");
                     this.sendMessage(sendMessage,"您在本群不是管理!请联系: "+format);
@@ -268,7 +268,7 @@ public class AccountBot extends TelegramLongPollingBot {
                     byUser.setCreateTime(new Date());
                     byUser.setFirstName(firstName);
                     userService.insertUser(byUser);
-                    UserNormal userNormal = userAuthorityService.selectByUserAndGroupId(id + "", chatId);
+                    UserNormal userNormal = userNormalService.selectByUserAndGroupId(id + "", chatId);
                     if (userNormal==null){
                         userNormal = new UserNormal();
                         userNormal.setAdmin(true);
@@ -276,10 +276,10 @@ public class AccountBot extends TelegramLongPollingBot {
                         userNormal.setUserId(id+"");
                         userNormal.setCreateTime(new Date());
                         userNormal.setUsername(username);
-                        userAuthorityService.insertUserNormal(userNormal);
+                        userNormalService.insertUserNormal(userNormal);
                     }else {
                         userNormal.setAdmin(true);
-                        userAuthorityService.update(userNormal);
+                        userNormalService.update(userNormal);
                     }
                     UserOperation userOperation = userOperationService.selectByUserAndGroupId(id + "", chatId);
                     if (userOperation==null){
@@ -296,8 +296,7 @@ public class AccountBot extends TelegramLongPollingBot {
                         userOperationService.update(userOperation);
                     }
                 }else if (byUser!=null){
-//                    if (!byUser.isSuperAdmin()){
-                        UserNormal userNormal = userAuthorityService.selectByUserAndGroupId(id + "", chatId);
+                        UserNormal userNormal = userNormalService.selectByUserAndGroupId(id + "", chatId);
                         if (userNormal==null){
                             userNormal = new UserNormal();
                             userNormal.setAdmin(true);
@@ -305,10 +304,10 @@ public class AccountBot extends TelegramLongPollingBot {
                             userNormal.setUserId(id+"");
                             userNormal.setUsername(username);
                             userNormal.setCreateTime(new Date());
-                            userAuthorityService.insertUserNormal(userNormal);
+                            userNormalService.insertUserNormal(userNormal);
                         }else {
                             userNormal.setAdmin(true);
-                            userAuthorityService.update(userNormal);
+                            userNormalService.update(userNormal);
                         }
                         UserOperation userOperation = userOperationService.selectByUserAndGroupId(id + "", chatId);
                         if (userOperation==null){
@@ -324,7 +323,6 @@ public class AccountBot extends TelegramLongPollingBot {
                             userOperation.setOperation(true);
                             userOperationService.update(userOperation);
                         }
-//                    }
                 }
                 String message="<b>感谢权限人把我添加到贵群</b> ❤\uFE0F\n" +
                         "➖➖➖➖➖➖➖➖➖➖➖\n" +

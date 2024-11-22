@@ -50,7 +50,7 @@ public class PaperPlaneBotSinglePerson {
     @Value("${telegram.bot.username}")
     protected String username;
     @Autowired
-    UserNormalService userAuthorityService;
+    UserNormalService userNormalService;
     @Autowired
     WalletListenerService walletListenerService;
     @Value("${tranAccountUrl}")
@@ -237,7 +237,7 @@ public class PaperPlaneBotSinglePerson {
                 userNormal.setUserId(userDTO.getUserId());
                 userNormal.setCreateTime(new Date());
                 userNormal.setUsername(userDTO.getUsername());
-                userAuthorityService.insertUserNormal(userNormal);
+                userNormalService.insertUserNormal(userNormal);
                 UserOperation userOperation = new UserOperation();
                 userOperation.setAdminUserId(userDTO.getUserId());
                 userOperation.setOperation(true);
@@ -257,7 +257,7 @@ public class PaperPlaneBotSinglePerson {
                 userNormal.setUserId(userDTO.getUserId());
                 userNormal.setCreateTime(new Date());
                 userNormal.setUsername(userDTO.getUsername());
-                userAuthorityService.insertUserNormal(userNormal);
+                userNormalService.insertUserNormal(userNormal);
                 UserOperation userOperation = new UserOperation();
                 userOperation.setAdminUserId(userDTO.getUserId());
                 userOperation.setOperation(true);
