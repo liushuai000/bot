@@ -13,6 +13,29 @@ import java.util.List;
  * 此类设置机器人按钮
  */
 public class PaperPlaneBotButton {
+
+    /**
+     * 设置底部按钮
+     * @return
+     */
+    protected ReplyKeyboardMarkup sendSelfReplyKeyboard() {
+        ReplyKeyboardMarkup replyKeyboardMarkup = new ReplyKeyboardMarkup();
+        replyKeyboardMarkup.setResizeKeyboard(true);
+        replyKeyboardMarkup.setOneTimeKeyboard(true); // 可选：一旦用户选择了按钮，键盘会消失
+        // 创建按钮行
+        KeyboardRow row1 = new KeyboardRow();
+        row1.add(new KeyboardButton("获取个人信息"));
+        row1.add(new KeyboardButton("使用说明"));
+//        KeyboardRow row2 = new KeyboardRow();
+//        row2.add(new KeyboardButton("使用说明"));
+        // 将按钮行添加到键盘列表中
+        List<KeyboardRow> keyboard = new ArrayList<>();
+        keyboard.add(row1);
+//        keyboard.add(row2);
+        // 设置键盘
+        replyKeyboardMarkup.setKeyboard(keyboard);
+        return replyKeyboardMarkup;
+    }
     /**
      * 设置底部按钮
      * @return

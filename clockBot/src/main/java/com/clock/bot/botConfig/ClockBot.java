@@ -1,14 +1,8 @@
 package com.clock.bot.botConfig;
 
 import com.clock.bot.dto.UserDTO;
-import com.clock.bot.pojo.Status;
-import com.clock.bot.pojo.User;
-import com.clock.bot.pojo.UserOperation;
-import com.clock.bot.pojo.UserStatus;
-import com.clock.bot.service.StatusService;
-import com.clock.bot.service.UserOperationService;
-import com.clock.bot.service.UserService;
-import com.clock.bot.service.UserStatusService;
+import com.clock.bot.pojo.*;
+import com.clock.bot.service.*;
 import com.clock.bot.utils.DateUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
@@ -55,7 +49,12 @@ public class ClockBot extends TelegramLongPollingBot {
     private ButtonList buttonList;
     @Autowired
     private StatusService statusService;
-
+    @Autowired
+    private UserNormalService userNormalService;
+    @Autowired
+    protected PaperPlaneBotSinglePerson paperPlaneBotSinglePerson;
+    @Value("${botUserId}")
+    protected String botUserId;
 
     @Override
     public String getBotUsername() {
@@ -79,7 +78,7 @@ public class ClockBot extends TelegramLongPollingBot {
     @Override
     public void onUpdateReceived(Update update) {
         onJinQunMessage(update);
-        String replyToText=null;
+        String replyToText=null;//回复的消息文本
         if (update != null && update.getMessage() != null && update.getMessage().getReplyToMessage() != null) {
             replyToText = update.getMessage().getReplyToMessage().getText();
             if (replyToText != null) {
@@ -111,12 +110,60 @@ public class ClockBot extends TelegramLongPollingBot {
             //处理私聊的消息
         }
         sendMessage.setChatId(String.valueOf(message.getChatId()==null?"":message.getChatId()));
-        if (update.hasMessage() && update.getMessage().hasText()) this.BusinessHandler(message,sendMessage,replyToText,userDTO,update);
+        if (update.hasMessage() && update.getMessage().hasText()) this.BusinessHandler(message,sendMessage,userDTO,update);
     }
 
-    private void BusinessHandler(Message message, SendMessage sendMessage, String replyToText, UserDTO userDTO, Update update) {
+    private void BusinessHandler(Message message, SendMessage sendMessage, UserDTO userDTO, Update update) {
+        if (userDTO.getText().equals("键盘")){
+            String stats="状态：<code>已开启便捷回复键盘</code>";
+            PaperPlaneBotButton buttonList = new PaperPlaneBotButton();
+            ReplyKeyboardMarkup replyKeyboardMarkup = buttonList.sendReplyKeyboard();
+            sendMessage.setReplyMarkup(replyKeyboardMarkup);//是否在onUpdateReceived设置
+            String chatId = update.getMessage().getChat().getId().toString();//群组id
+            sendMessage.setChatId(chatId);
+            this.tronAccountMessageTextHtml(sendMessage,chatId,stats);
+        }
+        //私聊的机器人  处理个人消息
+        if (message.getChat().isUserChat()){
+            paperPlaneBotSinglePerson.handleNonGroupMessage(message,sendMessage,userDTO);
+            return;
+        }
         String text = userDTO.getText();//查状态需要groupId
         User user = this.isNullUser(userDTO);
+        UserNormal userNormalTempAdmin =userNormalService.selectByGroupId(userDTO.getGroupId());//超级管理
+        //如果是本群权限人
+        if (userNormalTempAdmin.getUserId().equals(userDTO.getUserId())){
+            UserNormal userNormal = userNormalService.selectByUserId(user.getUserId(), userDTO.getGroupId());
+            if (userNormal==null || !userNormal.isAdmin() ){
+                String format = String.format("<a href=\"tg://user?id=%d\">%s</a>", Long.parseLong(adminUserId), "管理员");
+                this.sendMessage(sendMessage,"您在本群不是管理!请联系: "+format);
+                return;
+            }else {
+                User byUserId = userService.findByUserId(userDTO.getUserId());
+                //如果有效期没过期
+                if (byUserId.getValidTime()==null){
+                    String format = String.format("<a href=\"tg://user?id=%d\">%s</a>", Long.parseLong(botUserId), "打卡机器人");
+                    this.sendMessage(sendMessage,"您现在没有使用权限,请私聊机器人 @"+format+" .点击获取个人信息获取权限.");
+                    return;
+                }else if (new Date().compareTo(byUserId.getValidTime())>=0){
+                    String format = String.format("<a href=\"tg://user?id=%d\">%s</a>", Long.parseLong(adminUserId), "管理员");
+                    this.sendMessage(sendMessage,"您的使用期限已到期,请私聊管理员 @"+format);
+                    return;
+                }
+            }
+        }else {
+            User userAuth = userService.findByUserId(userNormalTempAdmin.getUserId());
+            //如果有效期没过期
+            if (userAuth.getValidTime()==null){
+                String format = String.format("<a href=\"tg://user?id=%d\">%s</a>", Long.parseLong(botUserId), "记账机器人");
+                this.sendMessage(sendMessage,"本群权限人现在没有使用权限,请私聊机器人 @"+format+" .点击获取个人信息获取权限.");
+                return;
+            }else if (new Date().compareTo(userAuth.getValidTime())>=0){
+                String format = String.format("<a href=\"tg://user?id=%d\">%s</a>", Long.parseLong(adminUserId), "管理员");
+                this.sendMessage(sendMessage,"本群权限人的使用期限已到期,请私聊管理员 @"+format);
+                return;
+            }
+        }
         String result="";
         UserStatus userStatus=userStatusService.selectUserStatus(userDTO);
         Status status=statusService.getInitStatus(userDTO.getGroupId(),userDTO.getGroupTitle());
@@ -137,6 +184,7 @@ public class ClockBot extends TelegramLongPollingBot {
             result=this.downWork(userStatus,user,userDTO,result,name,nowTime);
         } else if (text.equals("回座")||text.contains("/back")) {
             result=this.callback(userStatus,user,userDTO,result,name,nowTime);
+            buttonList.implList(sendMessage,userDTO.getGroupId(),userDTO.getGroupTitle());
         } else if (Arrays.asList(command).contains(text)||text.equals("/work")) {
             result=this.activity(userStatus,user,userDTO,result,name,nowTime);
         }
@@ -288,8 +336,7 @@ public class ClockBot extends TelegramLongPollingBot {
                         "纯工作时间：" + pureWorkTimeString + "\n" +
                         "------------------------\n" +
                         huodong+
-                        text1 + text +
-                        "点此联系客服升级至独享版";
+                        text1 + text ;
             }
         }else if (!userStatus.isStatus()){//下班状态
             result="用户："+name+"\n" +
@@ -376,8 +423,7 @@ public class ClockBot extends TelegramLongPollingBot {
                         "用户标识："+user.getUserId()+"\n" +
                         "✅ "+dateFromat+" 回座打卡成功："+userOperation.getOperation()+"\n" +
                         "提示：本次活动时间已结算\n" +
-                        "本次活动耗时："+dateUtils.formatDuration(between.getSeconds())+" 秒\n" + text1+huodong+text+
-                        "获取安全知识，电报使用技巧，欢迎关注： t.me/ttj817_channel";
+                        "本次活动耗时："+dateUtils.formatDuration(between.getSeconds())+" 秒\n" + text1+huodong+text;
             }else if (!userStatus.isReturnHome()){
                 result="用户："+name+"\n" +
                         "用户标识："+user.getUserId()+"\n" +
@@ -428,8 +474,7 @@ public class ClockBot extends TelegramLongPollingBot {
                         "注意：这是您第 "+userOperations.size()+" 次"+matchedCommand+"\n" +
                         "提示：活动完成后请及时打卡回座\n" +
                         "回座：/back\n" +
-                        "------------------------\n" +
-                        "点此联系客服升级至独享版";
+                        "------------------------\n";
             }
         }else if (!userStatus.isStatus()){//下班状态
             result="用户："+name+"\n" +
@@ -447,8 +492,7 @@ public class ClockBot extends TelegramLongPollingBot {
                         "用户标识："+user.getUserId()+"\n" +
                         "✅ 打卡成功：上班 - "+dateFromat +
                         "提示：请记得下班时打卡下班\n" +
-                        "------------------------\n" +
-                        "独享版支持用越南语、泰语、印尼语、英语显示报表文件和统计信息，便于多语言管理员查看，定制请联系 ttjdaka.com";
+                        "------------------------\n" ;
                 userStatus.setStatus(true);
                 userStatus.setUserId(user.getUserId());
                 userStatus.setUsername(user.getUsername());
@@ -469,8 +513,7 @@ public class ClockBot extends TelegramLongPollingBot {
                         "用户标识："+user.getUserId()+"\n" +
                         "✅ 打卡成功：上班 - "+dateFromat +
                         "提示：请记得下班时打卡下班\n" +
-                        "------------------------\n" +
-                        "独享版支持用越南语、泰语、印尼语、英语显示报表文件和统计信息，便于多语言管理员查看，定制请联系 ttjdaka.com";
+                        "------------------------\n";
                 userStatus=new UserStatus();
                 userStatus.setStatus(true);
                 userStatus.setUserId(user.getUserId());
@@ -529,7 +572,45 @@ public class ClockBot extends TelegramLongPollingBot {
                 String message="您好，"+format+"，机器人已检测到加入了新群组，正在初始化新群组，请稍候...\n"+
                         "当前上班时间为每天0点到0点，如果有日切需求可自行更改：日切格式：设置日切12（默认北京时间）✅";
                 String message1="<b>请【群组的创建者】将机器人设置为群组管理员，否则可能影响机器人功能！</b>";
-                update.getMessage();
+
+                User byUser = userService.findByUserId(id + "");
+                if (byUser==null) {
+                    byUser = new User();
+                    byUser.setUserId(id + "");
+                    byUser.setSuperAdmin(false);
+                    byUser.setUsername(username);
+                    byUser.setLastName(lastName);
+                    byUser.setCreateTime(new Date());
+                    byUser.setFirstName(firstName);
+                    userService.insertUser(byUser);
+                    UserNormal userNormal = userNormalService.selectByUserAndGroupId(id + "", chatId);
+                    if (userNormal == null) {
+                        userNormal = new UserNormal();
+                        userNormal.setAdmin(true);
+                        userNormal.setGroupId(chatId);
+                        userNormal.setUserId(id + "");
+                        userNormal.setCreateTime(new Date());
+                        userNormal.setUsername(username);
+                        userNormalService.insertUserNormal(userNormal);
+                    } else {
+                        userNormal.setAdmin(true);
+                        userNormalService.update(userNormal);
+                    }
+                }else if (byUser!=null){
+                    UserNormal userNormal = userNormalService.selectByUserAndGroupId(id + "", chatId);
+                    if (userNormal==null){
+                        userNormal = new UserNormal();
+                        userNormal.setAdmin(true);
+                        userNormal.setGroupId(chatId);
+                        userNormal.setUserId(id+"");
+                        userNormal.setUsername(username);
+                        userNormal.setCreateTime(new Date());
+                        userNormalService.insertUserNormal(userNormal);
+                    }else {
+                        userNormal.setAdmin(true);
+                        userNormalService.update(userNormal);
+                    }
+                }
                 SendMessage sendMessage = new SendMessage();
                 PaperPlaneBotButton buttonList = new PaperPlaneBotButton();
                 ReplyKeyboardMarkup replyKeyboardMarkup = buttonList.sendReplyKeyboard();

@@ -16,7 +16,7 @@ import java.util.Date;
 
 @Accessors(chain = true)
 @Data
-@TableName(value = "user", schema = "clockbot", autoResultMap = true)
+@TableName(value = "user",  schema = "clockbot", autoResultMap = true)
 public class User {
     @TableId(type= IdType.AUTO,value = "id")
     public int id; //主键id
@@ -30,7 +30,12 @@ public class User {
     public String lastName;    //昵称 小帅
     @TableField("create_time")
     private Date createTime;//创建时间
-
+    @TableField("is_super_admin")
+    public boolean isSuperAdmin=false; //是否是管理员
+    @TableField("valid_free")
+    private boolean validFree=false;//是否已经使用过免费时长6小时  只有在获取个人信息的时候赋值
+    @TableField("valid_time")
+    private Date validTime;//有效期  默认+6个小时有效期 只有在获取个人信息的时候赋值  或管理设置授权的时候
 
     public String getFirstLastName(){
         String fname=firstName==null?"":firstName;

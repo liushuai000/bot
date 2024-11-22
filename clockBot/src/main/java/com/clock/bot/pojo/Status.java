@@ -14,7 +14,7 @@ import java.util.Date;
 
 @Accessors(chain = true)
 @Data
-@TableName(value = "status", autoResultMap = true)
+@TableName(value = "status", schema = "clockbot", autoResultMap = true)
 public class Status {
         @TableId(type= IdType.AUTO,value = "id")
         private int id;

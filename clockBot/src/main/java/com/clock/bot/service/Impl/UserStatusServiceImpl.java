@@ -79,7 +79,9 @@ public class UserStatusServiceImpl implements UserStatusService {
                 QueryWrapper<User> userWrapper = new QueryWrapper<>();
                 userWrapper.eq("user_id", status.getUserId());
                 User user = userMapper.selectOne(userWrapper);
-                operationFromType.setFirstname(user.getFirstName()+user.getLastName()==null?"":user.getLastName());
+                String firstName;
+                if (user.getLastName()==null) firstName=user.getFirstName(); else firstName=user.getFirstName()+user.getLastName();
+                operationFromType.setFirstname(firstName);
                 operationFromType.setWorkTime(status.getWorkTime());
                 operationFromType.setWorkDownTime(status.getWorkDownTime());
                 if (operation.getOperation().equals("吃饭") && operation.getEndTime()!=null){
@@ -178,7 +180,9 @@ public class UserStatusServiceImpl implements UserStatusService {
             userWrapper.eq("user_id", status.getUserId());
             User user = userMapper.selectOne(userWrapper);
             statusFromType.setUserId(user.getUserId());
-            statusFromType.setFirstname(user.getFirstName()+user.getLastName()==null?"":user.getLastName());
+            String firstName;
+            if (user.getLastName()==null) firstName=user.getFirstName(); else firstName=user.getFirstName()+user.getLastName();
+            statusFromType.setFirstname(firstName);
             statusFromType.setUsername(user.getUsername());
             statusFromType.setGroupId(status.getGroupId());
             // 处理最早工作时间
