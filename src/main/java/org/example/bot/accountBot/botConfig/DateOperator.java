@@ -165,9 +165,17 @@ public class DateOperator{
             if (status.getSetTime().compareTo(new Date())<=0){
                 Date setTime = status.getSetTime();
                 Calendar calendar = Calendar.getInstance();
-                calendar.setTime(setTime);
+                calendar.setTime(new Date()); // 使用当前时间
+                // 获取 setTime 的时分秒
+                Calendar setTimeCalendar = Calendar.getInstance();
+                setTimeCalendar.setTime(setTime);
+                // 设置当前日期，但保留 setTime 的时分秒
+                calendar.set(Calendar.HOUR_OF_DAY, setTimeCalendar.get(Calendar.HOUR_OF_DAY));
+                calendar.set(Calendar.MINUTE, setTimeCalendar.get(Calendar.MINUTE));
+                calendar.set(Calendar.SECOND, setTimeCalendar.get(Calendar.SECOND));
+                calendar.set(Calendar.MILLISECOND, setTimeCalendar.get(Calendar.MILLISECOND));
                 calendar.add(Calendar.HOUR_OF_DAY, 24);
-                setTime = calendar.getTime();
+                setTime = calendar.getTime(); // 获取更新后的时间
                 status.setSetTime(setTime);
                 status.setSetStartTime(new Date());
                 statusService.update(status);

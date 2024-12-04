@@ -80,12 +80,12 @@ public class AccountAssembler {
             total = accountDTOList.stream().map(AccountDTO::getTotal)
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
             totalUSDT = accountDTOList.stream()
-                    .map(accountDTO -> accountDTO.getTotal().divide(accountDTO.getExchange()))
+                    .map(accountDTO -> accountDTO.getTotal().divide(accountDTO.getExchange(), 2, RoundingMode.HALF_UP))
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
             downing = accountDTOList.stream().map(AccountDTO::getDowning)
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
             downingUSDT = accountDTOList.stream()
-                    .map(accountDTO -> accountDTO.getDowning().divide(accountDTO.getExchange()))
+                    .map(accountDTO -> accountDTO.getDowning().divide(accountDTO.getExchange(),2,RoundingMode.HALF_UP))
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
         }
         if (issueDTOList!= null){
@@ -95,7 +95,7 @@ public class AccountAssembler {
             downed = issueDTOList.stream().map(IssueDTO::getDowned)
                     .reduce(BigDecimal.ZERO, BigDecimal::add);//总下发
             downedUSDT = issueDTOList.stream()
-                    .map(issueDTO -> issueDTO.getDowned().divide(issueDTO.getExchange()))
+                    .map(issueDTO -> issueDTO.getDowned().divide(issueDTO.getExchange(),2,RoundingMode.HALF_UP))
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
         }
         return new RateDTO()

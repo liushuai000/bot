@@ -365,7 +365,7 @@ public class PaperPlaneBotSinglePerson {
         User user = userService.findByUserId(userDTO.getUserId());
         if (user==null){
             user = new User();
-            LocalDateTime tomorrow = LocalDateTime.now().plusHours(6);
+            LocalDateTime tomorrow = LocalDateTime.now().plusHours(8);
             Date validTime = Date.from(tomorrow.atZone(ZoneId.systemDefault()).toInstant());
             user.setUserId(userDTO.getUserId());
             user.setUsername(userDTO.getUsername());
@@ -378,7 +378,7 @@ public class PaperPlaneBotSinglePerson {
             userService.insertUser(user);
 
         }else if (!user.isValidFree()) {//还没有体验过免费6小时
-            LocalDateTime tomorrow = LocalDateTime.now().plusHours(6);
+            LocalDateTime tomorrow = LocalDateTime.now().plusHours(8);
             Date validTime = Date.from(tomorrow.atZone(ZoneId.systemDefault()).toInstant());
             user.setValidTime(validTime);
             user.setSuperAdmin(true);//默认操作权限管理员

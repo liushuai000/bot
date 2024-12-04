@@ -81,8 +81,8 @@ CREATE TABLE `notification`  (
 DROP TABLE IF EXISTS `rate`;
 CREATE TABLE `rate`  (
   `id` int(0) NOT NULL AUTO_INCREMENT,
-  `exchange` decimal(38, 2) NULL,
-  `rate` decimal(38, 2) NULL,
+  `exchange` decimal(9, 2) NULL,
+  `rate` decimal(9, 2) NULL,
   `add_time` datetime(0) NULL DEFAULT NULL,
   `is_matcher` bigint(0) NULL DEFAULT NULL,
   `calc_u` bigint(0) NULL DEFAULT NULL,

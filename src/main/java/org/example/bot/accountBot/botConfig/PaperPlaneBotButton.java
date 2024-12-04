@@ -19,8 +19,8 @@ public class PaperPlaneBotButton {
      */
     protected ReplyKeyboardMarkup sendReplyKeyboard() {
         ReplyKeyboardMarkup replyKeyboardMarkup = new ReplyKeyboardMarkup();
-        replyKeyboardMarkup.setResizeKeyboard(true);
-        replyKeyboardMarkup.setOneTimeKeyboard(true); // 可选：一旦用户选择了按钮，键盘会消失
+        replyKeyboardMarkup.setResizeKeyboard(false);
+        replyKeyboardMarkup.setOneTimeKeyboard(false); // 可选：一旦用户选择了按钮，键盘会消失
         // 创建按钮行
         KeyboardRow row1 = new KeyboardRow();
         row1.add(new KeyboardButton("获取个人信息"));
