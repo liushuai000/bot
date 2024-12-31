@@ -55,7 +55,7 @@ public class TronAccountDTO {
     private List<Object> frozen_supply;
     private Bandwidth bandwidth;
     private long date_created;
-    private int acquiredDelegatedFrozenV2BalanceForEnergy;
+    private Long acquiredDelegatedFrozenV2BalanceForEnergy;
     private AccountResource accountResource;
     private String blueTag;
     private int witness;

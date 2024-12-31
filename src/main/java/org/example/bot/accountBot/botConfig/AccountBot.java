@@ -246,7 +246,7 @@ public class AccountBot extends TelegramLongPollingBot {
                         "输入: 查询TEtYFxxxxxxxxj8W9pC\n" +
                         "\n" +
                         "➖➖➖➖➖➖➖➖➖➖➖\n" +
-                        "<b>详情使用说明请私聊我</b> @Evipbot";
+                        "<b>详情使用说明请私聊我</b> @"+this.getBotUsername();
                 update.getMessage();
                 SendMessage sendMessage = new SendMessage();
                 String chatId = chatMember.getChat().getId().toString();//群组id
@@ -339,7 +339,7 @@ public class AccountBot extends TelegramLongPollingBot {
                         "输入: 查询TEtYFxxxxxxxxj8W9pC\n" +
                         "\n" +
                         "➖➖➖➖➖➖➖➖➖➖➖\n" +
-                        "<b>详情使用说明请私聊我</b> @Evipbot";
+                        "<b>详情使用说明请私聊我</b> @"+this.getBotUsername();
                 update.getMessage();
                 SendMessage sendMessage = new SendMessage();
                 sendMessage.setChatId(chatId);

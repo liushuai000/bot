@@ -151,12 +151,19 @@ public class DateOperator{
                 accounts.add(account);
             }
         });
-        return accounts.stream().filter(account1 -> {
-                    if (account1.isRiqie()) {
-                        return account1.getSetTime().compareTo(status.getSetTime()) >= 0;
-                    } else {
-                        return true; // 直接继续
-                    }}).collect(Collectors.toList());
+        List<Account> accountList1=new ArrayList<>();
+        if (status.isRiqie()){
+            accountList1 = accounts.stream().filter(account1 -> {
+                if (account1.isRiqie()) {
+                    return account1.getSetTime().compareTo(status.getSetTime()) >= 0;
+                } else {
+                    return true; // 直接继续
+                }
+            }).collect(Collectors.toList());
+        }else if (!status.isRiqie()){
+            accountList1 = accounts;
+        }
+        return accountList1;
     }
     //取今天的日切时间 +关闭日切后的账单 默认日切时间中午12点
     public void checkRiqie(SendMessage sendMessage,Status status) {

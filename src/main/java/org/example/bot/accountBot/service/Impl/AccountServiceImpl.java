@@ -380,12 +380,13 @@ public class AccountServiceImpl implements AccountService {
         QueryWrapper<Account> queryWrapper = new QueryWrapper<>();
         if (riqie){//开启日切则查今日的日切数据
             queryWrapper.eq("riqie",riqie);//查询没有开启日切的
-        }else {//如果关闭了日切则查全部的
-            LocalDateTime startOfDay = LocalDateTime.now().withHour(0).withMinute(0).withSecond(0);
-            LocalDateTime endOfDay = LocalDateTime.now().withHour(23).withMinute(59).withSecond(59);
-            queryWrapper.ge("add_time", Date.from(startOfDay.atZone(ZoneId.systemDefault()).toInstant()))
-                    .le("add_time", Date.from(endOfDay.atZone(ZoneId.systemDefault()).toInstant()));
         }
+//        else {//如果关闭了日切则查全部的
+//            LocalDateTime startOfDay = LocalDateTime.now().withHour(0).withMinute(0).withSecond(0);
+//            LocalDateTime endOfDay = LocalDateTime.now().withHour(23).withMinute(59).withSecond(59);
+//            queryWrapper.ge("add_time", Date.from(startOfDay.atZone(ZoneId.systemDefault()).toInstant()))
+//                    .le("add_time", Date.from(endOfDay.atZone(ZoneId.systemDefault()).toInstant()));
+//        }
         queryWrapper.eq("group_id",groupId);//如果groupId为空是否查的到呢
         queryWrapper.orderByDesc("add_time");
         return accountMapper.selectList(queryWrapper);

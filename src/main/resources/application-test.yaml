@@ -23,7 +23,7 @@ logging:
 #这个是超级管理员 可以私聊别人设置管理员权限
 adminUserId: 6636253835  #刘小帅 我自己
 botUserId: 7203617407   #我机器人的id
-vueUrl: http://192.168.0.12:8080/
+vueUrl: http://192.168.0.9:8080/
 Origin: http://43.128.113.117:8081
 apiKey: 2967e678-556e-497a-a892-a1dcee897ba5
 #获取最新汇率

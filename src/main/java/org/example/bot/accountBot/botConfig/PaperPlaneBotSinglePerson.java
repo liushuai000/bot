@@ -63,7 +63,7 @@ public class PaperPlaneBotSinglePerson {
     SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
     // 定时任务调度器
-    private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
+    private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(16);
     @Qualifier("userOperationService")
     @Autowired
     private UserOperationService userOperationService;
@@ -71,8 +71,9 @@ public class PaperPlaneBotSinglePerson {
     @PostConstruct
     public void init() {
         // 启动定时任务，首次立即执行，之后每隔30秒执行一次
-        scheduler.scheduleAtFixedRate(this::fetchAndCacheData, 0, 9, TimeUnit.SECONDS);
+        scheduler.scheduleAtFixedRate(this::fetchAndCacheData, 0, 15, TimeUnit.SECONDS);
     }
+    private Set<String> processedTransactions = Collections.synchronizedSet(new HashSet<>());
     //
     private void fetchAndCacheData() {
         List<WalletListener> walletListeners = walletListenerService.queryAll();
@@ -81,10 +82,10 @@ public class PaperPlaneBotSinglePerson {
             List<TronHistoryDTO> historyTrading = restTemplateConfig.getForObjectHistoryTrading(url, Map.class);
             historyTrading.stream().filter(Objects::nonNull).findFirst().ifPresent(t -> { // 在这里处理第一个非空的 HistoryTrading 对象
                 long difference = Math.abs(new Date().getTime() - t.getBlock_ts()); // 计算两个时间戳之间的差值
-                long thirtySecondsInMilliseconds = 18 * 1000; // 30 秒转换为毫秒
+                long thirtySecondsInMilliseconds = 30 * 1000; // 30 秒转换为毫秒
                 System.out.println("两个时间相差 " + difference/ 1000 + " 秒");
                 //如果当前时间相差大于30秒，则进行 通知用户否则不通知
-                if (difference <= thirtySecondsInMilliseconds){
+                if (difference <= thirtySecondsInMilliseconds && !processedTransactions.contains(t.getTransaction_id())) {
                     String result="";
                     BigDecimal balance = new BigDecimal(t.getQuant());
                     // 计算移动小数点后的 balance
@@ -111,6 +112,8 @@ public class PaperPlaneBotSinglePerson {
                     sendMessage.setChatId(w.getUserId());
                     sendMessage.disableWebPagePreview();//禁用预览链接
                     accountBot.sendMessage(sendMessage,result);
+                    // 标记此交易已处理
+                    processedTransactions.add(t.getTransaction_id());
                 }
             });
         });

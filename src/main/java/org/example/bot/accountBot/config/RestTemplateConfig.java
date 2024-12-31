@@ -69,6 +69,7 @@ public class RestTemplateConfig {
     public TronAccountDTO getForObjectTronAccount(String url){
         CloseableHttpClient httpClient = HttpClients.createDefault();
         HttpGet httpGet = new HttpGet(url);
+        System.err.println("输出地址:"+url);
         httpGet.setHeader("Accept",  MediaType.APPLICATION_JSON_VALUE);
         httpGet.setHeader("TRON-PRO-API-KEY", apiKey);
         httpGet.setHeader("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36");

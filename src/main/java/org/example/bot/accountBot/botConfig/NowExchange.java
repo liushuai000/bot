@@ -60,12 +60,12 @@ public class NowExchange {
     private final Map<String, String> cachedResults = new ConcurrentHashMap<>();
 
     // 定时任务调度器
-    private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
+    private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(16);
 
     @PostConstruct
     public void init() {
         // 启动定时任务，首次立即执行，之后每隔20秒执行一次
-        scheduler.scheduleAtFixedRate(this::fetchAndCacheData, 0, 20, TimeUnit.SECONDS);
+        scheduler.scheduleAtFixedRate(this::fetchAndCacheData, 0, 10, TimeUnit.SECONDS);
     }
 
     public void Query(SendMessage sendMessage,Update update){
