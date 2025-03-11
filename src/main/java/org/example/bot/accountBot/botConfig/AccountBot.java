@@ -340,7 +340,6 @@ public class AccountBot extends TelegramLongPollingBot {
                         "\n" +
                         "➖➖➖➖➖➖➖➖➖➖➖\n" +
                         "<b>详情使用说明请私聊我</b> @"+this.getBotUsername();
-                update.getMessage();
                 SendMessage sendMessage = new SendMessage();
                 sendMessage.setChatId(chatId);
                 this.tronAccountMessageTextHtml(sendMessage,chatId,message);

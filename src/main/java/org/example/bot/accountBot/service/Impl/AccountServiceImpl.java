@@ -70,20 +70,26 @@ public class AccountServiceImpl implements AccountService {
                     returnFromType.setStartTime(validTime);
                     returnFromType.setStartEndTime(new Date());
                 }else {
-                    returnFromType.setStartTime(status.getSetStartTime());//日切开始时间
+                    Date originalSetTime = status.getSetTime();
+                    // 将 Date 转换为 LocalDateTime
+                    LocalDateTime localDateTime = originalSetTime.toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime();
+                    // 减去一天
+                    LocalDateTime newLocalDateTime = localDateTime.minusDays(1);
+                    // 将 LocalDateTime 转换回 Date
+                    Date newSetTime = Date.from(newLocalDateTime.atZone(ZoneId.systemDefault()).toInstant());
+                    returnFromType.setStartTime(newSetTime);//日切开始时间
                     returnFromType.setStartEndTime(status.getSetTime());
                 }
             }
-            List<AccountDTO> accountDTOList=this.getAccountDTO(addTime,addEndTime,username,groupId,findAll,operation,status);
+            List<AccountDTO> accountDTOList=this.getAccountDTO(returnFromType,addTime,addEndTime,username,groupId,findAll,operation,status);
             returnFromType.setAccountData(accountDTOList);
-            List<IssueDTO> issueDTOList=this.getIssueDTO(addTime,addEndTime,username,groupId,findAll,operation,status);
+            List<IssueDTO> issueDTOList=this.getIssueDTO(returnFromType,addTime,addEndTime,username,groupId,findAll,operation,status);
             returnFromType.setIssueData(issueDTOList);
             if (accountDTOList==null && issueDTOList==null)return returnFromType;
             Rate rate = rateService.selectRateList(groupId).get(0);
             returnFromType.setRateData(accountAssembler.rateToDTO(rate,accountDTOList,issueDTOList));
             List<CallbackUserDTO> callbackUserDTOList=this.getCallbackDTO(accountDTOList,issueDTOList);
             returnFromType.setCallbackData(callbackUserDTOList);
-
             List<OperationUserDTO> operationUserDTOList=this.getOperationUserDTO(accountDTOList,issueDTOList);
             returnFromType.setOperationData(operationUserDTOList);
 
@@ -230,15 +236,15 @@ public class AccountServiceImpl implements AccountService {
 
     }
 
-    private List<IssueDTO> getIssueDTO(Date addTime,Date addEndTime, String username, String groupId, boolean findAll, boolean operation,Status status) {
+    private List<IssueDTO> getIssueDTO(ReturnFromType returnFromType,Date addTime,Date addEndTime, String username, String groupId, boolean findAll, boolean operation,Status status) {
         QueryWrapper<Issue> queryWrapper = new QueryWrapper<>();
         queryWrapper.eq("group_id", groupId);
         if (!findAll) {//不查询全部数据
             if (status.isRiqie()){
                 if (addTime==null){
-                    queryWrapper.ge("set_time", status.getSetStartTime()).le("set_time", status.getSetTime());
+                    queryWrapper.ge("add_time", returnFromType.getStartTime()).le("add_time", returnFromType.getStartEndTime());
                 }else{
-                    queryWrapper.ge("set_time", addTime).le("set_time", addEndTime);
+                    queryWrapper.ge("add_time", addTime).le("add_time", addEndTime);
                 }
             }else {
                 LocalDateTime startOfDay = LocalDateTime.now().withHour(0).withMinute(0).withSecond(0);
@@ -298,16 +304,16 @@ public class AccountServiceImpl implements AccountService {
         ).collect(Collectors.toList());
     }
 
-    public List<AccountDTO> getAccountDTO(Date addTime,Date addEndTime, String username, String groupId, boolean findAll, boolean operation,Status status) {
+    public List<AccountDTO> getAccountDTO(ReturnFromType returnFromType,Date addTime,Date addEndTime, String username, String groupId, boolean findAll, boolean operation,Status status) {
         QueryWrapper<Account> queryWrapper = new QueryWrapper<>();
         queryWrapper.eq("group_id", groupId);
         if (!findAll) {//不查询全部数据
             //第一次查询需要使用setStartTime
             if (status.isRiqie()){
                 if (addTime==null){
-                    queryWrapper.ge("set_time", status.getSetStartTime()).le("set_time", status.getSetTime());
+                    queryWrapper.ge("add_time", returnFromType.getStartTime()).le("add_time", returnFromType.getStartEndTime());
                 }else{
-                    queryWrapper.ge("set_time", addTime).le("set_time", addEndTime);
+                    queryWrapper.ge("add_time", addTime).le("add_time", addEndTime);
                 }
             }else {
                 LocalDateTime startOfDay = LocalDateTime.now().withHour(0).withMinute(0).withSecond(0);
