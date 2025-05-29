@@ -1,11 +1,14 @@
 package org.example.bot.accountBot.botConfig;
 
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.example.bot.accountBot.config.RestTemplateConfig;
 import org.example.bot.accountBot.dto.*;
+import org.example.bot.accountBot.mapper.GroupInfoSettingMapper;
 import org.example.bot.accountBot.pojo.Account;
+import org.example.bot.accountBot.pojo.GroupInfoSetting;
 import org.example.bot.accountBot.pojo.Rate;
 import org.example.bot.accountBot.pojo.WalletListener;
 import org.example.bot.accountBot.service.WalletListenerService;
@@ -61,6 +64,8 @@ public class NowExchange {
 
     // 定时任务调度器
     private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(16);
+    @Autowired
+    private GroupInfoSettingMapper groupInfoSettingMapper;
 
     @PostConstruct
     public void init() {
@@ -102,8 +107,6 @@ public class NowExchange {
         }else {
             trx ="\uD83D\uDCB0 "+trxText+": 0 TRX\n";
         }
-
-
         String result="✅✅✅✅\n" +
                 substring+"\n" +
                 "——————————\n" +
@@ -119,15 +122,11 @@ public class NowExchange {
     // 定时任务方法，用于获取最新数据并缓存
     private void fetchAndCacheData() {
         try {
-            String payMethod0 = "0"; // 所有
-            String payMethod1 = "1"; // 银行卡
-            String payMethod2 = "2"; // 支付宝
-            String payMethod3 = "3"; // 微信
             List<String> payMethodList=new ArrayList();
-            payMethodList.add("0");
-            payMethodList.add("1");
-            payMethodList.add("2");
-            payMethodList.add("3");
+            payMethodList.add("0");// 所有
+            payMethodList.add("1");// 银行卡
+            payMethodList.add("2");// 支付宝
+            payMethodList.add("3");// 微信
             for (String payMethod : payMethodList){
                 String url = this.url + "?coinId=2&currency=172&tradeType=sell&currPage=1&payMethod=" + payMethod +
                         "&acceptOrder=0&country=&blockType=general&online=1&range=0&amount=&isThumbsUp=false&isMerchant=false" +
@@ -287,7 +286,8 @@ public class NowExchange {
 
             ButtonList buttonList = new ButtonList();
             EditMessageText editMessage = new EditMessageText();
-            buttonList.editText(editMessage,chatId+"",payMethod);
+            GroupInfoSetting groupInfoSetting = groupInfoSettingMapper.selectOne(new QueryWrapper<GroupInfoSetting>().eq("group_id", chatId));
+            buttonList.editText(editMessage,chatId+"",payMethod,groupInfoSetting);
             // 更新消息文本
             accountBot.editMessageText(editMessage,chatId, messageId, result);
         }
@@ -318,10 +318,11 @@ public class NowExchange {
         }
         ButtonList buttonList=new ButtonList();
         Map<String, String> map = new HashMap<>();
+        GroupInfoSetting groupInfoSetting = groupInfoSettingMapper.selectOne(new QueryWrapper<GroupInfoSetting>().eq("group_id", message.getChatId().toString()));
         map.put("设置名称","设置名称");
         map.put("取消通知","取消通知");
         map.put("查询余额","查询余额");
-        buttonList.sendButton(sendMessage,message.getChatId().toString(),map);
+        buttonList.sendButton(sendMessage,message.getChatId().toString(),map,groupInfoSetting);
         accountBot.sendMessage(sendMessage,stringBuilder.toString());
     }
 
@@ -336,12 +337,13 @@ public class NowExchange {
         for (int i = 0; i < merchants.size(); i++) {
             stringBuilder.append(i+1).append(")   ").append(merchants.get(i).getPrice()).append("   ").append("<code>").append(merchants.get(i).getUserName()).append("</code>").append("\n");
         }
+        GroupInfoSetting groupInfoSetting = groupInfoSettingMapper.selectOne(new QueryWrapper<GroupInfoSetting>().eq("group_id", userDTO.getGroupId()));
         String result= "火币网商家实时交易汇率top10\n" +
                 stringBuilder+ "\n" +
                 "本群费率："+rate.getRate()+"%\n" +
                 "本群汇率："+rate.getExchange();
         ButtonList buttonList = new ButtonList();
-        buttonList.exchangeList(sendMessage,userDTO.getGroupId());
+        buttonList.exchangeList(sendMessage,userDTO.getGroupId(),groupInfoSetting);
         accountBot.sendMessage(sendMessage,result);
     }
 }

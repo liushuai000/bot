@@ -56,7 +56,7 @@ public class AccountServiceImpl implements AccountService {
         String username = queryType.getUsername();
         String groupId = queryType.getGroupId();
         boolean findAll = queryType.isFindAll();
-        boolean operation = queryType.isOperation();
+        Boolean operation = queryType.getOperation();
         ReturnFromType returnFromType = new ReturnFromType();
         if (StringUtils.isBlank(queryType.getGroupId())){
             return null;
@@ -236,7 +236,7 @@ public class AccountServiceImpl implements AccountService {
 
     }
 
-    private List<IssueDTO> getIssueDTO(ReturnFromType returnFromType,Date addTime,Date addEndTime, String username, String groupId, boolean findAll, boolean operation,Status status) {
+    private List<IssueDTO> getIssueDTO(ReturnFromType returnFromType,Date addTime,Date addEndTime, String username, String groupId, boolean findAll, Boolean operation,Status status) {
         QueryWrapper<Issue> queryWrapper = new QueryWrapper<>();
         queryWrapper.eq("group_id", groupId);
         if (!findAll) {//不查询全部数据
@@ -263,15 +263,23 @@ public class AccountServiceImpl implements AccountService {
         if (!findAll) {
             if (StringUtils.isNotBlank(username)) {
                 QueryWrapper<User> userQueryWrapper = new QueryWrapper<>();
-                userQueryWrapper.eq("username", username);
+                userQueryWrapper.eq("username", username.trim());
                 User user = userMapper.selectOne(userQueryWrapper);
                 if (user == null) {
                     throw new NoSuchElementException("User not found for username: " + username);
                 }
                 String userId = user.getUserId();
-                issueList = issues.stream().filter(Objects::nonNull)
-                        .filter(operation ? account -> account.getUserId().equals(userId) : account -> userId.equals(account.getCallBackUserId()))
-                        .collect(Collectors.toList());
+                issueList = issues.stream()
+                        .filter(Objects::nonNull)
+                        .filter(account -> {
+                            if (operation==null) {
+                                return true;
+                            } else if (operation){
+                                return account.getUserId().equals(userId);
+                            }else {
+                                return userId.equals(account.getCallBackUserId());
+                            }
+                        }).collect(Collectors.toList());
             }
         }
         List<Integer> rateIds = issueList.stream().filter(Objects::nonNull).map(Issue::getRateId).distinct().collect(Collectors.toList());
@@ -304,7 +312,7 @@ public class AccountServiceImpl implements AccountService {
         ).collect(Collectors.toList());
     }
 
-    public List<AccountDTO> getAccountDTO(ReturnFromType returnFromType,Date addTime,Date addEndTime, String username, String groupId, boolean findAll, boolean operation,Status status) {
+    public List<AccountDTO> getAccountDTO(ReturnFromType returnFromType,Date addTime,Date addEndTime, String username, String groupId, boolean findAll, Boolean operation,Status status) {
         QueryWrapper<Account> queryWrapper = new QueryWrapper<>();
         queryWrapper.eq("group_id", groupId);
         if (!findAll) {//不查询全部数据
@@ -333,15 +341,21 @@ public class AccountServiceImpl implements AccountService {
         if (!findAll) {
             if (StringUtils.isNotBlank(username)) {
                 QueryWrapper<User> userQueryWrapper = new QueryWrapper<>();
-                userQueryWrapper.eq("username", username);
+                userQueryWrapper.eq("username", username.trim());
                 User user = userMapper.selectOne(userQueryWrapper);
                 if (user == null) {
                     throw new NoSuchElementException("User not found for username: " + username);
                 }
                 String userId = user.getUserId();
-                accountList = accounts.stream().filter(Objects::nonNull)
-                        .filter(operation ? account -> account.getUserId().equals(userId) : account -> userId.equals(account.getCallBackUserId()))
-                        .collect(Collectors.toList());
+                accountList = accounts.stream().filter(Objects::nonNull).filter(account -> {
+                            if (operation==null) {
+                                return true;
+                            } else if (operation){
+                                return account.getUserId().equals(userId);
+                            }else {
+                                return userId.equals(account.getCallBackUserId());
+                            }
+                        }).collect(Collectors.toList());
             }
         }
         List<Integer> rateIds = accountList.stream().filter(Objects::nonNull).map(Account::getRateId).distinct().collect(Collectors.toList());

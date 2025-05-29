@@ -1,7 +1,12 @@
 package org.example.bot.accountBot.botConfig;
 
 
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import lombok.extern.slf4j.Slf4j;
+import org.example.bot.accountBot.mapper.GroupInfoSettingMapper;
+import org.example.bot.accountBot.pojo.GroupInfoSetting;
+import org.example.bot.accountBot.utils.TranslationExample;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.stereotype.Service;
@@ -19,14 +24,15 @@ import java.util.List;
 import java.util.Map;
 
 @Slf4j
-@Component
+@Service
 public class ButtonList {
     @Value("${vueUrl}")
     protected String url;//43.128.113.117 http://www.yaoke.cc/ 本地需要换端口
-
+    @Autowired
+    private GroupInfoSettingMapper groupInfoSettingMapper;
 //    protected String url="http://192.168.0.2:8080/";
     //map key:buttonText value:callbackData
-    public void sendButton(SendMessage sendMessage, String groupId, Map<String,String> buttonText) {
+    public void sendButton(SendMessage sendMessage, String groupId, Map<String,String> buttonText,GroupInfoSetting groupInfoSetting) {
         InlineKeyboardMarkup markup = new InlineKeyboardMarkup();
         List<List<InlineKeyboardButton>> rowsInline = new ArrayList<>();
         List<InlineKeyboardButton> rowInline = new ArrayList<>();
@@ -34,7 +40,11 @@ public class ButtonList {
             String buttonTextName = entry.getKey();
             String callbackData = entry.getValue();
             InlineKeyboardButton button = new InlineKeyboardButton();
-            button.setText(buttonTextName);
+            if (groupInfoSetting.getEnglish()){
+                button.setText(buttonTextName);
+            }else {
+                button.setText(TranslationExample.translateText(buttonTextName,groupInfoSetting.getEnglish()));
+            }
             button.setCallbackData(callbackData);
             rowInline.add(button);
         }
@@ -45,29 +55,32 @@ public class ButtonList {
     }
 
 
-    public void exchangeList(SendMessage sendMessage,String groupId) {
+    public void exchangeList(SendMessage sendMessage, String groupId, GroupInfoSetting groupInfoSetting) {
         InlineKeyboardMarkup markup = new InlineKeyboardMarkup();
         List<List<InlineKeyboardButton>> rowsInline = new ArrayList<>();
         List<InlineKeyboardButton> rowInline = new ArrayList<>();
 
         InlineKeyboardButton button1 = new InlineKeyboardButton();
-        button1.setText("所有✅");
         button1.setCallbackData("所有");
 //        button1.setUrl(url+"Account?groupId="+groupId); ✅
-
         // 创建第二个按钮
         InlineKeyboardButton button2 = new InlineKeyboardButton();
-        button2.setText("银行卡");
         button2.setCallbackData("银行卡");
-
         InlineKeyboardButton button3 = new InlineKeyboardButton();
-        button3.setText("支付宝");
         button3.setCallbackData("支付宝");
-
         InlineKeyboardButton button4 = new InlineKeyboardButton();
-        button4.setText("微信");
         button4.setCallbackData("微信");
-
+        if (groupInfoSetting.getEnglish()){
+            button1.setText("所有✅");
+            button2.setText("银行卡");
+            button3.setText("支付宝");
+            button4.setText("微信");
+        }else {
+            button1.setText("All✅");
+            button2.setText("Bank");
+            button3.setText("Alipay");
+            button4.setText("WeChat");
+        }
         rowInline.add(button1);
         rowInline.add(button2);
         rowInline.add(button3);
@@ -78,30 +91,32 @@ public class ButtonList {
         markup.setKeyboard(rowsInline);
         sendMessage.setReplyMarkup(markup);
     }
-    public void editText(EditMessageText editMessage,String groupId,String payMethod) {
+    public void editText(EditMessageText editMessage,String groupId,String payMethod,GroupInfoSetting groupInfoSetting) {
         InlineKeyboardMarkup markup = new InlineKeyboardMarkup();
         List<List<InlineKeyboardButton>> rowsInline = new ArrayList<>();
         List<InlineKeyboardButton> rowInline = new ArrayList<>();
-
         InlineKeyboardButton button1 = new InlineKeyboardButton();
-        button1.setText("所有");
         button1.setCallbackData("所有");
 //        button1.setUrl(url+"Account?groupId="+groupId);
         // 创建第二个按钮
         InlineKeyboardButton button2 = new InlineKeyboardButton();
         String icon="✅";
-        button2.setText("银行卡");
         button2.setCallbackData("银行卡");
-
         InlineKeyboardButton button3 = new InlineKeyboardButton();
-        button3.setText("支付宝");
         button3.setCallbackData("支付宝");
-
         InlineKeyboardButton button4 = new InlineKeyboardButton();
-        button4.setText("微信");
         button4.setCallbackData("微信");
-
-
+        if (groupInfoSetting.getEnglish()){
+            button1.setText("所有");
+            button2.setText("银行卡");
+            button3.setText("支付宝");
+            button4.setText("微信");
+        }else {
+            button1.setText("All");
+            button2.setText("Bank");
+            button3.setText("Alipay");
+            button4.setText("WeChat");
+        }
         if (payMethod.equals("0")) {
             button1.setText(button1.getText()+icon);
         } else if (payMethod.equals("1")) {
@@ -122,13 +137,16 @@ public class ButtonList {
         editMessage.setReplyMarkup(markup);
     }
     //实现list按钮
-    public void implList(SendMessage sendMessage,String groupId,String groupTitle) {
+    public void implList(SendMessage sendMessage,String groupId,String groupTitle,GroupInfoSetting groupInfoSetting) {
         InlineKeyboardMarkup markup = new InlineKeyboardMarkup();
         List<List<InlineKeyboardButton>> rowsInline = new ArrayList<>();
         List<InlineKeyboardButton> rowInline = new ArrayList<>();
-
         InlineKeyboardButton button1 = new InlineKeyboardButton();
-        button1.setText("网页账单");
+        if (groupInfoSetting.getEnglish()){
+            button1.setText("网页账单");
+        }else {
+            button1.setText("Web Bill");
+        }
         String encodedGroupTitle;
         try {
             encodedGroupTitle = URLEncoder.encode(groupTitle, StandardCharsets.UTF_8.toString());

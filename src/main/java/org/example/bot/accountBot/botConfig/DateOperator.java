@@ -40,8 +40,10 @@ public class DateOperator{
 
     //判断是否过期 groupId text  查询是否过期
     public void isOver24HourCheck(Message message, SendMessage sendMessage, UserDTO userDTO, Status status,List<Account> accountList,List<Issue> issueList) {
-        if (userDTO.getText().length()>=4&&userDTO.getText().substring(0,4).equals("设置日切")
-                ||userDTO.getText().length()>=4&&userDTO.getText().substring(0,4).equals("开启日切")){
+        if ((userDTO.getText().length()>=4&&userDTO.getText().substring(0,4).equals("设置日切")
+                ||userDTO.getText().length()>=4&&userDTO.getText().substring(0,4).equals("开启日切"))
+        ||(userDTO.getText().length()>=16&&userDTO.getText().substring(0,16).equals("Set Daily Switch")
+                ||userDTO.getText().length()>=19&&userDTO.getText().substring(0,19).equals("Enable Daily Switch")) ){
             LocalDateTime tomorrow;
             if (StringUtils.isBlank(message.getText().substring(4, message.getText().length()))){
                 //如果当前时间大于12点，则设置明天的12点为日切时间
@@ -83,18 +85,25 @@ public class DateOperator{
         String text = message.getText();
         if (text.length()>=4){
             //删除今日账单关键词： 清理今天数据 删除今天数据 清理今天账单 删除今天账单 是否判断操作员权限？
-            if (text.equals("清理今天数据")||text.equals("删除今天数据")||text.equals("清理今天账单")
+            if ((text.equals("清理今天数据")||text.equals("删除今天数据")||text.equals("清理今天账单")
                     ||text.equals("清理今日账单")||text.equals("删除今日账单")||text.equals("清理今天帐单")
                     ||text.equals("删除今天账单")||text.equals("删除账单") ||text.equals("删除今天帐单")||text.equals("删除帐单")
-                    ||text.equals("清除账单")||text.equals("删除账单")||text.equals("清除帐单")||text.equals("删除帐单")){
+                    ||text.equals("清除账单")||text.equals("删除账单")||text.equals("清除帐单")||text.equals("删除帐单"))
+                    ||  (text.equals("Clear Today's Data") || text.equals("Delete Today's Data")
+                    || text.equals("Clear Today's Bill") || text.equals("Clear Today's Record")
+                    || text.equals("Delete Today's Bill") || text.equals("Clear Today's Account")
+                    || text.equals("Delete Today's Account") || text.equals("Delete Bill")
+                    || text.equals("Delete Today's Record") || text.equals("Delete Record")
+                    || text.equals("Clear Bill") || text.equals("Delete All Bills")
+                    || text.equals("Clear All Records") || text.equals("Clear All Bills"))){
                 accountService.deleteTodayData(status,groupId);
                 issueService.deleteTodayIssueData(status,groupId);
                 accountBot.sendMessage(sendMessage,"操作成功 ，今日账单已删除");
-            }else if (text.equals("删除全部账单")||text.equals("清除全部账单")){
+            }else if (text.equals("删除全部账单")||text.equals("清除全部账单")||text.equals("Delete All Bills") || text.equals("Clear All Bills")){
                 accountService.deleteHistoryData(groupId);
                 issueService.deleteHistoryIssueData(groupId);
                 accountBot.sendMessage(sendMessage,"操作成功 ，全部账单已删除。");
-            }else if (text.equals("关闭日切")){
+            }else if (text.equals("关闭日切")||text.equals("Disable Daily Switch") || text.equals("Turn Off Daily Switch")){
                 status.setRiqie(false);//是否开启日切 是
                 Date date = new Date();
                 status.setSetTime(date);//设置日切时间

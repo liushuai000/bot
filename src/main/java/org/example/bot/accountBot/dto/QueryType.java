@@ -27,7 +27,7 @@ public class QueryType {
     @ApiModelProperty("findAll")
     private boolean findAll;
     @ApiModelProperty("operation")
-    private boolean operation;//是否是操作人
+    private Boolean operation;//是否是操作人  默认空是全部
     @ApiModelProperty("username")
     private String username;//用户名
 

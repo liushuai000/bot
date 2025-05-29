@@ -1,14 +1,13 @@
 package org.example.bot.accountBot.botConfig;
 
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import lombok.extern.slf4j.Slf4j;
 import org.example.bot.accountBot.config.RestTemplateConfig;
 import org.example.bot.accountBot.dto.TronAccountDTO;
 import org.example.bot.accountBot.dto.TronHistoryDTO;
 import org.example.bot.accountBot.dto.UserDTO;
-import org.example.bot.accountBot.pojo.User;
-import org.example.bot.accountBot.pojo.UserNormal;
-import org.example.bot.accountBot.pojo.UserOperation;
-import org.example.bot.accountBot.pojo.WalletListener;
+import org.example.bot.accountBot.mapper.GroupInfoSettingMapper;
+import org.example.bot.accountBot.pojo.*;
 import org.example.bot.accountBot.service.UserNormalService;
 import org.example.bot.accountBot.service.UserOperationService;
 import org.example.bot.accountBot.service.UserService;
@@ -51,6 +50,8 @@ public class PaperPlaneBotSinglePerson {
     protected String username;
     @Autowired
     UserNormalService userNormalService;
+    @Autowired
+    private GroupInfoSettingMapper groupInfoSettingMapper;
     @Autowired
     WalletListenerService walletListenerService;
     @Value("${tranAccountUrl}")
@@ -166,7 +167,8 @@ public class PaperPlaneBotSinglePerson {
         Map<String,String> buttonTextMap=new HashMap<>();
         buttonTextMap.put("监听该地址","监听该地址");
         buttonTextMap.put("查询交易记录","查询交易记录");
-        buttonList.sendButton(sendMessage, String.valueOf(userId),buttonTextMap);
+        GroupInfoSetting groupInfoSetting = groupInfoSettingMapper.selectOne(new QueryWrapper<GroupInfoSetting>().eq("group_id", userDTO.getGroupId()));
+        buttonList.sendButton(sendMessage, String.valueOf(userId),buttonTextMap,groupInfoSetting);
         accountBot.tronAccountMessageText(sendMessage,userId,result);
     }
 
@@ -177,17 +179,18 @@ public class PaperPlaneBotSinglePerson {
         String text = userDTO.getText();
         //授权-123456789-30  用户id -30
         PaperPlaneBotButton buttonList = new PaperPlaneBotButton();
-        ReplyKeyboardMarkup replyKeyboardMarkup = buttonList.sendReplyKeyboard();
+        GroupInfoSetting groupInfoSetting = groupInfoSettingMapper.selectOne(new QueryWrapper<GroupInfoSetting>().eq("group_id", userDTO.getUserId()));
+        ReplyKeyboardMarkup replyKeyboardMarkup = buttonList.sendReplyKeyboard(groupInfoSetting);
         sendMessage.setReplyMarkup(replyKeyboardMarkup);//是否在onUpdateReceived设置
         String regex = "^授权-[a-zA-Z0-9]+-[a-zA-Z0-9]+$";
         String[] split3 = text.split("-");
-        if (text.equals("获取个人信息")){
+        if (text.equals("获取个人信息") || text.equals("Access to personal information")){
             this.getUserInfoMessage(message,sendMessage,userDTO);
             return;
-        }else if (text.equals("监听列表")){
+        }else if (text.equals("监听列表") || text.equals("Listening List")){
             this.getListening(message,sendMessage,userDTO);
             return;
-        }else if (text.equals("使用说明")){
+        }else if (text.equals("使用说明") || text.equals("Instructions")){
             this.useInfo(message,sendMessage,userDTO);
             return;
         }else if (text.contains("##") &&text.length()>=37){
@@ -206,7 +209,7 @@ public class PaperPlaneBotSinglePerson {
             accountBot.sendMessage(sendMessage,messageResult);
             return;
         }
-        if (text.contains("授权")){
+        if (text.contains("授权") || text.contains("Authorization")){
             if (text.startsWith("授权-")&&!userDTO.getUserId().equals(adminUserId)){
                 accountBot.sendMessage(sendMessage,"您不是超级管理!无权限设置管理员!");
                 return;
@@ -276,11 +279,11 @@ public class PaperPlaneBotSinglePerson {
         }
         if (text.equals("/start")) accountBot.tronAccountMessageTextHtml(sendMessage,userDTO.getUserId(),"<b>你好！欢迎使用本机器人：\n" +
                 "\n" +
-                "点击下方底部按钮：获取个人信息\n" +
-                "（将我拉入群组可免费使用8小时）\n" +
+                "<b>点击下方底部按钮：获取个人信息</b>\n" +
+                "<b>（将我拉入群组可免费使用8小时）</b>\n" +
                 "\n" +
-                "将TRC20地址发送给我，即可设置入款通知；\n" +
-                "群友在群中发送U地址即可查询该地址当前余额；</b> \n" +
+                "<b>将TRC20地址发送给我，即可设置入款通知；</b>\n" +
+                "<b>群友在群中发送U地址即可查询该地址当前余额；</b> \n" +
                 "\n" +
                 "➖➖➖➖➖➖➖➖➖➖➖\n" +
                 "<b>本机器人用户名 ：</b> <code>@"+username+"</code>\n" +//（点击复制）
@@ -359,7 +362,8 @@ public class PaperPlaneBotSinglePerson {
                 "⁉\uFE0F 点击下列钱包对应标识按钮，查看钱包详情\n" +
                 "➖➖➖➖➖➖➖➖➖➖➖\n"+stringBuilder;
         ButtonList buttonList=new ButtonList();
-        buttonList.sendButton(sendMessage, String.valueOf(userDTO.getUserId()),map);
+        GroupInfoSetting groupInfoSetting = groupInfoSettingMapper.selectOne(new QueryWrapper<GroupInfoSetting>().eq("group_id", message.getChatId().toString()));
+        buttonList.sendButton(sendMessage, String.valueOf(userDTO.getUserId()),map,groupInfoSetting);
         accountBot.sendMessage(sendMessage,result);
     }
 

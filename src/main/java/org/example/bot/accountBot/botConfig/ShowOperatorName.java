@@ -2,10 +2,7 @@ package org.example.bot.accountBot.botConfig;
 
 import lombok.extern.slf4j.Slf4j;
 import org.example.bot.accountBot.dto.UserDTO;
-import org.example.bot.accountBot.pojo.Account;
-import org.example.bot.accountBot.pojo.Issue;
-import org.example.bot.accountBot.pojo.Rate;
-import org.example.bot.accountBot.pojo.Status;
+import org.example.bot.accountBot.pojo.*;
 import org.example.bot.accountBot.service.AccountService;
 import org.example.bot.accountBot.service.IssueService;
 import org.example.bot.accountBot.utils.BaseConstant;
@@ -40,9 +37,10 @@ public class ShowOperatorName {
     ButtonList buttonList;
 
     //显示操作人名字  显示账单用
-    public void  replay(SendMessage sendMessage, UserDTO userDTO, Account updateAccount, Rate rate, List<Issue> issuesList, Issue issue, String text, Status status) {
-        if (!BaseConstant.showReplay(text)) return;
-        buttonList.implList(sendMessage,userDTO.getGroupId(),userDTO.getGroupTitle());
+    public void  replay(SendMessage sendMessage, UserDTO userDTO, Account updateAccount, Rate rate, List<Issue> issuesList, Issue issue,
+                        String text, Status status, GroupInfoSetting groupInfoSetting) {
+        if (!BaseConstant.showReplay(text) && !BaseConstant.showReplayEnglish(text)) return;
+        buttonList.implList(sendMessage,userDTO.getGroupId(),userDTO.getGroupTitle(),groupInfoSetting);
         String iusseText="";
         //重新获取最新的数据
         List<Account> accounts = dateOperator.selectIsRiqie(sendMessage,status,userDTO.getGroupId());

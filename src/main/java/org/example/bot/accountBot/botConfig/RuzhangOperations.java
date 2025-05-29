@@ -6,6 +6,7 @@ import org.example.bot.accountBot.dto.UserDTO;
 import org.example.bot.accountBot.pojo.*;
 import org.example.bot.accountBot.service.*;
 import org.example.bot.accountBot.utils.BaseConstant;
+import org.example.bot.accountBot.utils.ConstantMap;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -51,11 +52,12 @@ public class RuzhangOperations{
     private ShowOperatorName showOperatorName;
     @Autowired
     ButtonList buttonList;
+    ConstantMap constantMap = new ConstantMap();//关键词的对应关系
     //设置费/汇率
     protected void setRate(Message message,SendMessage sendMessage,Rate rates) {
         String text = message.getText();
         if (text.length()<4){return;}
-        if (text.startsWith("设置费率")){
+        if (text.startsWith("设置费率") || text.startsWith(constantMap.get("设置费率"))){
             String rate = text.substring(4);
             BigDecimal bigDecimal = new BigDecimal(rate);
 //            bigDecimal=bigDecimal.multiply(BigDecimal.valueOf(0.01));
@@ -64,7 +66,7 @@ public class RuzhangOperations{
             log.info("rates:{}",rates);
             rateService.insertRate(rates);
             accountBot.sendMessage(sendMessage,"设置成功,当前费率为："+rate);
-        }else if (text.startsWith("设置汇率")){
+        }else if (text.startsWith("设置汇率")|| text.startsWith(constantMap.get("设置汇率"))){
             if (text.substring(4).startsWith("-")){
                 rates.setAddTime(new Date());
                 rates.setExchange(new BigDecimal(1));
@@ -88,7 +90,7 @@ public class RuzhangOperations{
     public void repeal(Message message, SendMessage sendMessage, List<Account> accounts, String replyToText, UserDTO userDTO, List<Issue> issueList) {
         String text = message.getText();
         if (text.length()>=2||replyToText!=null){
-            if (text.equals("撤销入款")){
+            if (text.equals("撤销入款") || text.equals(constantMap.get("撤销入款"))){
                 if (accounts.isEmpty()){
                     accountBot.sendMessage(sendMessage,"撤销未成功! 账单为空");
                 }else {
@@ -98,7 +100,7 @@ public class RuzhangOperations{
                     issueService.updateIssueDown(sortedUserList.get(sortedUserList.size()-1).getDown(),userDTO.getGroupId());
                     accountBot.sendMessage(sendMessage,"撤销成功");
                 }
-            }else if (text.equals("取消")&&replyToText!=null){
+            }else if (text.equals("取消")|| text.equals(constantMap.get("取消"))&& replyToText!=null){
                 log.info("replyToXXXTentacion:{}",replyToText);
                 if (replyToText.charAt(0)=='+'){
                     accountService.deleteInData(String.valueOf(accounts.get(accounts.size()-1).getId()),userDTO.getGroupId());
@@ -110,7 +112,7 @@ public class RuzhangOperations{
                     return;
                 }
                 accountBot.sendMessage(sendMessage,"取消成功");
-            }else if (text.equals("撤销下发")){
+            }else if (text.equals("撤销下发")|| text.equals(constantMap.get("撤销下发"))){
                 if (issueList.isEmpty()){
                     accountBot.sendMessage(sendMessage,"撤销未成功! 账单为空");
                     return;
@@ -129,14 +131,14 @@ public class RuzhangOperations{
     //入账操作 issue 这个和updateAccount 一样只不过没改名 updateIssue
     public void inHandle(String[] split2, String text, Account updateAccount,SendMessage sendMessage,
                          List<Account> accountList, Message message, String[] split3, Rate rate,
-                         Issue issue, List<Issue> issueList, UserDTO userDTO,Status status) {
+                         Issue issue, List<Issue> issueList, UserDTO userDTO,Status status,GroupInfoSetting groupInfoSetting) {
         BigDecimal total;
         BigDecimal down;
         //判断是否符合公式 true 是匹配
         boolean isMatcher = utils.isMatcher(text);
         //+0 -0显示账单
-        if (showOperatorName.isEmptyMoney(text) || BaseConstant.showReplay(text)){
-            showOperatorName.replay(sendMessage,userDTO,updateAccount,rate,issueList,issue,text,status);
+        if (showOperatorName.isEmptyMoney(text) || BaseConstant.showReplay(text)|| BaseConstant.showReplayEnglish(text)){
+            showOperatorName.replay(sendMessage,userDTO,updateAccount,rate,issueList,issue,text,status,groupInfoSetting);
             return;
         }
         if (text.charAt(0) != '+' && text.charAt(0) != '-')  return;
@@ -263,7 +265,7 @@ public class RuzhangOperations{
             //发送要显示的消息
             sendText1 = getSendText(updateAccount, accounts,rate, num, newAccountList,newIssueList,issues,issue,status);
             sendMessage.setText(sendText1);
-            buttonList.implList( sendMessage,userDTO.getGroupId(),userDTO.getGroupTitle());
+            buttonList.implList( sendMessage,userDTO.getGroupId(),userDTO.getGroupTitle(),groupInfoSetting);
         }
         accountBot.sendMessage(sendMessage,sendText1);
     }
@@ -421,7 +423,7 @@ public class RuzhangOperations{
             BigDecimal sxfCount =accounts.stream().map(Account::getAccountHandlerMoney).reduce(BigDecimal.ZERO, BigDecimal::add);
             String rukuan = status.getAccountHandlerMoney().compareTo(bigDecimal0) == 0 ? "" : "\n单笔入款手续费：" + status.getAccountHandlerMoney();
             String  xiafa= status.getIssueHandlerMoney().compareTo(bigDecimal0) == 0 ? "" : "\n单笔下发手续费：" + status.getIssueHandlerMoney();
-            String count = sxfCount.add(sxfCount2).compareTo(bigDecimal0) == 0 ? "" : "\n手续费总：" + sxfCount.add(sxfCount2);
+            String count = sxfCount.add(sxfCount2).compareTo(bigDecimal0) == 0 ? "" : "\n手续费总：" + sxfCount.add(sxfCount2).setScale(0, RoundingMode.HALF_UP);
             sxf=  rukuan+ xiafa+count;//sxf2 是下发手续费
 //            入款分类：
             return "\n已入账："+total +"，:共"+(accounts.size())+"笔:\n"+
@@ -431,7 +433,7 @@ public class RuzhangOperations{
                     "\n费率："+ rate.getRate().setScale(2, RoundingMode.HALF_UP)+
                     "\n应下发："+ yxf+
                     "\n已下发："+ yixf+
-                    "\n未下发："+ wxf+sxf;
+                    "\n未下发："+ wxf+(status.getShowHandlerMoneyStatus()==0?sxf:"");
         } else {
             //已下发
             BigDecimal downed = issuesList.stream().filter(Objects::nonNull).map(Issue::getDowned).reduce(BigDecimal.ZERO, BigDecimal::add);
@@ -468,7 +470,7 @@ public class RuzhangOperations{
             BigDecimal sxfCount =accounts.stream().map(Account::getAccountHandlerMoney).reduce(BigDecimal.ZERO, BigDecimal::add);
             String rukuan = status.getAccountHandlerMoney().compareTo(bigDecimal0) == 0 ? "" : "\n单笔入款手续费：" + status.getAccountHandlerMoney();
             String  xiafa= status.getIssueHandlerMoney().compareTo(bigDecimal0) == 0 ? "" : "\n单笔下发手续费：" + status.getIssueHandlerMoney();
-            String count = sxfCount.add(sxfCount2).compareTo(bigDecimal0) == 0 ? "" : "\n手续费总：" + sxfCount.add(sxfCount2);
+            String count = sxfCount.add(sxfCount2).compareTo(bigDecimal0) == 0 ? "" : "\n手续费总：" + sxfCount.add(sxfCount2).setScale(0, RoundingMode.HALF_UP);
             sxf=  rukuan+ xiafa+count;//sxf2 是下发手续费
             return "\n已入账："+total+"，:共"+(accounts.size())+"笔:\n"+
                     " "+ "暂无已入账数据"+ iusseText+
@@ -477,7 +479,7 @@ public class RuzhangOperations{
                     "\n费率："+ rate.getRate().setScale(2, RoundingMode.HALF_UP)+
                     "\n应下发："+ yxf+
                     "\n已下发："+ yixf+
-                    "\n未下发："+ wxf+sxf;
+                    "\n未下发："+ wxf+(status.getShowHandlerMoneyStatus()==0?sxf:"");
         }
 
     }

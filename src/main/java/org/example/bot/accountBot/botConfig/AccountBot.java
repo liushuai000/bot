@@ -1,28 +1,24 @@
 package org.example.bot.accountBot.botConfig;
 
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.example.bot.accountBot.dto.UserDTO;
+import org.example.bot.accountBot.mapper.GroupInfoSettingMapper;
 import org.example.bot.accountBot.pojo.*;
 
 import org.example.bot.accountBot.service.*;
 import org.example.bot.accountBot.utils.BaseConstant;
+import org.example.bot.accountBot.utils.ConstantMap;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
-import org.telegram.telegrambots.meta.api.methods.ParseMode;
-import org.telegram.telegrambots.meta.api.methods.commands.SetMyCommands;
-import org.telegram.telegrambots.meta.api.methods.groupadministration.GetChatAdministrators;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageText;
 import org.telegram.telegrambots.meta.api.objects.ChatMemberUpdated;
 import org.telegram.telegrambots.meta.api.objects.Message;
-import org.telegram.telegrambots.meta.api.objects.MessageEntity;
 import org.telegram.telegrambots.meta.api.objects.Update;
-import org.telegram.telegrambots.meta.api.objects.chatmember.ChatMember;
-import org.telegram.telegrambots.meta.api.objects.commands.BotCommand;
-import org.telegram.telegrambots.meta.api.objects.commands.scope.BotCommandScopeDefault;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
 import java.util.*;
@@ -52,8 +48,6 @@ public class AccountBot extends TelegramLongPollingBot {
     @Autowired
     protected SettingOperatorPerson settingOperatorPerson;   //设置操作人员
     @Autowired
-    protected ShowOperatorName showOperatorName;   //显示操作人名字
-    @Autowired
     protected RuzhangOperations ruzhangOperations;    //入账和入账时发送的消息
     @Autowired
     protected NotificationService notificationService;
@@ -65,7 +59,11 @@ public class AccountBot extends TelegramLongPollingBot {
     private UserOperationService userOperationService;
     @Autowired
     private NowExchange nowExchange;//获取最新汇率
-
+    @Autowired
+    private GroupInfoSettingMapper groupInfoSettingMapper;//中英文切换
+    @Autowired
+    private GroupInfoSettingBotMessage groupInfoSettingBotMessage;//注意处理进群记录用户信息或者是 切换中英文
+    ConstantMap constantMap=new ConstantMap();//关键词的对应关系
     @Override
     public String getBotUsername() {
         return username;
@@ -110,6 +108,24 @@ public class AccountBot extends TelegramLongPollingBot {
     }
 
     public void BusinessHandler(Message message,SendMessage sendMessage, String replyToText, UserDTO userDTO,Update update) {
+        GroupInfoSetting groupInfoSetting = groupInfoSettingMapper.selectOne(new QueryWrapper<GroupInfoSetting>().eq("group_id", userDTO.getGroupId()));
+        //切换中英文初始化 或更新
+        if (message.getChat().isGroupChat()||message.getChat().isSuperGroupChat()){
+            groupInfoSetting=groupInfoSettingBotMessage.getGroupOrCreate(userDTO.getText(), Long.valueOf(userDTO.getGroupId()));
+        } else if (message.getChat().isUserChat()) {
+            groupInfoSetting= groupInfoSettingBotMessage.getGroupOrCreate(userDTO.getText(), Long.valueOf(userDTO.getUserId()));
+        }
+        if (userDTO.getText().equals("/detail")){
+            String sc="<strong>中英文对应如下(The Chinese and English correspondence is as follows)</strong>\n";
+            String allCommandsDetail = constantMap.getAllCommandsDetail();
+            SendMessage sendMessageDetail = new SendMessage();
+            if (message.getChat().isUserChat()){
+                sendMessageDetail.setChatId(userDTO.getUserId());
+            }else {
+                sendMessageDetail.setChatId(userDTO.getGroupId());
+            }
+            this.sendMessage(sendMessageDetail,sc+allCommandsDetail);
+        }
         //私聊的机器人  处理个人消息
         if (message.getChat().isUserChat()){
             paperPlaneBotSinglePerson.handleTronAccountMessage(sendMessage,update,userDTO);
@@ -137,7 +153,7 @@ public class AccountBot extends TelegramLongPollingBot {
         utils.counter(message,sendMessage);
         notificationService.initNotification(userDTO);
         if (message.getText().charAt(0)!='+' && message.getText().charAt(0)!='-' &&
-                !BaseConstant.getMessageContentIsContain(message.getText()) ) {
+                (!BaseConstant.getMessageContentIsContain(message.getText()) && !BaseConstant.getMessageContentIsContainEnglish(message.getText()))) {
             return ;
         }
         UserNormal userNormalTempAdmin =userNormalService.selectByGroupId(userDTO.getGroupId());//超级管理
@@ -147,7 +163,7 @@ public class AccountBot extends TelegramLongPollingBot {
         }
         if (userOperation==null || !userOperation.isOperation()){
             String format = String.format("<a href=\"tg://user?id=%d\">%s</a>", Long.parseLong(userNormalTempAdmin.getUserId()), "权限人");
-            this.sendMessage(sendMessage,"没有使用权限，请联系本群权限人 @"+format);
+            this.sendMessage(sendMessage,"没有使用权限，请联系本群权限人 "+format);
             return;
         }else if(userOperation.isOperation()){
             //如果是本群权限人
@@ -196,8 +212,14 @@ public class AccountBot extends TelegramLongPollingBot {
         issue.setGroupId(userDTO.getGroupId());
         //没有用户名的情况下
         if (StringUtils.isEmpty(userDTO.getUsername()))userDTO.setUsername("");
-        if (message.getText().contains(BaseConstant.showArray[1])){
-            message.setText(BaseConstant.isXiFa(message.getText()));
+        if (groupInfoSetting.getEnglish()){
+            if (message.getText().contains(BaseConstant.showArray[1])){
+                message.setText(BaseConstant.isXiFa(message.getText()));
+            }
+        }else{
+            if (message.getText().contains(BaseConstant.showArrayEnglish[1])){
+                message.setText(BaseConstant.isXiFaEnglish(message.getText()));
+            }
         }
         //查询最新数据用这个 dateOperator.selectIsRiqie dateOperator.checkRiqie
         dateOperator.checkRiqie(sendMessage,status);//检查日切时间
@@ -206,19 +228,25 @@ public class AccountBot extends TelegramLongPollingBot {
         //设置日切 如果日切时间没结束 第二次设置日切 也需要修改账单的日切时间
         dateOperator.isOver24HourCheck(message, sendMessage, userDTO, status,accountList,issueList);
         //设置操作人员
-        settingOperatorPerson.setHandle(split1, sendMessage,message.getText(),userDTO,user1,status);
+        settingOperatorPerson.setHandle(split1, sendMessage,message.getText(),userDTO,user1,status,groupInfoSetting);
         //设置费率/汇率
         ruzhangOperations.setRate(message,sendMessage,rate);
         //撤销入款
         ruzhangOperations.repeal(message,sendMessage,accountList,replyToText,userDTO,issueList);
         //删除今日数据/关闭日切/
         dateOperator.deleteTodayData(message,sendMessage,userDTO.getGroupId(),status,accountList,issueList);
-        if (split3[0].contains(BaseConstant.showArray[1])){
-            split3=BaseConstant.isXiFa(message.getText()).split("-");
+        if (groupInfoSetting.getEnglish()){
+            if (split3[0].contains(BaseConstant.showArray[1])){
+                split3=BaseConstant.isXiFa(message.getText()).split("-");
+            }
+        }else{
+            if (split3[0].contains(BaseConstant.showArrayEnglish[1])){
+                split3=BaseConstant.isXiFaEnglish(message.getText()).split("-");
+            }
         }
         //入账操作
         ruzhangOperations.inHandle(split2,message.getText(),  updateAccount,  sendMessage, accountList, message,split3,
-                rate,issue,issueList,userDTO,status);
+                rate,issue,issueList,userDTO,status,groupInfoSetting);
         //删除操作人员
         settingOperatorPerson.deleteHandle(message.getText(),sendMessage,userDTO);
         //通知功能
@@ -413,6 +441,7 @@ public class AccountBot extends TelegramLongPollingBot {
     protected void tronAccountMessageText(SendMessage sendMessage,String chatId, String text) {
         sendMessage.setChatId(chatId);
 //        sendMessage.setMessageId(messageId);
+        text = groupInfoSettingBotMessage.handler(chatId,text);
         sendMessage.setText(text);
         sendMessage.setParseMode("Markdown");
 //        sendMessage.enableHtml(true);
@@ -427,9 +456,10 @@ public class AccountBot extends TelegramLongPollingBot {
     protected void tronAccountMessageTextHtml(SendMessage sendMessage,String chatId, String text) {
         sendMessage.setChatId(chatId);
 //        sendMessage.setMessageId(messageId);
+        text = groupInfoSettingBotMessage.handler(chatId,text);
         sendMessage.setText(text);
         sendMessage.setParseMode("HTML");
-//        sendMessage.enableHtml(true);
+        sendMessage.enableHtml(true);
         sendMessage.disableWebPagePreview();//禁用预览链接
         // 发送编辑消息请求
         try {
@@ -441,6 +471,7 @@ public class AccountBot extends TelegramLongPollingBot {
     protected void editMessageText(EditMessageText editMessage,long chatId, int messageId, String text) {
         editMessage.setChatId(chatId);
         editMessage.setMessageId(messageId);
+        text = groupInfoSettingBotMessage.handler(String.valueOf(chatId),text);
         editMessage.setText(text);
         editMessage.setParseMode("HTML");
         editMessage.enableHtml(true);
@@ -452,11 +483,24 @@ public class AccountBot extends TelegramLongPollingBot {
         }
     }
     public void sendMessage(SendMessage sendMessage,String text) {
+        text = groupInfoSettingBotMessage.handler(sendMessage.getChatId(),text);
         sendMessage.setText(text);
         sendMessage.enableHtml(true);
+        sendMessage.setParseMode("HTML");
 //        sendMessage.enableMarkdown(true);
         try {
             log.info("发送消息:{}", text);
+            execute(sendMessage);
+        } catch (Exception e) {
+            log.info(e.getMessage());
+        }
+    }
+
+    public void sendMessage(SendMessage sendMessage) {
+        sendMessage.enableHtml(true);
+        sendMessage.setParseMode("HTML");
+//        sendMessage.enableMarkdown(true);
+        try {
             execute(sendMessage);
         } catch (Exception e) {
             log.info(e.getMessage());

@@ -1,11 +1,16 @@
 package org.example.bot.accountBot.utils;
 
 import java.util.Arrays;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 //此类记载所有常量
 public class BaseConstant {
+    // 命令映射：中文 -> 英文
+    public static final Map<String, String> COMMAND_MAP = new LinkedHashMap<>();
+
     //SettingOperatorPerson也需要加 同步的
     public final static String[] array={
             "通知","设置日切","开启日切","关闭日切","设置费率","通知所有人",
@@ -24,6 +29,29 @@ public class BaseConstant {
             "清理今天数据", "删除今天数据","清理今天账单","清理今日账单","删除今日账单","清理今天帐单","删除今天账单",
             "删除账单", "删除今天帐单","删除帐单","清除账单","清除帐单", "删除全部账单","删除全部帐单", "删除全部账单","清除全部账单",
             "撤销下发","撤销入款","显示手续费","隐藏手续费",
+    };
+    // 英文命令常量数组示例
+// array 对应英文翻译（1:1 对应）
+    public final static String[] arrayEnglish = {
+            "Notice", "Set Daily Switch", "Enable Daily Switch", "Disable Daily Switch", "Set Rate", "Notify All",
+            "Set Exchange Rate", "Set Deposit Fee per Transaction", "Cancel",
+            "Delete Operator", "Delete Operator", "Set Operator", "Set Operator",
+            "Disable Replier Display", "Hide Replier Display",
+            "Set Deposit Fee per Transaction", "Set Deposit Fee", "Set Withdrawal Fee", "Set Withdrawal Fee per Transaction",
+            "Set Withdrawal Fee per Transaction", "Set Deposit Fee per Transaction"
+    };
+
+
+    // showArray 对应英文翻译（1:1 对应）
+    public final static String[] showArrayEnglish = {
+            "Set Fee", "Withdrawal",
+            "Show Details", "Hide Details", "Show Operator Name", "Show Operator", "Show Operator Name", "Hide Operator Name",
+            "Hide Operator Name", "Hide Operator Name", "Show Operator", "Show Operator",
+            "Hide Names", "Hide Titles", "Turn Off Display", "Show Replier", "Show Replier Name", "Show Balance", "Show Amount", "Show USDT", "Show USDT", "Show All",
+            "Show 1 Entry", "Show 3 Entries", "Show 5 Entries", "+0", "-0", "+0u", "-0u", "+0U", "-0U", "Show Category", "Hide Category",
+            "Clear Today's Data", "Delete Today's Data", "Clear Today's Bill", "Clear Today's Bill", "Delete Today's Bill", "Clear Today's Record", "Delete Today's Bill",
+            "Delete Bill", "Delete Today's Record", "Delete Record", "Clear Bill", "Clear Record", "Delete All Bills", "Delete All Records", "Delete All Bills", "Clear All Bills",
+            "Revoke Withdrawal", "Revoke Deposit", "Show Fee", "Hide Fee"
     };
 
     /**
@@ -45,9 +73,26 @@ public class BaseConstant {
         }
         return temp;
     }
+    public static boolean getMessageContentIsContainEnglish(String text) {
+        // 合并两个数组
+        String[] combinedArray = Arrays.copyOf(arrayEnglish, arrayEnglish.length + showArrayEnglish.length);
+        System.arraycopy(showArrayEnglish, 0, combinedArray, arrayEnglish.length, showArrayEnglish.length);
+        boolean b = equalsAny(arrayEnglish, text);
+        boolean b1 = containsAny(showArrayEnglish, text);
+        boolean temp;
+        if (b){
+            temp= true;
+        }else {
+            temp = b1;
+        }
+        return temp;
+    }
     //判断群组内消息 是否直接显示账单
     public static boolean showReplay(String text) {
         return  containsAny(showArray, text);//包含0  equals0
+    }
+    public static boolean showReplayEnglish(String text) {
+        return  containsAny(showArrayEnglish, text);//包含0  equals0
     }
     public static boolean equalsAny(String[] array, String input) {
         for (String str : array) {
@@ -72,6 +117,23 @@ public class BaseConstant {
     public static String isXiFa(String text){
         // 定义正则表达式
         Pattern pattern = Pattern.compile("下发(\\d+)(u)?");
+        Matcher matcher = pattern.matcher(text);
+
+        // 使用 StringBuffer 来构建替换后的字符串
+        StringBuffer sb = new StringBuffer();
+
+        while (matcher.find()) {
+            String number = matcher.group(1); // 提取数字部分
+            String unit = matcher.group(2); // 提取单位部分（可能为空）
+            String replacement = "-" + number + (unit != null ? unit : "");
+            matcher.appendReplacement(sb, replacement);
+        }
+        matcher.appendTail(sb);
+        return  sb.toString();
+    }
+    public static String isXiFaEnglish(String text){
+        // 定义正则表达式
+        Pattern pattern = Pattern.compile("Issue(\\d+)(u)?");
         Matcher matcher = pattern.matcher(text);
 
         // 使用 StringBuffer 来构建替换后的字符串
