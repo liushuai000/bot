@@ -1,8 +1,13 @@
 package org.example.bot.accountBot.botConfig;
 
+import cn.hutool.json.JSONArray;
+import cn.hutool.json.JSONObject;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.Response;
 import org.apache.commons.lang3.StringUtils;
 import org.example.bot.accountBot.config.RestTemplateConfig;
 import org.example.bot.accountBot.dto.*;
@@ -57,10 +62,7 @@ public class NowExchange {
     protected WalletListenerService walletListenerService;
     @Resource
     protected AccountBot accountBot;
-
-    // 缓存变量，使用Map存储不同支付方式的缓存结果
-    private final Map<String, List<Merchant>> cachedMerchants = new ConcurrentHashMap<>();
-    private final Map<String, String> cachedResults = new ConcurrentHashMap<>();
+    private final OkHttpClient client = new OkHttpClient();
 
     // 定时任务调度器
     private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(16);
@@ -136,9 +138,6 @@ public class NowExchange {
                 for (int i = 0; i < merchants.size(); i++) {
                     stringBuilder.append(i + 1).append(")   ").append(merchants.get(i).getPrice()).append("   ").append("<code>").append(merchants.get(i).getUserName()).append("</code>").append("\n");
                 }
-                // 更新缓存
-                cachedMerchants.put(payMethod, merchants);
-                cachedResults.put(payMethod, stringBuilder.toString());
             }
         } catch (Exception e) {
             log.error("Error fetching and caching data", e);
@@ -270,20 +269,20 @@ public class NowExchange {
                 return;
             }
             if (callbackData.equals("银行卡")) {
-                payMethod="1";
+                payMethod="银行卡";
             } else if (callbackData.equals("所有")) {
-                payMethod="0";
+                payMethod="所有";
             } else if (callbackData.equals("微信")) {
-                payMethod="3";
+                payMethod="微信";
             } else if (callbackData.equals("支付宝")) {
-                payMethod="2";
+                payMethod="支付宝";
             }
+            String string = this.fetchRealTimeUSDTPriceFromOKX("");
             // 使用缓存的数据
-            String result = "火币网商家实时交易汇率top10\n" +
-                    cachedResults.get(payMethod).toString() + "\n" +
+            String result = "欧易网商家实时交易汇率top10\n" +
+                    string + "\n" +
                     "本群费率：" + rate.getRate() + "%\n" +
                     "本群汇率：" + rate.getExchange();
-
             ButtonList buttonList = new ButtonList();
             EditMessageText editMessage = new EditMessageText();
             GroupInfoSetting groupInfoSetting = groupInfoSettingMapper.selectOne(new QueryWrapper<GroupInfoSetting>().eq("group_id", chatId));
@@ -292,7 +291,6 @@ public class NowExchange {
             accountBot.editMessageText(editMessage,chatId, messageId, result);
         }
     }
-
     private void getWallerListener(Message message, SendMessage sendMessage, String callbackData,Map<String, String> map1) {
         String urls = tranHistoryUrl+callbackData;//callbackData这里的key昵称
         List<TronHistoryDTO> tradingList=restTemplateConfig.getForObjectHistoryTrading(urls,TronHistoryDTO.class);
@@ -327,23 +325,44 @@ public class NowExchange {
     }
 
 
-    public void getNowExchange(Message message, SendMessage sendMessage, UserDTO userDTO, Rate rate, Update update) {
-        List<Merchant> merchants = restTemplateConfig.getForObjectMerchant(url+"" +
-                        "?coinId=2&currency=172&tradeType=sell" + "&currPage=1" + "&payMethod=0" +
-                        "&acceptOrder=0&country=&blockType=general&online=1&range=0&amount=&isThumbsUp=false&isMerchant=false" +
-                        "&isTraded=false&onlyTradable=false&isFollowed=false&makerCompleteRate=0" ,
-                NowExchangeDTO.class);
-        StringBuilder stringBuilder = new StringBuilder();
-        for (int i = 0; i < merchants.size(); i++) {
-            stringBuilder.append(i+1).append(")   ").append(merchants.get(i).getPrice()).append("   ").append("<code>").append(merchants.get(i).getUserName()).append("</code>").append("\n");
-        }
+    public void getNowExchange(SendMessage sendMessage, UserDTO userDTO, Rate rate) {
+        String string = this.fetchRealTimeUSDTPriceFromOKX("");
         GroupInfoSetting groupInfoSetting = groupInfoSettingMapper.selectOne(new QueryWrapper<GroupInfoSetting>().eq("group_id", userDTO.getGroupId()));
-        String result= "火币网商家实时交易汇率top10\n" +
-                stringBuilder+ "\n" +
+        String result= "欧易商家实时交易汇率top10\n" +
+                string+ "\n" +
                 "本群费率："+rate.getRate()+"%\n" +
                 "本群汇率："+rate.getExchange();
         ButtonList buttonList = new ButtonList();
         buttonList.exchangeList(sendMessage,userDTO.getGroupId(),groupInfoSetting);
         accountBot.sendMessage(sendMessage,result);
     }
+    private String fetchRealTimeUSDTPriceFromOKX(String type) {
+        String url = "https://www.okx.com/v3/c2c/tradingOrders/books" +
+                "?quoteCurrency=cny&baseCurrency=usdt&side=sell&paymentMethod="+type+"&userType=all&limit=10";
+        Request request = new Request.Builder().url(url).get().build();
+        try (Response response = client.newCall(request).execute()) {
+            if (response.isSuccessful() && response.body() != null) {
+                String body = response.body().string();
+                JSONObject json = new JSONObject(body);
+                JSONObject data1 = json.getJSONObject("data");
+                JSONArray data = data1.getJSONArray("sell");
+                StringBuilder result = new StringBuilder("\n");
+                for (int i = 0; i < data.size(); i++) {
+                    JSONObject item = data.getJSONObject(i);
+                    String price = item.getStr("price");
+                    String name = item.getStr("nickName");
+                    result.append(String.format("%d.) %s %s\n", i + 1, price, name));
+                }
+                return result.toString();
+            } else {
+                return "请求失败：" + response.code();
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return "";
+    }
+
+
+
 }

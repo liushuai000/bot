@@ -20,10 +20,6 @@ import java.io.IOException;
 
 @ComponentScan(basePackages = {"org.example.bot.accountBot.service"})
 public class Main {
-
-    @Value("${getExchangeUrl}")
-    private static String url;
-
     public static void main(String[] args) throws IOException {
         String url = "https://apilist.tronscanapi.com/api/accountv2?address=TWxokzzX2Y68iVdhZg8LbJWp9bjsj8w9Pc";
 

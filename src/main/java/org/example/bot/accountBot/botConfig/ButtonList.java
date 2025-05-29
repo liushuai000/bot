@@ -117,14 +117,14 @@ public class ButtonList {
             button3.setText("Alipay");
             button4.setText("WeChat");
         }
-        if (payMethod.equals("0")) {
+        if (payMethod.equals("所有")) {
             button1.setText(button1.getText()+icon);
-        } else if (payMethod.equals("1")) {
+        } else if (payMethod.equals("银行卡")) {
             button2.setText(button2.getText()+icon);
-        } else if (payMethod.equals("3")) {
-            button4.setText(button4.getText()+icon);
-        } else if (payMethod.equals("2")) {
+        } else if (payMethod.equals("支付宝")) {
             button3.setText(button3.getText()+icon);
+        } else if (payMethod.equals("微信")) {
+            button4.setText(button4.getText()+icon);
         }
         rowInline.add(button1);
         rowInline.add(button2);

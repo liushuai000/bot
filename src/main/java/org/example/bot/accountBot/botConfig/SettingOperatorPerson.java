@@ -315,10 +315,11 @@ public class SettingOperatorPerson{
         if (text.startsWith("删除操作人") || text.startsWith(constantMap.get("删除操作人"))){
             String[] split = splitOperatorSkipFirst(text);
             for (String deleteName : split) {
-                User byUsername = userService.findByUsername(deleteName);
+                String userName=deleteName.substring(1, deleteName.length());//@ggg_id
+                User byUsername = userService.findByUsername(userName);
                 if (byUsername!=null){
                     //修改为普通用户
-                    userOperationService.deleteByUsername(deleteName,userDTO.getGroupId());
+                    userOperationService.deleteByUsername(userName,userDTO.getGroupId());
                     accountBot.sendMessage(sendMessage,"删除成功");
                 }else {
                     byUsername=userService.findByFirstName(deleteName);

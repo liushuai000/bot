@@ -147,7 +147,7 @@ public class AccountBot extends TelegramLongPollingBot {
         }
         if (userDTO.getText().equals("z0")||userDTO.getText().equals("Z0")){
             Rate rate=rateService.getInitRate(userDTO.getGroupId());
-            nowExchange.getNowExchange(message,sendMessage,userDTO,rate,update);
+            nowExchange.getNowExchange(sendMessage,userDTO,rate);
         }
         //计算器功能
         utils.counter(message,sendMessage);
