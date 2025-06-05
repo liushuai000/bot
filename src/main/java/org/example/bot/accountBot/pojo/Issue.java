@@ -48,4 +48,10 @@ public class Issue {
     @TableField("message_id")
     private Integer messageId;//用户发送消息的id用于取消用
 
+    @TableField("down_exchange")
+    private BigDecimal downExchange=BigDecimal.ZERO;    //下发汇率取status里的下发汇率
+    @TableField("down_rate")
+    private BigDecimal downRate=BigDecimal.ZERO;    //下发费率取status
+    
+
 }

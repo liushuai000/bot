@@ -42,6 +42,7 @@ public class BaseConstant {
     public final static String[] showArrayEnglish = {
             constantMap.get("设置手续费"),
             constantMap.get("下发"),
+            constantMap.get("入款"),
 
             constantMap.get("显示明细"),
             constantMap.get("隐藏明细"),
@@ -155,6 +156,15 @@ public class BaseConstant {
         }else {
             temp = b1;
         }
+        if (text.startsWith("设置手续费")||text.toLowerCase().contains("set fee")){
+            return true;
+        }
+        if (text.startsWith("下发")||text.toLowerCase().contains("withdraw")){
+            return true;
+        }
+        if (text.startsWith("入款")||text.toLowerCase().contains("deposit")){
+            return true;
+        }
         return temp;
     }
     public static boolean getMessageContentIsContainEnglish(String text) {
@@ -169,6 +179,15 @@ public class BaseConstant {
         }else {
             temp = b1;
         }
+        if (text.startsWith("设置手续费")||text.toLowerCase().contains("set fee")){
+            return true;
+        }
+        if (text.startsWith("下发")||text.toLowerCase().contains("withdraw")){
+            return true;
+        }
+        if (text.startsWith("入款")||text.toLowerCase().contains("deposit")){
+            return true;
+        }
         return temp;
     }
     public static boolean getMessageContentIsContainEnglish2(String text) {
@@ -182,6 +201,15 @@ public class BaseConstant {
             temp= true;
         }else {
             temp = b1;
+        }
+        if (text.startsWith("设置手续费")||text.toLowerCase().contains("set fee")){
+            return true;
+        }
+        if (text.startsWith("下发")||text.toLowerCase().contains("withdraw")){
+            return true;
+        }
+        if (text.startsWith("入款")||text.toLowerCase().contains("deposit")){
+            return true;
         }
         return temp;
     }
@@ -208,6 +236,10 @@ public class BaseConstant {
             if (array[0]==null){
                 System.err.println(input+"-"+array[0]+" - "+array[1]);
             }
+            if (input.startsWith("设置下发费率")||input.startsWith("设置下发汇率")
+                    ||input.toLowerCase().contains("set the exchange rate")||input.toLowerCase().contains("set the delivery rate")){
+                return false;
+            }
             if(input.contains(array[0])||input.contains(array[1])){
                 return true;
             }
@@ -217,39 +249,38 @@ public class BaseConstant {
         }
         return false; // 如果没有任何元素匹配，返回false
     }
-    //如果有下发替换成-
-    public static String isXiFa(String text){
-        // 定义正则表达式
-        Pattern pattern = Pattern.compile("下发(\\d+)(u)?");
-        Matcher matcher = pattern.matcher(text);
-
-        // 使用 StringBuffer 来构建替换后的字符串
-        StringBuffer sb = new StringBuffer();
-
-        while (matcher.find()) {
-            String number = matcher.group(1); // 提取数字部分
-            String unit = matcher.group(2); // 提取单位部分（可能为空）
-            String replacement = "-" + number + (unit != null ? unit : "");
-            matcher.appendReplacement(sb, replacement);
+    public static String isXiFa(String text) {
+        if (text == null || text.isEmpty()) return text;
+        // 判断是否包含 “下发” 或 “withdraw”
+        if (text.toLowerCase().contains("下发") || text.toLowerCase().contains("withdraw")) {
+            // 提取数字和单位
+            Pattern pattern = Pattern.compile("([+\\-]?\\d+)(u)?", Pattern.CASE_INSENSITIVE);
+            Matcher matcher = pattern.matcher(text);
+            if (matcher.find()) {
+                String number = matcher.group(1);
+                String unit = matcher.group(2);
+                return "-" + number + (unit != null ? unit : "");
+            }
         }
-        matcher.appendTail(sb);
-        return  sb.toString();
+        return text; // 不匹配则原样返回
     }
-    public static String isXiFaEnglish(String text){
-        // 定义正则表达式
-        Pattern pattern = Pattern.compile("Issue(\\d+)(u)?");
-        Matcher matcher = pattern.matcher(text);
-
-        // 使用 StringBuffer 来构建替换后的字符串
-        StringBuffer sb = new StringBuffer();
-
-        while (matcher.find()) {
-            String number = matcher.group(1); // 提取数字部分
-            String unit = matcher.group(2); // 提取单位部分（可能为空）
-            String replacement = "-" + number + (unit != null ? unit : "");
-            matcher.appendReplacement(sb, replacement);
+    public static String isRuKuan(String text) {
+        if (text == null || text.isEmpty()) return text;
+        // 判断是否包含 “入款” 或 “deposit”
+        if (text.toLowerCase().contains("入款") || text.toLowerCase().contains("deposit")) {
+            // 提取数字和单位（支持正负号）
+            Pattern pattern = Pattern.compile("([+\\-]?\\d+)(u)?", Pattern.CASE_INSENSITIVE);
+            Matcher matcher = pattern.matcher(text);
+            if (matcher.find()) {
+                String number = matcher.group(1);   // 比如 "-300" 或 "200"
+                String unit = matcher.group(2);     // 比如 "u"
+                return "+" + number + (unit != null ? unit : "");
+            }
         }
-        matcher.appendTail(sb);
-        return  sb.toString();
+        return text; // 不匹配则原样返回
     }
+
+
+
+
 }

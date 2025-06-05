@@ -41,6 +41,7 @@ public class ConstantMap {
         // showArray 相关
         put("设置手续费(Set Fee)", "SZSXF");
         put("下发(Withdraw)", "XF");
+        put("入款(Deposit)", "RK");
         put("显示明细(Show Details)", "XSMX");
         put("隐藏明细(Hide Details)", "YCMX");
         put("将操作员显示(Show Operator)", "JCZYXS");
@@ -138,6 +139,7 @@ public class ConstantMap {
         // showArray 相关
         putEnglish("设置手续费", "SZSXF");
         putEnglish("下发", "XF");
+        putEnglish("入款", "RK");
         putEnglish("显示明细", "XSMX");
         putEnglish("隐藏明细", "YCMX");
         putEnglish("将操作员显示", "JCZYXS");

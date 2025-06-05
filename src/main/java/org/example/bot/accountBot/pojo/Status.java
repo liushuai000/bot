@@ -40,6 +40,12 @@ public class Status {
     private BigDecimal accountHandlerMoney=BigDecimal.ZERO;//全局入款手续费 account issue 里的手续费是记录单笔历史的
     @TableField("issue_handler_money")
     private BigDecimal issueHandlerMoney=BigDecimal.ZERO;//全局下方手续费
+    @TableField("old_money")
+    private boolean oldMoney;//老旧手续费  如果是老旧手续费 显示已修改用
+    @TableField("old_money_user_id")
+    private String oldMoneyUserId;//老旧手续费 的修改人
+    @TableField("old_money_person_time")
+    private Date oldMoneyPersonTime;//老旧手续费 的修改时间
     @TableField("show_handler_money_status")
     private int showHandlerMoneyStatus=1;//手续费显示状态：1表示不显示，0表示显示
     @TableField("set_time")
@@ -52,6 +58,9 @@ public class Status {
     private BigDecimal downExchange=BigDecimal.ZERO;    //下发汇率
     @TableField("down_rate")
     private BigDecimal downRate=BigDecimal.ZERO;    //下发费率
+
+
+
 
 
     public Date parseDate(){

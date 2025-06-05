@@ -304,13 +304,13 @@ public class SettingOperatorPerson{
             status.setShowFew(i);
             statusService.updateStatus("show_few"            ,i , userDTO.getGroupId());
             accountBot.sendMessage(sendMessage, "操作成功");
-        }else if (split1[0].startsWith("设置下发费率")){
-            BigDecimal downExchange=BigDecimal.valueOf(Long.parseLong(split1[0].substring("设置下发费率".length(), split1[0].length())));
+        }else if (split1[0].startsWith("设置下发汇率")){
+            BigDecimal downExchange=BigDecimal.valueOf(Long.parseLong(split1[0].substring("设置下发汇率".length(), split1[0].length())));
             status.setDownExchange(downExchange);
             statusMapper.updateById(status);
             accountBot.sendMessage(sendMessage, "操作成功");
-        } else if (split1[0].startsWith("设置下发汇率")) {
-            BigDecimal downRate=BigDecimal.valueOf(Long.parseLong(split1[0].substring("设置下发汇率".length(), split1[0].length())));
+        } else if (split1[0].startsWith("设置下发费率")) {
+            BigDecimal downRate=BigDecimal.valueOf(Long.parseLong(split1[0].substring("设置下发费率".length(), split1[0].length())));
             status.setDownRate(downRate);
             statusMapper.updateById(status);
             accountBot.sendMessage(sendMessage, "操作成功");

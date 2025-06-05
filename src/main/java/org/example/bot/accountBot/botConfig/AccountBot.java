@@ -224,15 +224,6 @@ public class AccountBot extends TelegramLongPollingBot {
         issue.setGroupId(userDTO.getGroupId());
         //没有用户名的情况下
         if (StringUtils.isEmpty(userDTO.getUsername()))userDTO.setUsername("");
-        if (groupInfoSetting.getEnglish()){
-            if (message.getText().contains(BaseConstant.showArray[1])){
-                message.setText(BaseConstant.isXiFa(message.getText()));
-            }
-        }else{
-            if (message.getText().contains(BaseConstant.showArrayEnglish[1])){
-                message.setText(BaseConstant.isXiFaEnglish(message.getText()));
-            }
-        }
         //查询最新数据用这个 dateOperator.selectIsRiqie dateOperator.checkRiqie
         dateOperator.checkRiqie(sendMessage,status);//检查日切时间  如果时间没到往前查24小时数据 如果时间到了 往后查大于当前时间的数据
         List<Account> accountList=dateOperator.selectIsRiqie(sendMessage,status,userDTO.getGroupId());
@@ -249,15 +240,6 @@ public class AccountBot extends TelegramLongPollingBot {
         ruzhangOperations.repealEn(message,sendMessage,accountList,replyToText,replayToMessageId,userDTO,issueList);
         //删除今日数据/关闭日切/
         dateOperator.deleteTodayData(message,sendMessage,userDTO.getGroupId(),status,accountList,issueList);
-        if (groupInfoSetting.getEnglish()){
-            if (split3[0].contains(BaseConstant.showArray[1])){
-                split3=BaseConstant.isXiFa(message.getText()).split("-");
-            }
-        }else{
-            if (split3[0].contains(BaseConstant.showArrayEnglish[1])){
-                split3=BaseConstant.isXiFaEnglish(message.getText()).split("-");
-            }
-        }
         //入账操作
         ruzhangOperations.inHandle(split2,message.getText(),  updateAccount,  sendMessage, accountList, message,split3,
                 rate,issue,issueList,userDTO,status,groupInfoSetting);
@@ -287,6 +269,7 @@ public class AccountBot extends TelegramLongPollingBot {
                         "\n" +
                         "我也可以查询TRC20地址如下：\n" +
                         "输入: 查询TEtYFxxxxxxxxj8W9pC\n" +
+                        "命令详情/detail"+
                         "\n" +
                         "➖➖➖➖➖➖➖➖➖➖➖\n" +
                         "<b>详情使用说明请私聊我</b> @"+this.getBotUsername();
@@ -380,6 +363,7 @@ public class AccountBot extends TelegramLongPollingBot {
                         "\n" +
                         "我也可以查询TRC20地址如下：\n" +
                         "输入: 查询TEtYFxxxxxxxxj8W9pC\n" +
+                        "命令详情/detail"+
                         "\n" +
                         "➖➖➖➖➖➖➖➖➖➖➖\n" +
                         "<b>详情使用说明请私聊我</b> @"+this.getBotUsername();
