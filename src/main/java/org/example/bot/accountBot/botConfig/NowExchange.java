@@ -77,7 +77,12 @@ public class NowExchange {
 
     public void Query(SendMessage sendMessage,Update update){
         String text = update.getMessage().getText();
-        String substring = text.substring(2, text.length());
+        String substring;
+        if (text.startsWith("Query")){
+            substring = text.substring("Query".length(), text.length());
+        }else {
+            substring = text.substring(2, text.length());
+        }
         Long groupId = update.getMessage().getChatId();
         if (StringUtils.isBlank(substring)){
             return;

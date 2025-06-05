@@ -9,8 +9,96 @@ import java.util.regex.Pattern;
 //此类记载所有常量
 public class BaseConstant {
     // 命令映射：中文 -> 英文
-    public static final Map<String, String> COMMAND_MAP = new LinkedHashMap<>();
+    static Map<String, String> constantMap = ConstantMap.COMMAND_MAP_ENGLISH;
+    // 英文命令常量数组示例
+    public final static String[] arrayEnglish = {
+            constantMap.get("通知"),
+            constantMap.get("设置日切"),
+            constantMap.get("开启日切"),
+            constantMap.get("关闭日切"),
+            constantMap.get("设置费率"),
+            constantMap.get("通知所有人"),
 
+            constantMap.get("设置汇率"),
+            constantMap.get("设置入款单笔手续费"),
+            constantMap.get("取消"),
+
+            constantMap.get("删除操作员"),
+            constantMap.get("删除操作人"),
+            constantMap.get("设置操作员"),
+            constantMap.get("设置操作人"),
+
+            constantMap.get("关闭回复人显示"),
+            constantMap.get("隐藏回复人显示"),
+
+            constantMap.get("设置入款单笔手续费"),
+            constantMap.get("设置入款手续费"),
+            constantMap.get("设置下发手续费"),
+            constantMap.get("设置下发单笔手续费"),
+            constantMap.get("设置单笔下发手续费"),
+            constantMap.get("设置单笔入款手续费")
+    };
+
+    public final static String[] showArrayEnglish = {
+            constantMap.get("设置手续费"),
+            constantMap.get("下发"),
+
+            constantMap.get("显示明细"),
+            constantMap.get("隐藏明细"),
+            constantMap.get("显示操作人名称"),
+            constantMap.get("将操作员显示"),
+            constantMap.get("显示操作人名字"),
+            constantMap.get("隐藏操作人名称"),
+            constantMap.get("隐藏操作人名字"),
+            constantMap.get("显示操作人"),
+            constantMap.get("显示操作员"),
+
+            constantMap.get("隐藏名字"),
+            constantMap.get("隐藏名称"),
+            constantMap.get("关闭显示"),
+            constantMap.get("将回复人显示"),
+            constantMap.get("显示回复人名称"),
+            constantMap.get("显示余额"),
+            constantMap.get("显示金额"),
+            constantMap.get("显示USDT"),
+            constantMap.get("显示usdt"),
+            constantMap.get("显示全部"),
+
+            constantMap.get("显示1条"),
+            constantMap.get("显示3条"),
+            constantMap.get("显示5条"),
+            constantMap.get("+0"),
+            constantMap.get("-0"),
+            constantMap.get("+0u"),
+            constantMap.get("-0u"),
+            constantMap.get("+0U"),
+            constantMap.get("-0U"),
+            constantMap.get("显示分类"),
+            constantMap.get("隐藏分类"),
+
+            constantMap.get("清理今天数据"),
+            constantMap.get("删除今天数据"),
+            constantMap.get("清理今天账单"),
+            constantMap.get("清理今日账单"),
+            constantMap.get("删除今日账单"),
+            constantMap.get("清理今天帐单"),
+            constantMap.get("删除今天账单"),
+
+            constantMap.get("删除账单"),
+            constantMap.get("删除今天帐单"),
+            constantMap.get("删除帐单"),
+            constantMap.get("清除账单"),
+            constantMap.get("清除帐单"),
+            constantMap.get("删除全部账单"),
+            constantMap.get("删除全部帐单"),
+            constantMap.get("删除全部账单"),
+            constantMap.get("清除全部账单"),
+
+            constantMap.get("撤销下发"),
+            constantMap.get("撤销入款"),
+            constantMap.get("显示手续费"),
+            constantMap.get("隐藏手续费")
+    };
     //SettingOperatorPerson也需要加 同步的
     public final static String[] array={
             "通知","设置日切","开启日切","关闭日切","设置费率","通知所有人",
@@ -18,7 +106,7 @@ public class BaseConstant {
             "删除操作员", "删除操作人","设置操作员", "设置操作人",
             "关闭回复人显示","隐藏回复人显示",
             "设置入款单笔手续费","设置入款手续费","设置下发手续费", "设置下发单笔手续费",
-            "设置单笔下发手续费","设置单笔入款手续费"
+            "设置单笔下发手续费","设置单笔入款手续费","设置下发费率","设置下发汇率"
     };
     //这个是需要显示账单的第一行都是contains 其余行都是equals 因为第一行有  下发-30.equals(下发)
     public final static String[] showArray={
@@ -30,28 +118,24 @@ public class BaseConstant {
             "删除账单", "删除今天帐单","删除帐单","清除账单","清除帐单", "删除全部账单","删除全部帐单", "删除全部账单","清除全部账单",
             "撤销下发","撤销入款","显示手续费","隐藏手续费",
     };
-    // 英文命令常量数组示例
-// array 对应英文翻译（1:1 对应）
-    public final static String[] arrayEnglish = {
+    public final static String[] arrayEnglish2 = {
             "Notice", "Set Daily Switch", "Enable Daily Switch", "Disable Daily Switch", "Set Rate", "Notify All",
-            "Set Exchange Rate", "Set Deposit Fee per Transaction", "Cancel",
-            "Delete Operator", "Delete Operator", "Set Operator", "Set Operator",
-            "Disable Replier Display", "Hide Replier Display",
-            "Set Deposit Fee per Transaction", "Set Deposit Fee", "Set Withdrawal Fee", "Set Withdrawal Fee per Transaction",
-            "Set Withdrawal Fee per Transaction", "Set Deposit Fee per Transaction"
+            "Set Exchange Rate", "Set Single Deposit Fee", "Cancel",
+            "Delete Operator", "Delete Operator", "Set Operator", "Set Operator Person",
+            "Hide Replyer Display", "Hide Replyer Info",
+            "Set Single Deposit Fee","Set Deposit Fee","Set Withdrawal Fee","Set Single Withdrawal Fee",
+            "Set Single Withdrawal Fee","Set Single Deposit Fee","Set the exchange rate", "Set the delivery rate"
     };
 
-
-    // showArray 对应英文翻译（1:1 对应）
-    public final static String[] showArrayEnglish = {
-            "Set Fee", "Withdrawal",
-            "Show Details", "Hide Details", "Show Operator Name", "Show Operator", "Show Operator Name", "Hide Operator Name",
-            "Hide Operator Name", "Hide Operator Name", "Show Operator", "Show Operator",
-            "Hide Names", "Hide Titles", "Turn Off Display", "Show Replier", "Show Replier Name", "Show Balance", "Show Amount", "Show USDT", "Show USDT", "Show All",
-            "Show 1 Entry", "Show 3 Entries", "Show 5 Entries", "+0", "-0", "+0u", "-0u", "+0U", "-0U", "Show Category", "Hide Category",
-            "Clear Today's Data", "Delete Today's Data", "Clear Today's Bill", "Clear Today's Bill", "Delete Today's Bill", "Clear Today's Record", "Delete Today's Bill",
-            "Delete Bill", "Delete Today's Record", "Delete Record", "Clear Bill", "Clear Record", "Delete All Bills", "Delete All Records", "Delete All Bills", "Clear All Bills",
-            "Revoke Withdrawal", "Revoke Deposit", "Show Fee", "Hide Fee"
+    public final static String[] showArrayEnglish2 = {
+            "Set Fee", "Withdraw",
+            "Show Details", "Hide Details", "Show Operator Name", "Show Operator Names", "Show Operator Name", "Hide Operator Name",
+            "Hide Name","Hide Names", "Hide Titles","Hide Display","Show Replyer","Show Replyer Name",
+            "Hide All", "Show Replier", "Show Replier Name", "Show Balance", "Show Amount", "Show USDT", "Show All",
+            "Show 1 Record", "Show 3 Record", "Show 5 Record", "+0", "-0", "+0u", "-0u", "+0U", "-0U", "Show Category",
+            "Hide Category","Clear Today Data","Delete Today Data","Clear Today Bill","Delete Today Bill",
+            "Delete Bill","Clear Bill","Delete All Bills","Clear All Bills","Undo Withdrawal","Undo Deposit",
+            "Show Fee","Hide Fee","Bill","View Bill","Show Bill",
     };
 
     /**
@@ -87,12 +171,29 @@ public class BaseConstant {
         }
         return temp;
     }
+    public static boolean getMessageContentIsContainEnglish2(String text) {
+        // 合并两个数组
+        String[] combinedArray = Arrays.copyOf(arrayEnglish2, arrayEnglish2.length + showArrayEnglish2.length);
+        System.arraycopy(showArrayEnglish2, 0, combinedArray, arrayEnglish2.length, showArrayEnglish2.length);
+        boolean b = equalsAny(arrayEnglish2, text);
+        boolean b1 = containsAny(showArrayEnglish2, text);
+        boolean temp;
+        if (b){
+            temp= true;
+        }else {
+            temp = b1;
+        }
+        return temp;
+    }
     //判断群组内消息 是否直接显示账单
     public static boolean showReplay(String text) {
         return  containsAny(showArray, text);//包含0  equals0
     }
     public static boolean showReplayEnglish(String text) {
         return  containsAny(showArrayEnglish, text);//包含0  equals0
+    }
+    public static boolean showReplayEnglish2(String text) {
+        return  containsAny(showArrayEnglish2, text);//包含0  equals0
     }
     public static boolean equalsAny(String[] array, String input) {
         for (String str : array) {
@@ -104,6 +205,9 @@ public class BaseConstant {
     }
     public static boolean containsAny(String[] array, String input) {
         for (String str : array) {
+            if (array[0]==null){
+                System.err.println(input+"-"+array[0]+" - "+array[1]);
+            }
             if(input.contains(array[0])||input.contains(array[1])){
                 return true;
             }

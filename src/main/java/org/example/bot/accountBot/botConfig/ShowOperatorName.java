@@ -39,10 +39,10 @@ public class ShowOperatorName {
     //显示操作人名字  显示账单用
     public void  replay(SendMessage sendMessage, UserDTO userDTO, Account updateAccount, Rate rate, List<Issue> issuesList, Issue issue,
                         String text, Status status, GroupInfoSetting groupInfoSetting) {
-        if (!BaseConstant.showReplay(text) && !BaseConstant.showReplayEnglish(text)) return;
+        if (!this.isEmptyMoney(text) && !BaseConstant.showReplay(text) && !BaseConstant.showReplayEnglish(text)&& !BaseConstant.showReplayEnglish2(text)) return;
         buttonList.implList(sendMessage,userDTO.getGroupId(),userDTO.getGroupTitle(),groupInfoSetting);
         String iusseText="";
-        //重新获取最新的数据
+        //重新获取最新的数据 +00000
         List<Account> accounts = dateOperator.selectIsRiqie(sendMessage,status,userDTO.getGroupId());
         List<String> newList = new ArrayList<>();
         List<String> newIssueList=new ArrayList<>();
@@ -88,8 +88,30 @@ public class ShowOperatorName {
             return true;
         } else if (text.equals("-0U")) {
             return true;
-        }else {
+        }else if (text.startsWith("+")|| text.startsWith("-")){
+            if (text.length()<=1)return false;
+            if (text.endsWith("u")){
+                if (text.length()<=2)return false;
+                else if (text.substring(1, text.length()).endsWith("U")) {
+                    String substring = text.substring(1, text.length() - 1);
+                    BigDecimal num=new BigDecimal(substring);
+                    if (num.compareTo(BigDecimal.ZERO)==0){
+                        return true;
+                    }else {
+                        return false;
+                    }
+                }
+            }else {
+                BigDecimal num=new BigDecimal(text.substring(1, text.length()));
+                if (num.compareTo(BigDecimal.ZERO)==0){
+                    return true;
+                }else {
+                    return false;
+                }
+            }
+        }else{
             return false;
         }
+        return false;
     }
 }

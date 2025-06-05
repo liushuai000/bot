@@ -22,6 +22,12 @@ public class CallbackUserDTO {
     private AtomicReference<BigDecimal> count = new AtomicReference<>(BigDecimal.ZERO);//总入款
     @ApiModelProperty("countDowned")
     private AtomicReference<BigDecimal> countDowned = new AtomicReference<>(BigDecimal.ZERO);//总下发
+    @ApiModelProperty("countUSDT")
+    private AtomicReference<BigDecimal> countUSDT = new AtomicReference<>(BigDecimal.ZERO);//总入款
+    @ApiModelProperty("countDownedUSDT")
+    private AtomicReference<BigDecimal> countDownedUSDT = new AtomicReference<>(BigDecimal.ZERO);//总下发U显示
+    @ApiModelProperty("downingUSDT")
+    private AtomicReference<BigDecimal> downingUSDT = new AtomicReference<>(BigDecimal.ZERO);
     @ApiModelProperty("countCishu")
     private int countCishu;//总入款次数
     @ApiModelProperty("countDownedCishu")
@@ -43,6 +49,36 @@ public class CallbackUserDTO {
             BigDecimal currentTotal = this.count.get();
             BigDecimal newTotal = currentTotal.add(amount);
             this.count.set(newTotal);
+        } else {
+            // 处理 null 值，可以根据业务需求进行调整
+            System.out.println("Amount cannot be null");
+        }
+    }
+    public void addTotalUSDT(BigDecimal amount) {
+        if (amount != null) {
+            BigDecimal currentTotal = this.countUSDT.get();
+            BigDecimal newTotal = currentTotal.add(amount);
+            this.countUSDT.set(newTotal);
+        } else {
+            // 处理 null 值，可以根据业务需求进行调整
+            System.out.println("Amount cannot be null");
+        }
+    }
+    public void addIssueDowningUSDT(BigDecimal amount) {
+        if (amount != null) {
+            BigDecimal currentTotal = this.downingUSDT.get();
+            BigDecimal newTotal = currentTotal.add(amount);
+            this.downingUSDT.set(newTotal);
+        } else {
+            // 处理 null 值，可以根据业务需求进行调整
+            System.out.println("Amount cannot be null");
+        }
+    }
+    public void addIssueTotalUSDT(BigDecimal amount) {
+        if (amount != null) {
+            BigDecimal currentTotal = this.countDownedUSDT.get();
+            BigDecimal newTotal = currentTotal.add(amount);
+            this.countDownedUSDT.set(newTotal);
         } else {
             // 处理 null 值，可以根据业务需求进行调整
             System.out.println("Amount cannot be null");

@@ -1,6 +1,7 @@
 package org.example.bot.accountBot.botConfig;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import io.swagger.models.auth.In;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.example.bot.accountBot.dto.UserDTO;
@@ -48,6 +49,8 @@ public class AccountBot extends TelegramLongPollingBot {
     @Autowired
     protected SettingOperatorPerson settingOperatorPerson;   //设置操作人员
     @Autowired
+    private SettingOperatorPersonEnglish settingOperatorPersonEnglish;//setHandle
+    @Autowired
     protected RuzhangOperations ruzhangOperations;    //入账和入账时发送的消息
     @Autowired
     protected NotificationService notificationService;
@@ -63,7 +66,9 @@ public class AccountBot extends TelegramLongPollingBot {
     private GroupInfoSettingMapper groupInfoSettingMapper;//中英文切换
     @Autowired
     private GroupInfoSettingBotMessage groupInfoSettingBotMessage;//注意处理进群记录用户信息或者是 切换中英文
-    ConstantMap constantMap=new ConstantMap();//关键词的对应关系
+    @Autowired
+    private PermissionUser permissionUser;//查询本群权限人
+
     @Override
     public String getBotUsername() {
         return username;
@@ -76,8 +81,10 @@ public class AccountBot extends TelegramLongPollingBot {
     public void onUpdateReceived(Update update) {
         onJinQunMessage(update);
         String replyToText=null;
+        Integer replayToMessageId=null;
         if (update != null && update.getMessage() != null && update.getMessage().getReplyToMessage() != null) {
             replyToText = update.getMessage().getReplyToMessage().getText();
+            replayToMessageId = update.getMessage().getReplyToMessage().getMessageId();
             if (replyToText != null) {
                 log.info("ReplyToText: {}", replyToText);
             }
@@ -104,10 +111,9 @@ public class AccountBot extends TelegramLongPollingBot {
         }
         userDTO.setInfo(message);
         sendMessage.setChatId(String.valueOf(message.getChatId()==null?"":message.getChatId()));
-        if (update.hasMessage() && update.getMessage().hasText()) this.BusinessHandler(message,sendMessage,replyToText,userDTO,update);
+        if (update.hasMessage() && update.getMessage().hasText()) this.BusinessHandler(message,sendMessage,replyToText,replayToMessageId,userDTO,update);
     }
-
-    public void BusinessHandler(Message message,SendMessage sendMessage, String replyToText, UserDTO userDTO,Update update) {
+    public void BusinessHandler(Message message,SendMessage sendMessage, String replyToText,Integer replayToMessageId, UserDTO userDTO,Update update) {
         GroupInfoSetting groupInfoSetting = groupInfoSettingMapper.selectOne(new QueryWrapper<GroupInfoSetting>().eq("group_id", userDTO.getGroupId()));
         //切换中英文初始化 或更新
         if (message.getChat().isGroupChat()||message.getChat().isSuperGroupChat()){
@@ -115,16 +121,17 @@ public class AccountBot extends TelegramLongPollingBot {
         } else if (message.getChat().isUserChat()) {
             groupInfoSetting= groupInfoSettingBotMessage.getGroupOrCreate(userDTO.getText(), Long.valueOf(userDTO.getUserId()));
         }
-        if (userDTO.getText().equals("/detail")){
-            String sc="<strong>中英文对应如下(The Chinese and English correspondence is as follows)</strong>\n";
-            String allCommandsDetail = constantMap.getAllCommandsDetail();
+        if (userDTO.getText().equals("/detail"+"@"+username)||userDTO.getText().equals("/detail")){
+            String sc="<strong>中英文对应如下以下命令包括括号里的都可识别(The Chinese and English correspondence is as follows)</strong>\n";
+            String allCommandsDetail = new ConstantMap().getAllCommandsDetail();
             SendMessage sendMessageDetail = new SendMessage();
             if (message.getChat().isUserChat()){
                 sendMessageDetail.setChatId(userDTO.getUserId());
             }else {
                 sendMessageDetail.setChatId(userDTO.getGroupId());
             }
-            this.sendMessage(sendMessageDetail,sc+allCommandsDetail);
+            sendMessageDetail.setText(sc+allCommandsDetail);
+            this.sendMessage(sendMessageDetail);
         }
         //私聊的机器人  处理个人消息
         if (message.getChat().isUserChat()){
@@ -132,7 +139,7 @@ public class AccountBot extends TelegramLongPollingBot {
             paperPlaneBotSinglePerson.handleNonGroupMessage(message,sendMessage,userDTO);
             return;
         }
-        if(userDTO.getText().startsWith("查询")){
+        if(userDTO.getText().startsWith("查询") || userDTO.getText().startsWith("CX") || userDTO.getText().startsWith("Query")){
             nowExchange.Query(sendMessage,update);
         }
         User userTemp = userService.findByUserId(userDTO.getUserId());
@@ -152,11 +159,16 @@ public class AccountBot extends TelegramLongPollingBot {
         //计算器功能
         utils.counter(message,sendMessage);
         notificationService.initNotification(userDTO);
+        UserNormal userNormalTempAdmin =userNormalService.selectByGroupId(userDTO.getGroupId());//超级管理
+        if (message.getText().equals("权限人") || message.getText().equals("管理员")
+                || message.getText().toLowerCase().equals("authorized person")||  message.getText().toLowerCase().equals("admin")){
+            permissionUser.getPermissionUser(sendMessage,userDTO,user1,userNormalTempAdmin);
+        }
         if (message.getText().charAt(0)!='+' && message.getText().charAt(0)!='-' &&
-                (!BaseConstant.getMessageContentIsContain(message.getText()) && !BaseConstant.getMessageContentIsContainEnglish(message.getText()))) {
+                (!BaseConstant.getMessageContentIsContain(message.getText()) && !BaseConstant.getMessageContentIsContainEnglish(message.getText())
+                        && !BaseConstant.getMessageContentIsContainEnglish2(message.getText()))) {
             return ;
         }
-        UserNormal userNormalTempAdmin =userNormalService.selectByGroupId(userDTO.getGroupId());//超级管理
         UserOperation userOperation = userOperationService.selectByUserAndGroupId(userDTO.getUserId(), userDTO.getGroupId());
         if (userOperation==null){
             userOperation= userOperationService.selectByUserName(userDTO.getUsername(), userDTO.getGroupId());
@@ -222,17 +234,19 @@ public class AccountBot extends TelegramLongPollingBot {
             }
         }
         //查询最新数据用这个 dateOperator.selectIsRiqie dateOperator.checkRiqie
-        dateOperator.checkRiqie(sendMessage,status);//检查日切时间
+        dateOperator.checkRiqie(sendMessage,status);//检查日切时间  如果时间没到往前查24小时数据 如果时间到了 往后查大于当前时间的数据
         List<Account> accountList=dateOperator.selectIsRiqie(sendMessage,status,userDTO.getGroupId());
         List<Issue> issueList=dateOperator.selectIsIssueRiqie(sendMessage,status,userDTO.getGroupId());
         //设置日切 如果日切时间没结束 第二次设置日切 也需要修改账单的日切时间
         dateOperator.isOver24HourCheck(message, sendMessage, userDTO, status,accountList,issueList);
         //设置操作人员
         settingOperatorPerson.setHandle(split1, sendMessage,message.getText(),userDTO,user1,status,groupInfoSetting);
+        settingOperatorPersonEnglish.setHandle(sendMessage,message.getText(),userDTO,user1,status,groupInfoSetting);
         //设置费率/汇率
         ruzhangOperations.setRate(message,sendMessage,rate);
         //撤销入款
-        ruzhangOperations.repeal(message,sendMessage,accountList,replyToText,userDTO,issueList);
+        ruzhangOperations.repeal(message,sendMessage,accountList,replyToText,replayToMessageId,userDTO,issueList);
+        ruzhangOperations.repealEn(message,sendMessage,accountList,replyToText,replayToMessageId,userDTO,issueList);
         //删除今日数据/关闭日切/
         dateOperator.deleteTodayData(message,sendMessage,userDTO.getGroupId(),status,accountList,issueList);
         if (groupInfoSetting.getEnglish()){
@@ -249,6 +263,7 @@ public class AccountBot extends TelegramLongPollingBot {
                 rate,issue,issueList,userDTO,status,groupInfoSetting);
         //删除操作人员
         settingOperatorPerson.deleteHandle(message.getText(),sendMessage,userDTO);
+        settingOperatorPersonEnglish.deleteHandleEnglish(message.getText(),sendMessage,userDTO);
         //通知功能
         notificationService.inform(message.getText(),sendMessage);
     }
@@ -482,7 +497,7 @@ public class AccountBot extends TelegramLongPollingBot {
             e.printStackTrace(); // 处理异常
         }
     }
-    public void sendMessage(SendMessage sendMessage,String text) {
+    public Integer sendMessage(SendMessage sendMessage,String text) {
         text = groupInfoSettingBotMessage.handler(sendMessage.getChatId(),text);
         sendMessage.setText(text);
         sendMessage.enableHtml(true);
@@ -490,10 +505,12 @@ public class AccountBot extends TelegramLongPollingBot {
 //        sendMessage.enableMarkdown(true);
         try {
             log.info("发送消息:{}", text);
-            execute(sendMessage);
+            Message execute = execute(sendMessage);
+            return execute.getMessageId();
         } catch (Exception e) {
             log.info(e.getMessage());
         }
+        return null;
     }
 
     public void sendMessage(SendMessage sendMessage) {

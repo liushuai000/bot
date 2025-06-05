@@ -59,7 +59,7 @@ public class Utils{
     public static final Pattern pattern3 = Pattern.compile("([+-]?\\d+)/([+-]?\\d+)");
     public static void main(String[] args) {
         // 原始字符串
-        String originalString = "-600";
+        String originalString = "下发-3857.14u";
 
         // 定义正则表达式
         Pattern pattern = Pattern.compile("下发(\\d+)(u)?");
@@ -163,7 +163,6 @@ public class Utils{
         updateAccount.setDowning(downing.setScale(2, RoundingMode.HALF_UP));
         updateAccount.setDown(downing.subtract(downed));
         updateAccount.setRiqie(status.isRiqie());
-        updateAccount.setSetTime(status.getSetTime());
         log.info("应下发:{},总入账:{},account:{}", downing, total, updateAccount);
         accountService.insertAccount(updateAccount);
         issueService.updateIssueDown(down.add(t),updateAccount.getGroupId());
@@ -183,7 +182,6 @@ public class Utils{
         updateAccount.setDown(downing.subtract(downed));
         updateAccount.setRateId(rate.getId());
         updateAccount.setRiqie(status.isRiqie());
-        updateAccount.setSetTime(status.getSetTime());
         accountService.insertAccount(updateAccount);
         //应该是新增加一条 已出帐记录吧!issueService.insert();
         issueService.updateIssueDown(down.add(t),updateAccount.getGroupId());
@@ -200,7 +198,7 @@ public class Utils{
         issue.setDown(down.subtract(downed));
         issue.setDowned(downed);
         issue.setRiqie(status.isRiqie());
-        issue.setSetTime(status.getSetTime());
+//        issue.setSetTime(status.getSetTime());
         User byUserId = userService.findByUserId(messageUserId);
         if (byUserId!=null){
             issueService.insertIssue(issue);

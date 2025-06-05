@@ -21,14 +21,14 @@ logging:
   pattern:
     console: '%d{YYYY-MM-dd HH:mm:ss.SSS} %clr(%-5level) --- [%-15thread]%cyan(%-50logger{50}):%msg%n'
 #这个是超级管理员 可以私聊别人设置管理员权限
-#adminUserId: 6102261377 #教父
-#botUserId: 6736457256
-#Origin: http://43.128.113.117:8081
-#vueUrl: http://www.yaoke.cc/
-adminUserId: 6721175591 #昊天
-botUserId: 6749246766
-vueUrl: http://www.bot2025.cc/
-Origin: http://43.134.137.221:8081
+adminUserId: 6890367940 #教父
+botUserId: 7823327297
+Origin: http://43.128.113.117:8081
+vueUrl: http://www.yaoke.cc/
+#adminUserId: 6721175591 #昊天
+#botUserId: 6749246766
+#vueUrl: http://www.bot2025.cc/
+#Origin: http://43.134.137.221:8081
 
 apiKey: 2967e678-556e-497a-a892-a1dcee897ba5
 #获取最新汇率
@@ -38,9 +38,9 @@ tranHistoryUrl: https://apilist.tronscanapi.com/api/filter/trc20/transfers?limit
 telegram:
   bot:
     #正式环境
-#    token: 6736457256:AAHo8BBhs9E3hIG4xBkiAiZEYnVCcNoEKDM
-#    username: Evipbot #117
-    token: 6749246766:AAGzDFvqbaQMBugLcdlSVli_UtocxsLSMxU
-    username: Yvipbot #221服务  第二个打卡机器人
+    token: 7823327297:AAFyk7Dmh4feR-X_MXfvq755WiMFl88eqR8
+    username: vip1111111bot #117
+#    token: 6749246766:AAGzDFvqbaQMBugLcdlSVli_UtocxsLSMxU
+#    username: Yvipbot #221服务  第二个打卡机器人
 
 

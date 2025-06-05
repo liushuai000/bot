@@ -92,8 +92,6 @@ public class AccountServiceImpl implements AccountService {
             returnFromType.setCallbackData(callbackUserDTOList);
             List<OperationUserDTO> operationUserDTOList=this.getOperationUserDTO(accountDTOList,issueDTOList);
             returnFromType.setOperationData(operationUserDTOList);
-
-
             return returnFromType;
         } catch (Exception e) {
             // 记录日志或返回空列表
@@ -128,13 +126,19 @@ public class AccountServiceImpl implements AccountService {
                         if (accountSummary==null){
                             accountSummary = new OperationUserDTO();
                             accountSummary.addTotal(total);
+                            BigDecimal totalUSDT = total.divide(exchange, 2, BigDecimal.ROUND_HALF_UP);
+                            accountSummary.addTotalUSDT(totalUSDT);
                             accountSummary.addIssueDowning(downing);
+                            accountSummary.addIssueDowningUSDT(downing.divide(exchange, 2, BigDecimal.ROUND_HALF_UP));
                             accountSummary.incrementCount();
                             summaryMap.put(userId,accountSummary);
                         }else {
                             accountSummary.addIssueDowning(downing);
+                            accountSummary.addIssueDowningUSDT(downing.divide(exchange, 2, BigDecimal.ROUND_HALF_UP));
                             accountSummary.incrementCount();
                             accountSummary.addTotal(total);
+                            BigDecimal totalUSDT = total.divide(exchange, 2, BigDecimal.ROUND_HALF_UP);
+                            accountSummary.addTotalUSDT(totalUSDT);
                         }
                         accountSummary.setRate(rate.multiply(BigDecimal.valueOf(0.01)));
                         accountSummary.setExchange(exchange);
@@ -155,11 +159,13 @@ public class AccountServiceImpl implements AccountService {
                     if (accountSummary==null){
                         accountSummary = new OperationUserDTO();
                         accountSummary.addIssueTotal(total);
+                        accountSummary.addIssueTotalUSDT(total.divide(exchange, 2, BigDecimal.ROUND_HALF_UP));
                         accountSummary.IssueIncrementCount();
                         summaryMap.put(userId,accountSummary);
                     }else {
                         accountSummary.IssueIncrementCount();
                         accountSummary.addIssueTotal(total);
+                        accountSummary.addIssueTotalUSDT(total.divide(exchange, 2, BigDecimal.ROUND_HALF_UP));
                     }
                     accountSummary.setDown(down);
                     accountSummary.setExchange(exchange);
@@ -186,14 +192,20 @@ public class AccountServiceImpl implements AccountService {
                         CallbackUserDTO accountSummary = summaryMap.get(userId);
                         if (accountSummary==null){
                             accountSummary = new CallbackUserDTO();
-                            accountSummary.addIssueDowning(downing);
                             accountSummary.addTotal(total);
+                            BigDecimal totalUSDT = total.divide(exchange, 2, BigDecimal.ROUND_HALF_UP);
+                            accountSummary.addTotalUSDT(totalUSDT);
+                            accountSummary.addIssueDowning(downing);
+                            accountSummary.addIssueDowningUSDT(downing.divide(exchange, 2, BigDecimal.ROUND_HALF_UP));
                             accountSummary.incrementCount();
                             summaryMap.put(userId,accountSummary);
                         }else {
-                            accountSummary.addIssueDowning(downing);
                             accountSummary.incrementCount();
                             accountSummary.addTotal(total);
+                            BigDecimal totalUSDT = total.divide(exchange, 2, BigDecimal.ROUND_HALF_UP);
+                            accountSummary.addTotalUSDT(totalUSDT);
+                            accountSummary.addIssueDowning(downing);
+                            accountSummary.addIssueDowningUSDT(downing.divide(exchange, 2, BigDecimal.ROUND_HALF_UP));
                         }
                         accountSummary.setExchange(exchange);
                         accountSummary.setRate(rate.multiply(BigDecimal.valueOf(0.01)));
@@ -215,12 +227,14 @@ public class AccountServiceImpl implements AccountService {
                         if (accountSummary==null){
                             accountSummary = new CallbackUserDTO();
                             accountSummary.addIssueTotal(total);
+                            accountSummary.addIssueTotalUSDT(total.divide(exchange, 2, BigDecimal.ROUND_HALF_UP));
 //                            accountSummary.addIssueDowning(downing);
                             accountSummary.IssueIncrementCount();
                             summaryMap.put(userId,accountSummary);
                         }else {
                             accountSummary.IssueIncrementCount();
 //                            accountSummary.addIssueDowning(downing);
+                            accountSummary.addIssueTotalUSDT(total.divide(exchange, 2, BigDecimal.ROUND_HALF_UP));
                             accountSummary.addIssueTotal(total);
                         }
                         accountSummary.setExchange(exchange);
@@ -263,7 +277,7 @@ public class AccountServiceImpl implements AccountService {
         if (!findAll) {
             if (StringUtils.isNotBlank(username)) {
                 QueryWrapper<User> userQueryWrapper = new QueryWrapper<>();
-                userQueryWrapper.eq("username", username.trim());
+                userQueryWrapper.like("username", username.trim());
                 User user = userMapper.selectOne(userQueryWrapper);
                 if (user == null) {
                     throw new NoSuchElementException("User not found for username: " + username);
@@ -273,7 +287,7 @@ public class AccountServiceImpl implements AccountService {
                         .filter(Objects::nonNull)
                         .filter(account -> {
                             if (operation==null) {
-                                return true;
+                                return account.getUserId().equals(userId)||userId.equals(account.getCallBackUserId());
                             } else if (operation){
                                 return account.getUserId().equals(userId);
                             }else {
@@ -341,7 +355,7 @@ public class AccountServiceImpl implements AccountService {
         if (!findAll) {
             if (StringUtils.isNotBlank(username)) {
                 QueryWrapper<User> userQueryWrapper = new QueryWrapper<>();
-                userQueryWrapper.eq("username", username.trim());
+                userQueryWrapper.like("username", username.trim());
                 User user = userMapper.selectOne(userQueryWrapper);
                 if (user == null) {
                     throw new NoSuchElementException("User not found for username: " + username);
@@ -349,7 +363,7 @@ public class AccountServiceImpl implements AccountService {
                 String userId = user.getUserId();
                 accountList = accounts.stream().filter(Objects::nonNull).filter(account -> {
                             if (operation==null) {
-                                return true;
+                                return account.getUserId().equals(userId)||userId.equals(account.getCallBackUserId());
                             } else if (operation){
                                 return account.getUserId().equals(userId);
                             }else {
@@ -432,32 +446,6 @@ public class AccountServiceImpl implements AccountService {
         accountMapper.delete(updateWrapper);
     }
 
-    @Override
-    public void updateRiqie(int id,boolean riqie) {
-        UpdateWrapper<Account> updateWrapper = new UpdateWrapper<>();
-        updateWrapper.eq("id",id);
-        updateWrapper.set("riqie",riqie);
-        accountMapper.update(null,updateWrapper);
-    }
-
-    @Override
-    public void updateLastUpdateRiqie(int id,boolean riqie,Date updateTime) {
-        UpdateWrapper<Account> updateWrapper = new UpdateWrapper<>();
-        updateWrapper.eq("id",id);
-        updateWrapper.set("update_time",updateTime);
-        updateWrapper.set("riqie",riqie);
-        accountMapper.update(null,updateWrapper);
-    }
-
-    @Override
-    public void updateSetTime(String id, Date setTime) {
-        UpdateWrapper<Account> updateWrapper = new UpdateWrapper<>();
-        updateWrapper.eq("id",id);
-        updateWrapper.set("set_time",setTime);
-        accountMapper.update(null,updateWrapper);
-    }
-
-
     public void deleteTodayData(Status status, String groupId) {
         LocalDateTime startOfDay = LocalDateTime.now().withHour(0).withMinute(0).withSecond(0);
         LocalDateTime endOfDay = LocalDateTime.now().withHour(23).withMinute(59).withSecond(59);
@@ -474,10 +462,7 @@ public class AccountServiceImpl implements AccountService {
     }
 
     public void deleteInData(String id,String groupId) {
-        UpdateWrapper<Account> updateWrapper = new UpdateWrapper<>();
-        updateWrapper.eq("id",id);
-        updateWrapper.eq("group_id",groupId);
-        accountMapper.delete(updateWrapper);
+        accountMapper.delete(new QueryWrapper<Account>().eq("id",id).eq("group_id",groupId));
     }
 
     public void updateDown(BigDecimal add, String groupId) {

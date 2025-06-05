@@ -167,7 +167,8 @@ public class PaperPlaneBotSinglePerson {
         Map<String,String> buttonTextMap=new HashMap<>();
         buttonTextMap.put("监听该地址","监听该地址");
         buttonTextMap.put("查询交易记录","查询交易记录");
-        GroupInfoSetting groupInfoSetting = groupInfoSettingMapper.selectOne(new QueryWrapper<GroupInfoSetting>().eq("group_id", userDTO.getGroupId()));
+        //这里是私聊的查询 所以用user_id
+        GroupInfoSetting groupInfoSetting = groupInfoSettingMapper.selectOne(new QueryWrapper<GroupInfoSetting>().eq("group_id", userDTO.getUserId()));
         buttonList.sendButton(sendMessage, String.valueOf(userId),buttonTextMap,groupInfoSetting);
         accountBot.tronAccountMessageText(sendMessage,userId,result);
     }
@@ -176,21 +177,22 @@ public class PaperPlaneBotSinglePerson {
 
     //设置机器人在群组内的有效时间 默认免费使用日期6小时. 机器人底部按钮 获取个人信息 获取最新用户名 获取个人id 使用日期;
     protected void handleNonGroupMessage(Message message, SendMessage sendMessage, UserDTO userDTO) {
-        String text = userDTO.getText();
+        String text = userDTO.getText().toLowerCase();
         //授权-123456789-30  用户id -30
         PaperPlaneBotButton buttonList = new PaperPlaneBotButton();
         GroupInfoSetting groupInfoSetting = groupInfoSettingMapper.selectOne(new QueryWrapper<GroupInfoSetting>().eq("group_id", userDTO.getUserId()));
         ReplyKeyboardMarkup replyKeyboardMarkup = buttonList.sendReplyKeyboard(groupInfoSetting);
         sendMessage.setReplyMarkup(replyKeyboardMarkup);//是否在onUpdateReceived设置
         String regex = "^授权-[a-zA-Z0-9]+-[a-zA-Z0-9]+$";
+        String regexEn = "^authorization-[a-zA-Z0-9]+-[a-zA-Z0-9]+$";
         String[] split3 = text.split("-");
-        if (text.equals("获取个人信息") || text.equals("Access to personal information")){
+        if (text.equals("获取个人信息") || text.equals("access to personal information")){
             this.getUserInfoMessage(message,sendMessage,userDTO);
             return;
-        }else if (text.equals("监听列表") || text.equals("Listening List")){
+        }else if (text.equals("监听列表") || text.equals("listening list")){
             this.getListening(message,sendMessage,userDTO);
             return;
-        }else if (text.equals("使用说明") || text.equals("Instructions")){
+        }else if (text.equals("使用说明") || text.equals("instructions")){
             this.useInfo(message,sendMessage,userDTO);
             return;
         }else if (text.contains("##") &&text.length()>=37){
@@ -209,7 +211,7 @@ public class PaperPlaneBotSinglePerson {
             accountBot.sendMessage(sendMessage,messageResult);
             return;
         }
-        if (text.contains("授权") || text.contains("Authorization")){
+        if (text.contains("授权")){
             if (text.startsWith("授权-")&&!userDTO.getUserId().equals(adminUserId)){
                 accountBot.sendMessage(sendMessage,"您不是超级管理!无权限设置管理员!");
                 return;
@@ -276,21 +278,89 @@ public class PaperPlaneBotSinglePerson {
             accountBot.sendMessage(sendMessage,"用户ID: "+userId+" 有效期:"+tomorrow.getYear()+"年"+tomorrow.getMonthValue()+ "月"+
                     tomorrow.getDayOfMonth()+"日"+ tomorrow.getHour()+"时"+tomorrow.getMinute()+"分" +tomorrow.getSecond()+"秒");
             return;
+        } else if (text.contains("authorization")) {
+            if (text.startsWith("authorization-")&&!userDTO.getUserId().equals(adminUserId)){
+                accountBot.sendMessage(sendMessage,"您不是超级管理!无权限设置管理员!");
+                return;
+            }
+            boolean matches = text.matches(regexEn);
+            String validTimeText = "";
+            String userId=split3[1];
+            User user=userService.findByUserId(userId);
+            if (matches) {
+                validTimeText=split3[2];
+            }else {
+                accountBot.sendMessage(sendMessage,"格式不匹配!");
+                return;
+            }
+            LocalDateTime tomorrow= LocalDateTime.now().plusDays(Long.parseLong(validTimeText));
+            Date validTime = Date.from(tomorrow.atZone(ZoneId.systemDefault()).toInstant());
+            if (user == null) {
+                user = new User();
+                user.setUserId(userId);
+                user.setUsername(userDTO.getUsername());
+                user.setFirstName(userDTO.getFirstName());
+                user.setLastName(userDTO.getLastName());
+                user.setCreateTime(new Date());
+                user.setSuperAdmin(true);//是管理员
+                user.setValidFree(true);
+                user.setValidTime(validTime);
+                userService.insertUser(user);
+                UserNormal userNormal = new UserNormal();
+                userNormal.setAdmin(true);
+                userNormal.setGroupId(message.getChatId().toString());
+                userNormal.setUserId(userDTO.getUserId());
+                userNormal.setCreateTime(new Date());
+                userNormal.setUsername(userDTO.getUsername());
+                userNormalService.insertUserNormal(userNormal);
+                UserOperation userOperation = new UserOperation();
+                userOperation.setAdminUserId(userDTO.getUserId());
+                userOperation.setOperation(true);
+                userOperation.setUserId(userDTO.getUserId());
+                userOperation.setUsername(userDTO.getUsername());
+                userOperation.setGroupId(message.getChatId().toString());
+                userOperation.setCreateTime(new Date());
+                userOperationService.insertUserOperation(userOperation);
+            }else {
+                user.setSuperAdmin(true);//默认操作权限管理员
+                user.setValidTime(validTime);
+                user.setValidFree(true);
+                userService.updateUserValidTime(user,validTime);
+                UserNormal userNormal = new UserNormal();
+                userNormal.setAdmin(true);
+                userNormal.setGroupId(message.getChatId().toString());
+                userNormal.setUserId(userDTO.getUserId());
+                userNormal.setCreateTime(new Date());
+                userNormal.setUsername(userDTO.getUsername());
+                userNormalService.insertUserNormal(userNormal);
+                UserOperation userOperation = new UserOperation();
+                userOperation.setAdminUserId(userDTO.getUserId());
+                userOperation.setOperation(true);
+                userOperation.setUserId(userDTO.getUserId());
+                userOperation.setUsername(userDTO.getUsername());
+                userOperation.setGroupId(message.getChatId().toString());
+                userOperation.setCreateTime(new Date());
+                userOperationService.insertUserOperation(userOperation);
+            }
+            accountBot.sendMessage(sendMessage,"用户ID: "+userId+" 有效期:"+tomorrow.getYear()+"年"+tomorrow.getMonthValue()+ "月"+
+                    tomorrow.getDayOfMonth()+"日"+ tomorrow.getHour()+"时"+tomorrow.getMinute()+"分" +tomorrow.getSecond()+"秒");
+            return;
         }
-        if (text.equals("/start")) accountBot.tronAccountMessageTextHtml(sendMessage,userDTO.getUserId(),"<b>你好！欢迎使用本机器人：\n" +
+        if (text.equals("/start")) accountBot.tronAccountMessageTextHtml(sendMessage,userDTO.getUserId(),"你好！<b>欢迎使用本机器人：\n" +
                 "\n" +
-                "<b>点击下方底部按钮：获取个人信息</b>\n" +
-                "<b>（将我拉入群组可免费使用8小时）</b>\n" +
+                "点击下方底部按钮：获取个人信息\n" +
+                "（将我拉入群组可免费使用8小时）\n" +
                 "\n" +
-                "<b>将TRC20地址发送给我，即可设置入款通知；</b>\n" +
-                "<b>群友在群中发送U地址即可查询该地址当前余额；</b> \n" +
+                "将TRC20地址发送给我，即可设置入款通知；\n" +
+                "群友在群中发送U地址即可查询该地址当前余额； \n" +
                 "\n" +
                 "➖➖➖➖➖➖➖➖➖➖➖\n" +
-                "<b>本机器人用户名 ：</b> <code>@"+username+"</code>\n" +//（点击复制）
+                "本机器人用户名 ： </b><code>@"+username+"</code>\n" +//（点击复制）
                 "\n" +
                 "<b>联系客服：</b>@vipkefu\n" +
                 "<b>双向客服：</b>@yewuvipBot");
     }
+
     //使用说明
     private void useInfo(Message message, SendMessage sendMessage, UserDTO userDTO) {
         accountBot.sendMessage(sendMessage,"①增加机器人进群。群右上角--Add member-输入  @Evipbot\n" +

@@ -10,12 +10,14 @@ import org.example.bot.accountBot.service.AccountService;
 import org.example.bot.accountBot.service.IssueService;
 import org.example.bot.accountBot.service.RateService;
 import org.example.bot.accountBot.service.StatusService;
+import org.example.bot.accountBot.utils.ConstantMap;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Message;
 
 import java.time.*;
+import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
@@ -37,73 +39,82 @@ public class DateOperator{
     AccountBot accountBot;
     @Autowired
     StatusService statusService;
-
+    Map<String, String> constantMap = ConstantMap.COMMAND_MAP_ENGLISH;
     //判断是否过期 groupId text  查询是否过期
     public void isOver24HourCheck(Message message, SendMessage sendMessage, UserDTO userDTO, Status status,List<Account> accountList,List<Issue> issueList) {
+        String lowerCase = userDTO.getText().toLowerCase();
         if ((userDTO.getText().length()>=4&&userDTO.getText().substring(0,4).equals("设置日切")
                 ||userDTO.getText().length()>=4&&userDTO.getText().substring(0,4).equals("开启日切"))
-        ||(userDTO.getText().length()>=16&&userDTO.getText().substring(0,16).equals("Set Daily Switch")
-                ||userDTO.getText().length()>=19&&userDTO.getText().substring(0,19).equals("Enable Daily Switch")) ){
-            LocalDateTime tomorrow;
-            if (StringUtils.isBlank(message.getText().substring(4, message.getText().length()))){
-                //如果当前时间大于12点，则设置明天的12点为日切时间
-                if (12>new Date().getHours()){
-                    tomorrow=LocalDateTime.now().plusDays(0).withHour(12).withMinute(0).withSecond(0).withNano(1);
-                }else {
-                    tomorrow = LocalDateTime.now().plusDays(1).withHour(12).withMinute(0).withSecond(0).withNano(1);
-                }
-            }else {
-                Integer hours = Integer.parseInt(message.getText().substring(4, message.getText().length()));
-                //16 >15
-                if (hours>new Date().getHours()){
-                    tomorrow = LocalDateTime.now().plusDays(0).withHour(hours).withMinute(0).withSecond(0).withNano(1);
-                }else {
-                    tomorrow = LocalDateTime.now().plusDays(1).withHour(hours).withMinute(0).withSecond(0).withNano(1);
-                }
-            }
-            Date OverDue = Date.from(tomorrow.atZone(ZoneId.systemDefault()).toInstant());
-            status.setRiqie(true);//是否开启日切 是
-            status.setSetTime(OverDue);//设置日切时间
-            status.setSetStartTime(new Date());//日切开始时间
-            statusService.update(status);//accountList 更新账单日切时间
-            // 计算两个日期之间的毫秒差
-            long differenceInMillis = OverDue.getTime()-new Date().getTime();
-            // 转换为小时、分钟和秒
-            long hours = differenceInMillis / (1000 * 60 * 60);
-            long minutes = (differenceInMillis % (1000 * 60 * 60)) / (1000 * 60);
-            long seconds = (differenceInMillis % (1000 * 60)) / 1000;
-            //机器人进群  首次进群 如果有账单就查所有 没有就默认
-            accountList.stream().filter(Objects::nonNull).forEach(a->accountService.updateSetTime(a.getId()+"",OverDue));
-            issueList.stream().filter(Objects::nonNull).forEach(a->issueService.updateLastUpdateRiqie(a.getId(),OverDue));
-            accountBot.sendMessage(sendMessage,"设置成功 日切时间为每天:"+ tomorrow.getHour()+"时"+tomorrow.getMinute()+"分" +tomorrow.getSecond()+"秒!\n" +
-                    "距离日切时间结束还有:"+ hours+"小时"+minutes+"分钟"+seconds+"秒");
+        ||(userDTO.getText().length()>=4&&userDTO.getText().substring(0,4).equals(constantMap.get("设置日切"))
+                ||userDTO.getText().length()>=4&&userDTO.getText().substring(0,4).equals(constantMap.get("开启日切"))) ){
+            this.dataInfo(lowerCase,status,sendMessage,4,lowerCase.length());
+        }else if (lowerCase.startsWith("set daily switch")){
+            this.dataInfo(lowerCase,status,sendMessage,"set daily switch".length(),lowerCase.length());
+        }else if (lowerCase.startsWith("enable daily switch")){
+            this.dataInfo(lowerCase,status,sendMessage,"enable daily switch".length(),lowerCase.length());
         }
     }
+    public void dataInfo(String lowerCase,Status status,SendMessage sendMessage,Integer length,Integer endLength){
+        LocalDateTime tomorrow;
+        if (StringUtils.isBlank(lowerCase.substring(length, endLength))){
+            //如果当前时间大于12点，则设置明天的12点为日切时间
+            if (12>new Date().getHours()){
+                tomorrow=LocalDateTime.now().plusDays(0).withHour(12).withMinute(0).withSecond(0).withNano(1);
+            }else {
+                tomorrow = LocalDateTime.now().plusDays(1).withHour(12).withMinute(0).withSecond(0).withNano(1);
+            }
+        }else {
+            Integer hours = Integer.parseInt(lowerCase.substring(length, endLength));
+            //16 >15
+            if (hours>new Date().getHours()){
+                tomorrow = LocalDateTime.now().plusDays(0).withHour(hours).withMinute(0).withSecond(0).withNano(1);
+            }else {
+                tomorrow = LocalDateTime.now().plusDays(1).withHour(hours).withMinute(0).withSecond(0).withNano(1);
+            }
+        }
+        Date OverDue = Date.from(tomorrow.atZone(ZoneId.systemDefault()).toInstant());
+        status.setRiqie(true);//是否开启日切 是
+        status.setSetTime(OverDue);//设置日切时间
+        // ✅ 修改：设置日切开始时间为当前时间减去24小时
+        status.setSetStartTime(Date.from(Instant.now().minus(24, ChronoUnit.HOURS)));
+        statusService.update(status);//accountList 更新账单日切时间
+        // 计算两个日期之间的毫秒差
+        long differenceInMillis = OverDue.getTime()-new Date().getTime();
+        // 转换为小时、分钟和秒
+        long hours = differenceInMillis / (1000 * 60 * 60);
+        long minutes = (differenceInMillis % (1000 * 60 * 60)) / (1000 * 60);
+        long seconds = (differenceInMillis % (1000 * 60)) / 1000;
+        //机器人进群  首次进群 如果有账单就查所有 没有就默认
+//            accountList.stream().filter(Objects::nonNull).forEach(a->accountService.updateSetTime(a.getId()+"",OverDue));
+//        issueList.stream().filter(Objects::nonNull).forEach(a->issueService.updateLastUpdateRiqie(a.getId(),OverDue));
+        accountBot.sendMessage(sendMessage,"设置成功 日切时间为每天:"+ tomorrow.getHour()+"时"+tomorrow.getMinute()+"分" +tomorrow.getSecond()+"秒!\n" +
+                "距离日切时间结束还有:"+ hours+"小时"+minutes+"分钟"+seconds+"秒");
+    }
+
+
 
     // 操作人跟最高权限人都可以删除。 删除今日数据/关闭日切 到时间后账单数据自动保存为历史数据，软件界面内数据全部自动清空，操作员权限保留。
     public void deleteTodayData(Message message, SendMessage sendMessage,String groupId,Status status,List<Account> accountList,List<Issue> issueList) {
-        String text = message.getText();
+        String text = message.getText().toLowerCase();
         if (text.length()>=4){
             //删除今日账单关键词： 清理今天数据 删除今天数据 清理今天账单 删除今天账单 是否判断操作员权限？
             if ((text.equals("清理今天数据")||text.equals("删除今天数据")||text.equals("清理今天账单")
                     ||text.equals("清理今日账单")||text.equals("删除今日账单")||text.equals("清理今天帐单")
                     ||text.equals("删除今天账单")||text.equals("删除账单") ||text.equals("删除今天帐单")||text.equals("删除帐单")
                     ||text.equals("清除账单")||text.equals("删除账单")||text.equals("清除帐单")||text.equals("删除帐单"))
-                    ||  (text.equals("Clear Today's Data") || text.equals("Delete Today's Data")
-                    || text.equals("Clear Today's Bill") || text.equals("Clear Today's Record")
-                    || text.equals("Delete Today's Bill") || text.equals("Clear Today's Account")
-                    || text.equals("Delete Today's Account") || text.equals("Delete Bill")
-                    || text.equals("Delete Today's Record") || text.equals("Delete Record")
-                    || text.equals("Clear Bill") || text.equals("Delete All Bills")
-                    || text.equals("Clear All Records") || text.equals("Clear All Bills"))){
+                    ||  (text.equals(constantMap.get("清理今天数据"))||text.equals(constantMap.get("删除今天数据"))||text.equals(constantMap.get("清理今天账单"))
+                    ||text.equals(constantMap.get("清理今日账单"))||text.equals("删除今日账单")||text.equals("清理今天帐单")
+                    ||text.equals(constantMap.get("删除今天账单"))||text.equals(constantMap.get("删除账单")) ||text.equals(constantMap.get("删除今天帐单"))||text.equals(constantMap.get("删除帐单"))
+                    ||text.equals(constantMap.get("清除账单"))||text.equals(constantMap.get("删除账单"))||text.equals(constantMap.get("清除帐单"))||text.equals(constantMap.get("删除帐单")))){
                 accountService.deleteTodayData(status,groupId);
                 issueService.deleteTodayIssueData(status,groupId);
                 accountBot.sendMessage(sendMessage,"操作成功 ，今日账单已删除");
-            }else if (text.equals("删除全部账单")||text.equals("清除全部账单")||text.equals("Delete All Bills") || text.equals("Clear All Bills")){
+            }else if (text.equals("删除全部账单")||text.equals("清除全部账单")||text.equals(constantMap.get("删除全部账单")) || text.equals(constantMap.get("清除全部账单"))
+            ||text.equals("delete all bills")||text.equals("delete all records")|| text.equals("clear all bills")){
                 accountService.deleteHistoryData(groupId);
                 issueService.deleteHistoryIssueData(groupId);
                 accountBot.sendMessage(sendMessage,"操作成功 ，全部账单已删除。");
-            }else if (text.equals("关闭日切")||text.equals("Disable Daily Switch") || text.equals("Turn Off Daily Switch")){
+            }else if (text.equals("关闭日切")||text.equals(constantMap.get("关闭日切"))|| text.equals("disable daily switch")){
                 status.setRiqie(false);//是否开启日切 是
                 Date date = new Date();
                 status.setSetTime(date);//设置日切时间
@@ -114,67 +125,37 @@ public class DateOperator{
     }
     public List<Issue> selectIsIssueRiqie(SendMessage sendMessage, Status status, String groupId) {
         List<Issue> issueList=issueService.selectIssueRiqie(status.isRiqie(),status.getSetTime(),groupId);
-        List<Issue> issues = new ArrayList<>();
-        issueList.stream().filter(Objects::nonNull).forEach(issue -> {
-            if (status.isRiqie()){
-                Calendar calendar = Calendar.getInstance();
-                calendar.setTime(issue.getSetTime());
-                calendar.add(Calendar.DAY_OF_MONTH, -1);
-                // 获取减去一天后的新 Date 对象
-                Date newAddTime = calendar.getTime();
-                int hours = newAddTime.getHours();
-                if (hours>=status.getSetTime().getHours()){
-                    issues.add(issue);
-                }else if (issue.getAddTime().compareTo(status.getSetStartTime())>=0){
-                    issues.add(issue);
-                }
-            }else{
-                issues.add(issue);
-            }
-        });
-        return issues.stream().filter(issue1 -> {
-            if (issue1.isRiqie()) {
-                return issue1.getSetTime().compareTo(status.getSetTime()) >= 0;
-            } else {
-                return true; // 直接继续
-            }}).collect(Collectors.toList());
-    }
-    //如果日切时间超时
-    public List<Account> selectIsRiqie(SendMessage sendMessage, Status status, String groupId) {
-        List<Account> accountList=accountService.selectAccountRiqie(status.isRiqie(),status.getSetTime(),groupId);//status.getSetTime() 这个没有用
-        List<Account> accounts = new ArrayList<>();
-        accountList.stream().filter(Objects::nonNull).forEach(account -> {
-            if (status.isRiqie()){
-                Calendar calendar = Calendar.getInstance();
-                calendar.setTime(account.getSetTime());
-                calendar.add(Calendar.DAY_OF_MONTH, -1);
-                // 获取减去一天后的新 Date 对象
-                Date newAddTime = calendar.getTime();
-                int hours = newAddTime.getHours();
-                if (hours>=status.getSetTime().getHours()){
-                    accounts.add(account);
-                }else if (account.getAddTime().compareTo(status.getSetStartTime())>=0){
-                    accounts.add(account);
-                }
-            }else{
-                accounts.add(account);
-            }
-        });
-        List<Account> accountList1=new ArrayList<>();
-        if (status.isRiqie()){
-            accountList1 = accounts.stream().filter(account1 -> {
-                if (account1.isRiqie()) {
-                    return account1.getSetTime().compareTo(status.getSetTime()) >= 0;
-                } else {
-                    return true; // 直接继续
-                }
-            }).collect(Collectors.toList());
-        }else if (!status.isRiqie()){
-            accountList1 = accounts;
+        // 如果未开启日切，直接返回所有账单
+        if (!status.isRiqie()) {
+            return issueList;
         }
-        return accountList1;
+        // 获取日切开始时间和结束时间
+        Date setStartTime = status.getSetStartTime();
+        Date setTime = status.getSetTime();
+        return issueList.stream().filter(Objects::nonNull).filter(account -> {
+            Date addTime = account.getAddTime();
+            return addTime != null &&
+                    !addTime.before(setStartTime) && !addTime.after(setTime);
+        }).collect(Collectors.toList());
     }
-    //取今天的日切时间 +关闭日切后的账单 默认日切时间中午12点
+    public List<Account> selectIsRiqie(SendMessage sendMessage, Status status, String groupId) {
+        // 获取原始账单数据
+        List<Account> accountList = accountService.selectAccountRiqie(status.isRiqie(), status.getSetTime(), groupId);
+        // 如果未开启日切，直接返回所有账单
+        if (!status.isRiqie()) {
+            return accountList;
+        }
+        // 获取日切开始时间和结束时间
+        Date setStartTime = status.getSetStartTime();
+        Date setTime = status.getSetTime();
+        // 筛选在 [setStartTime, setTime] 时间段内的账单
+        return accountList.stream().filter(Objects::nonNull).filter(account -> {
+                    Date addTime = account.getAddTime();
+                    return addTime != null &&
+                            !addTime.before(setStartTime) && !addTime.after(setTime);
+                }).collect(Collectors.toList());
+    }
+
     public void checkRiqie(SendMessage sendMessage,Status status) {
         //当前时间小于日切时间
         if (status.isRiqie() ){

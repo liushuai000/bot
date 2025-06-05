@@ -48,6 +48,11 @@ public class Status {
     private Date setStartTime=new Date();   //账单 设置的过期时间 日切时间
     @TableField("riqie")
     private boolean riqie;   //是否设置了日切 true 1 false 0
+    @TableField("down_exchange")
+    private BigDecimal downExchange=BigDecimal.ZERO;    //下发汇率
+    @TableField("down_rate")
+    private BigDecimal downRate=BigDecimal.ZERO;    //下发费率
+
 
     public Date parseDate(){
         Date date = new Date();

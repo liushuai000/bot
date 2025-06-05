@@ -35,11 +35,8 @@ public class Account {
     @TableField("add_time")
     private Date addTime;
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
-    @TableField("update_time")
-    private Date updateTime;//日切关闭时的时间
-    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
-    @TableField("set_time")
-    private Date setTime;//日切时间
+//    @TableField("set_time")
+//    private Date setTime;//日切时间
     @TableField("total")
     private BigDecimal total;    //总入账 这个是每笔要入款的金额
     @TableField("downing")
@@ -50,5 +47,9 @@ public class Account {
     private boolean riqie=false;   //是否设置了日切  用status里的 set_riqie
     @TableField("account_handler_money")
     private BigDecimal accountHandlerMoney=BigDecimal.ZERO;//全局入款手续费 account issue 里的手续费是记录单笔历史的
+    @TableField("message_id")
+    private Integer messageId;//用户发送消息的id用于取消用
+
+
 
 }

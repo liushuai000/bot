@@ -1,8 +1,12 @@
 package org.example.bot.accountBot.botConfig;
 
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.example.bot.accountBot.dto.UserDTO;
+import org.example.bot.accountBot.mapper.AccountMapper;
+import org.example.bot.accountBot.mapper.IssueMapper;
 import org.example.bot.accountBot.pojo.*;
 import org.example.bot.accountBot.service.*;
 import org.example.bot.accountBot.utils.BaseConstant;
@@ -46,13 +50,17 @@ public class RuzhangOperations{
     protected StatusService statusService;
     @Autowired
     protected AccountService accountService;
+    @Autowired
+    protected AccountMapper accountMapper;
+    @Autowired
+    protected IssueMapper issueMapper;
     @Value("${telegram.bot.username}")
     protected String username;
     @Autowired
     private ShowOperatorName showOperatorName;
     @Autowired
     ButtonList buttonList;
-    ConstantMap constantMap = new ConstantMap();//关键词的对应关系
+    Map<String, String> constantMap = ConstantMap.COMMAND_MAP_ENGLISH;//关键词的对应关系
     //设置费/汇率
     protected void setRate(Message message,SendMessage sendMessage,Rate rates) {
         String text = message.getText();
@@ -83,11 +91,37 @@ public class RuzhangOperations{
                 rateService.insertRate(rates);
                 accountBot.sendMessage(sendMessage,"设置成功,当前汇率为："+text.substring(4));
             }
+        } else if (text.toLowerCase().startsWith("set rate")) {
+            String rate = text.substring("set rate".length()).trim();
+            BigDecimal bigDecimal = new BigDecimal(rate);
+//            bigDecimal=bigDecimal.multiply(BigDecimal.valueOf(0.01));
+            rates.setRate(bigDecimal);
+            rates.setAddTime(new Date());
+            log.info("rates:{}",rates);
+            rateService.insertRate(rates);
+            accountBot.sendMessage(sendMessage,"设置成功,当前费率为："+rate);
+        }else if (text.toLowerCase().startsWith("set exchange")) {
+            if (text.substring("set exchange".length()).trim().startsWith("-")){
+                rates.setAddTime(new Date());
+                rates.setExchange(new BigDecimal(1));
+                rateService.insertRate(rates);
+                accountBot.sendMessage(sendMessage,"当前汇率已设置为默认汇率：1");
+            }else {
+                //如果设置汇率为0 就设置成1
+                if (text.substring("set exchange".length()).equals("0")){
+                    rates.setExchange(new BigDecimal(1));
+                }else {
+                    rates.setExchange(new BigDecimal(text.substring(13)));
+                }
+                rates.setAddTime(new Date());
+                rateService.insertRate(rates);
+                accountBot.sendMessage(sendMessage,"设置成功,当前汇率为："+text.substring(13));
+            }
         }
     }
 
     //撤销入款
-    public void repeal(Message message, SendMessage sendMessage, List<Account> accounts, String replyToText, UserDTO userDTO, List<Issue> issueList) {
+    public void repeal(Message message, SendMessage sendMessage, List<Account> accounts, String replyToText,Integer replayToMessageId, UserDTO userDTO, List<Issue> issueList) {
         String text = message.getText();
         if (text.length()>=2||replyToText!=null){
             if (text.equals("撤销入款") || text.equals(constantMap.get("撤销入款"))){
@@ -103,11 +137,13 @@ public class RuzhangOperations{
             }else if (text.equals("取消")|| text.equals(constantMap.get("取消"))&& replyToText!=null){
                 log.info("replyToXXXTentacion:{}",replyToText);
                 if (replyToText.charAt(0)=='+'){
-                    accountService.deleteInData(String.valueOf(accounts.get(accounts.size()-1).getId()),userDTO.getGroupId());
-                    issueService.updateIssueDown(accounts.get(accounts.size()-1).getDown(),userDTO.getGroupId());
+                    Account account = accountMapper.selectOne(new QueryWrapper<Account>().eq("message_id", replayToMessageId));
+                    accountMapper.delete(new QueryWrapper<Account>().eq("message_id",replayToMessageId));
+                    issueService.updateIssueDown(account.getDown(),userDTO.getGroupId());
                 }else if (replyToText.charAt(0)=='-'){
-                    issueService.deleteNewestIssue(String.valueOf(issueList.get(issueList.size()-1).getId()),userDTO.getGroupId());
-                    accountService.updateNewestData(issueList.get(issueList.size()-1).getDown(),userDTO.getGroupId());
+                    Issue issue = issueMapper.selectOne(new QueryWrapper<Issue>().eq("message_id", replayToMessageId));
+                    issueMapper.delete(new QueryWrapper<Issue>().eq("message_id",replayToMessageId));
+                    accountService.updateNewestData(issue.getDown(),userDTO.getGroupId());
                 }else {
                     return;
                 }
@@ -126,7 +162,47 @@ public class RuzhangOperations{
             }
         }
     }
-
+    public void repealEn(Message message, SendMessage sendMessage, List<Account> accounts, String replyToText,Integer replayToMessageId, UserDTO userDTO, List<Issue> issueList) {
+        String text = message.getText().toLowerCase();
+        if (replyToText!=null){
+            if (text.equals("Revoke Deposit")){
+                if (accounts.isEmpty()){
+                    accountBot.sendMessage(sendMessage,"撤销未成功! 账单为空");
+                }else {
+                    List<Account> sortedUserList = accounts.stream().sorted(Comparator.comparing(Account::getAddTime)) // 按时间倒序排序
+                            .collect(Collectors.toList());
+                    accountService.deleteInData(String.valueOf(sortedUserList.get(sortedUserList.size()-1).getId()),userDTO.getGroupId());
+                    issueService.updateIssueDown(sortedUserList.get(sortedUserList.size()-1).getDown(),userDTO.getGroupId());
+                    accountBot.sendMessage(sendMessage,"撤销成功");
+                }
+            }else if (text.equals("Cancel")&& replyToText!=null){
+                log.info("replyToXXXTentacion:{}",replyToText);
+                if (replyToText.charAt(0)=='+'){
+                    Account account = accountMapper.selectOne(new QueryWrapper<Account>().eq("message_id", replayToMessageId));
+                    accountMapper.delete(new QueryWrapper<Account>().eq("message_id",replayToMessageId));
+                    issueService.updateIssueDown(account.getDown(),userDTO.getGroupId());
+                }else if (replyToText.charAt(0)=='-'){
+                    Issue issue = issueMapper.selectOne(new QueryWrapper<Issue>().eq("message_id", replayToMessageId));
+                    issueMapper.delete(new QueryWrapper<Issue>().eq("message_id",replayToMessageId));
+                    accountService.updateNewestData(issue.getDown(),userDTO.getGroupId());
+                }else {
+                    return;
+                }
+                accountBot.sendMessage(sendMessage,"取消成功");
+            }else if (text.equals("Revoke Withdrawal")){
+                if (issueList.isEmpty()){
+                    accountBot.sendMessage(sendMessage,"撤销未成功! 账单为空");
+                    return;
+                }else {
+                    List<Issue> sortedUserList = issueList.stream().sorted(Comparator.comparing(Issue::getAddTime)) // 按时间倒序排序
+                            .collect(Collectors.toList());
+                    issueService.deleteNewestIssue(String.valueOf(sortedUserList.get(sortedUserList.size()-1).getId()),userDTO.getGroupId());
+                    accountService.updateNewestData(sortedUserList.get(sortedUserList.size()-1).getDown(),userDTO.getGroupId());
+                }
+                accountBot.sendMessage(sendMessage,"撤销成功");
+            }
+        }
+    }
 
     //入账操作 issue 这个和updateAccount 一样只不过没改名 updateIssue
     public void inHandle(String[] split2, String text, Account updateAccount,SendMessage sendMessage,
@@ -137,7 +213,7 @@ public class RuzhangOperations{
         //判断是否符合公式 true 是匹配
         boolean isMatcher = utils.isMatcher(text);
         //+0 -0显示账单
-        if (showOperatorName.isEmptyMoney(text) || BaseConstant.showReplay(text)|| BaseConstant.showReplayEnglish(text)){
+        if (showOperatorName.isEmptyMoney(text) || BaseConstant.showReplay(text)|| BaseConstant.showReplayEnglish(text)||BaseConstant.showReplayEnglish2(text)){
             showOperatorName.replay(sendMessage,userDTO,updateAccount,rate,issueList,issue,text,status,groupInfoSetting);
             return;
         }
@@ -176,10 +252,9 @@ public class RuzhangOperations{
         updateAccount.setAddTime(new Date());
         //数据状态默认是0
         updateAccount.setRiqie(status.isRiqie());
-        updateAccount.setSetTime(status.getSetTime());
         issue.setAddTime(new Date());
         issue.setRiqie(status.isRiqie());
-        issue.setSetTime(status.getSetTime());
+//        issue.setSetTime(status.getSetTime());
         down = updateAccount.getDown();
         BigDecimal downed = issue.getDowned();
         BigDecimal downing = updateAccount.getDowning();
@@ -223,7 +298,7 @@ public class RuzhangOperations{
                 }
                 updateAccount.setAccountHandlerMoney(status.getAccountHandlerMoney());
                 updateAccount.setRiqie(status.isRiqie());
-                updateAccount.setSetTime(status.getSetTime());
+                updateAccount.setMessageId(message.getMessageId());
                 accountService.insertAccount(updateAccount);
             }else if (firstChar == '-' ){
                 issue.setUserId(userDTO.getUserId());
@@ -233,7 +308,8 @@ public class RuzhangOperations{
                 issue.setCallBackUserId(userDTO.getCallBackUserId());
                 issue.setIssueHandlerMoney(status.getIssueHandlerMoney());
                 issue.setRiqie(status.isRiqie());
-                issue.setSetTime(status.getSetTime());
+//                issue.setSetTime(status.getSetTime());
+                issue.setMessageId(message.getMessageId());
                 User byUserId = userService.findByUserId(userDTO.getUserId());
                 issueService.insertIssue(issue);
                 if (byUserId!=null){

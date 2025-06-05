@@ -23,11 +23,11 @@ public class AccountAssembler {
         accountDTO.setId(String.valueOf(account.getId()));
         accountDTO.setUsername(user.getUsername());
         accountDTO.setAccountHandlerMoney(account.getAccountHandlerMoney());
-        accountDTO.setFirstName(user.getFirstName()+user.getLastName());
+        accountDTO.setFirstName(user.getFirstLastName());
         if (rate.isCalcU()){
             accountDTO.setTotal(account.getTotal());
         }else {
-            accountDTO.setTotal(account.getTotal().subtract(account.getTotal().multiply(rate.getRate().multiply(BigDecimal.valueOf(0.01)))));
+            accountDTO.setTotal(account.getTotal());//.subtract(account.getTotal().multiply(rate.getRate().multiply(BigDecimal.valueOf(0.01))))
         }
         accountDTO.setDowning(account.getDowning());//.divide(rate.getExchange(), 2, RoundingMode.HALF_UP)
         accountDTO.setRate(rate.getRate());
@@ -48,7 +48,7 @@ public class AccountAssembler {
         issueDTO.setId(String.valueOf(issue.getId()));
         issueDTO.setUsername(user.getUsername());
         issueDTO.setIssueHandlerMoney(issue.getIssueHandlerMoney());
-        issueDTO.setFirstName(user.getFirstName()+user.getLastName());
+        issueDTO.setFirstName(user.getFirstLastName());
         issueDTO.setDowned(issue.getDowned());
         issueDTO.setRate(rate.getRate());
         issueDTO.setExchange(rate.getExchange());

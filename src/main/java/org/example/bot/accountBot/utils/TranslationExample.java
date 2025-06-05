@@ -10,41 +10,18 @@ import java.net.URL;
 import java.net.URLEncoder;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 public class TranslationExample {
 
     private static final String APP_KEY = "2a7ebf111b16f79e"; // 替换为你的APP KEY
     private static final String SECRET = "fFJIfTzH4BnuSB3wManZqPKoe2vH14IG"; // 替换为你的密钥
     private static final String[] tagsToKeep = {"<strong>", "</strong>", "<code>", "</code>", "<pre>", "</pre>", "<em>", "</em>", "<a ", "</a>"};
-    public static void main(String[] args) throws Exception {
-        boolean newLanguage = false;
-        String query = "<strong> \uD83D\uDED2选择你需要的商品：\n" +
-                "\uFE0F没使用过本店商品的，请先少量购买测试，以免造成不必要的争执！谢谢合作 </strong>";
-        // 使用占位符替换HTML标签
-        Map<String, String> placeholders = new HashMap<>();
-        placeholders.put("__tag_placeholder_0__", "<strong>");
-        placeholders.put("__tag_placeholder_1__", "</strong>");
-        String queryWithPlaceholders = query.replace("<strong>", "__tag_placeholder_0__")
-                .replace("</strong>", "__tag_placeholder_1__");
-
-        // 假设translate方法是你的翻译服务
-        String translatedQuery = translateText(queryWithPlaceholders, newLanguage);
-        // 恢复HTML标签
-        for (Map.Entry<String, String> entry : placeholders.entrySet()) {
-            translatedQuery = translatedQuery.replace(entry.getKey(), entry.getValue());
-        }
-        System.out.println(translatedQuery);
-    }
 
     public static String translateText(String text, boolean newLanguage) {
-        if (newLanguage){//不翻译中文
+        if (newLanguage) {
             return text;
         }
-        if (text.equals("切换语言成功！")){
+        if (text.equals("切换语言成功！")) {
             return text;
         }
         try {

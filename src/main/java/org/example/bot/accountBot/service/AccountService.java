@@ -26,15 +26,6 @@ public interface AccountService {
 
     List<Account> selectAccountRiqie(boolean riqie,Date setTime, String groupId);
 
-    List<Account> selectAccounts(String groupId);
-
-    void deleteById(int id);
-
     void deleteHistoryData(String groupId);
 
-    void updateRiqie(int id,boolean riqie);
-
-    void updateLastUpdateRiqie(int id,boolean riqie, Date updateTime);
-
-    void updateSetTime(String id, Date setTime);
 }

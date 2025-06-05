@@ -2,14 +2,12 @@ package org.example.bot.accountBot.botConfig;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import lombok.NonNull;
-import org.example.bot.accountBot.dto.UserDTO;
 import org.example.bot.accountBot.mapper.GroupInfoSettingMapper;
 import org.example.bot.accountBot.pojo.GroupInfoSetting;
 import org.example.bot.accountBot.utils.TranslationExample;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
-import org.telegram.telegrambots.meta.api.objects.Message;
 
 @Service
 public class GroupInfoSettingBotMessage {

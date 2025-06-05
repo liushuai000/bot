@@ -28,8 +28,7 @@ import java.util.Map;
 public class ButtonList {
     @Value("${vueUrl}")
     protected String url;//43.128.113.117 http://www.yaoke.cc/ 本地需要换端口
-    @Autowired
-    private GroupInfoSettingMapper groupInfoSettingMapper;
+
 //    protected String url="http://192.168.0.2:8080/";
     //map key:buttonText value:callbackData
     public void sendButton(SendMessage sendMessage, String groupId, Map<String,String> buttonText,GroupInfoSetting groupInfoSetting) {

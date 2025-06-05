@@ -27,7 +27,11 @@ public class UserOperationService {
         queryWrapper.eq("group_id", groupId);
         return mapper.selectOne(queryWrapper);
     }
-
+    public List<UserOperation> selectByUsers(String groupId) {
+        QueryWrapper<UserOperation> queryWrapper = new QueryWrapper<>();
+        queryWrapper.eq("group_id", groupId);
+        return mapper.selectList(queryWrapper);
+    }
     public void insertUserOperation(UserOperation user) {
         mapper.insert(user);
     }

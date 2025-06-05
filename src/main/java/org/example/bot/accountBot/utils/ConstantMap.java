@@ -6,96 +6,206 @@ public class ConstantMap {
 
     // 命令映射：中文 -> 英文
     public static final Map<String, String> COMMAND_MAP = new LinkedHashMap<>();
+    public static final Map<String, String> COMMAND_MAP_ENGLISH = new LinkedHashMap<>();
+    public ConstantMap() {
+    }
 
     static {
         // 初始化映射关系
-        put("通知", "Notice");
-        put("设置日切", "Set Daily Switch");
-        put("开启日切", "Enable Daily Switch");
-        put("关闭日切", "Disable Daily Switch");
-        put("设置费率", "Set Rate");
-        put("通知所有人", "Notify All");
+        put("通知(Notice)", "TZ");
+        put("设置日切(Set Daily Switch)", "SZRQ");
+        put("开启日切(Enable Daily Switch)", "KQRQ");
+        put("关闭日切(Disable Daily Switch)", "GBRQ");
+        put("设置费率(Set Rate)", "SZFL");
+        put("通知所有人(Notify All)", "TZSYR");
 
-        put("设置汇率", "Set Exchange Rate");
-        put("设置入款单笔手续费", "Set Deposit Fee per Transaction");
-        put("取消", "Cancel");
+        put("设置汇率(Set Exchange Rate)", "SZHL");
+        put("设置入款单笔手续费(Set Single Deposit Fee)", "SZRKDBSXF");
+        put("取消(Cancel)", "QX");
 
-        put("删除操作员", "Delete Operator");
-        put("删除操作人", "Delete Operator");
-        put("设置操作员", "Set Operator");
-        put("设置操作人", "Set Operator");
+        put("删除操作员(Delete Operator)", "SCCZY");
+        put("删除操作人(Delete Operator Person)", "SCCZR");
+        put("设置操作员(Set Operator)", "SZCZY");
+        put("设置操作人(Set Operator Person)", "SZCZR");
 
-        put("关闭回复人显示", "Disable Replier Display");
-        put("隐藏回复人显示", "Hide Replier Display");
+        put("关闭回复人显示(Hide Replyer Display)", "GBHFRXS");
+        put("隐藏回复人显示(Hide Replyer Info)", "YCHFRXS");
+        put("查询(Query)", "CX");
 
-        put("设置入款手续费", "Set Deposit Fee");
-        put("设置下发手续费", "Set Withdrawal Fee");
-        put("设置下发单笔手续费", "Set Withdrawal Fee per Transaction");
-        put("设置单笔下发手续费", "Set Withdrawal Fee per Transaction");
-        put("设置单笔入款手续费", "Set Deposit Fee per Transaction");
+        put("设置入款手续费(Set Deposit Fee)", "SZRKSXF");
+        put("设置下发手续费(Set Withdrawal Fee)", "SZXFSXF");
+        put("设置下发单笔手续费(Set Single Withdrawal Fee)", "SZXFDBSXF");
+        put("设置单笔下发手续费(Set Single Withdrawal Fee)", "SZDBXFSXF");
+        put("设置单笔入款手续费(Set Single Deposit Fee)", "SZDBRKSXF");
 
         // showArray 相关
-        put("设置手续费", "Set Fee");
-        put("下发", "Withdrawal");
-        put("显示明细", "Show Details");
-        put("隐藏明细", "Hide Details");
-        put("显示操作人名称", "Show Operator Name");
-        put("将操作员显示", "Show Operator");
-        put("显示操作人名字", "Show Operator Name");
-        put("隐藏操作人名称", "Hide Operator Name");
-        put("隐藏操作人名字", "Hide Operator Name");
-        put("显示操作人", "Show Operator");
-        put("显示操作员", "Show Operator");
+        put("设置手续费(Set Fee)", "SZSXF");
+        put("下发(Withdraw)", "XF");
+        put("显示明细(Show Details)", "XSMX");
+        put("隐藏明细(Hide Details)", "YCMX");
+        put("将操作员显示(Show Operator)", "JCZYXS");
+        put("显示操作人名称(Show Operator Name)", "XSCZRMC");
+        put("显示操作人名字(Show Operator Name)", "XSCZRMZ");
+        put("隐藏操作人名称(Hide Operator Name)", "YCCZRMC");
+        put("隐藏操作人名字(Hide Operator Name)", "YCCZRMZ");
+        put("显示操作人(Show Operator)", "XSCZR");
+        put("显示操作员(Show Operator)", "XSCZY");
 
-        put("隐藏名字", "Hide Names");
-        put("隐藏名称", "Hide Titles");
-        put("关闭显示", "Turn Off Display");
-        put("将回复人显示", "Show Replier");
-        put("显示回复人名称", "Show Replier Name");
-        put("显示余额", "Show Balance");
-        put("显示金额", "Show Amount");
-        put("显示USDT", "Show USDT");
-        put("显示usdt", "Show USDT");
-        put("显示全部", "Show All");
+        put("隐藏名字(Hide Name)", "YCMZ");
+        put("隐藏名称(Hide Title)", "YCMC");
+        put("关闭显示(Hide Display)", "GBXS");
+        put("将回复人显示(Show Replyer)", "JHFRXS");
+        put("显示回复人名称(Show Replyer Name)", "XSHFRMC");
+        put("显示余额(Show Balance)", "XSYE");
+        put("显示金额(Show Amount)", "XSJE");
+        put("显示USDT(Show USDT)", "XSUSDT");
+        put("显示usdt(Show USDT)", "XSusdt");
+        put("显示全部(Show All)", "XSQB");
 
-        put("显示1条", "Show 1 Entry");
-        put("显示3条", "Show 3 Entries");
-        put("显示5条", "Show 5 Entries");
-        put("+0", "+0");
-        put("-0", "-0");
-        put("+0u", "+0u");
-        put("-0u", "-0u");
-        put("+0U", "+0U");
-        put("-0U", "-0U");
-        put("显示分类", "Show Category");
-        put("隐藏分类", "Hide Category");
+        put("显示1条(Show 1 Record)", "XS1T");
+        put("显示3条(Show 3 Record)", "XS3T");
+        put("显示5条(Show 5 Record)", "XS5T");
+        put("+0(Add Zero)", "+0");
+        put("-0(Subtract Zero)", "-0");
+        put("+0u(Add Zero USDT)", "+0U");
+        put("-0u(Subtract Zero USDT)", "-0U");
+        put("+0U(Add Zero USDT)", "+0U");
+        put("-0U(Subtract Zero USDT)", "-0U");
+        put("显示分类(Show Category)", "XSFL");
+        put("隐藏分类(Hide Category)", "YCFL");
 
-        put("清理今天数据", "Clear Today's Data");
-        put("删除今天数据", "Delete Today's Data");
-        put("清理今天账单", "Clear Today's Bill");
-        put("清理今日账单", "Clear Today's Bill");
-        put("删除今日账单", "Delete Today's Bill");
-        put("清理今天帐单", "Clear Today's Record");
-        put("删除今天账单", "Delete Today's Bill");
+        put("清理今天数据(Clear Today Data)", "QLJTSJ");
+        put("删除今天数据(Delete Today Data)", "SCJTSJ");
+        put("清理今天账单(Clear Today Bill)", "QLJTZD");
+        put("清理今日账单(Clear Today Bill)", "QLJRZD");
+        put("删除今日账单(Delete Today Bill)", "SCJRZD");
+        put("清理今天帐单(Clear Today Bill)", "QLJTZD");
+        put("删除今天账单(Delete Today Bill)", "SCJTZD");
 
-        put("删除账单", "Delete Bill");
-        put("删除今天帐单", "Delete Today's Record");
-        put("删除帐单", "Delete Record");
-        put("清除账单", "Clear Bill");
-        put("清除帐单", "Clear Record");
-        put("删除全部账单", "Delete All Bills");
-        put("删除全部帐单", "Delete All Records");
-        put("清除全部账单", "Clear All Bills");
+        put("删除账单(Delete Bill)", "SCZD");
+        put("删除今天帐单(Delete Today Bill)", "SCJTZD");
+        put("删除帐单(Delete Bill)", "SCZD");
+        put("清除账单(Clear Bill)", "QCZD");
+        put("清除帐单(Clear Bill)", "QCZD");
+        put("删除全部账单(Delete All Bills)", "SCQBZD");
+        put("删除全部帐单(Delete All Bills)", "SCQBZD");
+        put("清除全部账单(Clear All Bills)", "QCQBZD");
 
-        put("撤销下发", "Revoke Withdrawal");
-        put("撤销入款", "Revoke Deposit");
-        put("显示手续费", "Show Fee");
-        put("隐藏手续费", "Hide Fee");
+        put("撤销下发(Undo Withdrawal)", "CXXF");
+        put("撤销入款(Undo Deposit)", "CXRK");
+        put("显示手续费(Show Fee)", "XSSXF");
+        put("隐藏手续费(Hide Fee)", "YCSXF");
+
+        put("账单(Bill)", "ZD");
+        put("查看账单(View Bill)", "CKZD");
+        put("显示账单(Show Bill)", "XXZD");
+
+        put("权限人(Authorized Person)", "QXR");
+        put("管理员(Admin)", "GLY");
+
+        put("设置下发汇率(Set the exchange rate)", "SZXFHL");
+        put("设置下发费率(Set the delivery rate)", "SZXFFL");
+    }
+    static {
+
+        // 初始化映射关系
+        putEnglish("通知", "TZ");
+        putEnglish("设置日切", "SZRQ");
+        putEnglish("开启日切", "KQRQ");
+        putEnglish("关闭日切", "GBRQ");
+        putEnglish("设置费率", "set rate ");
+        putEnglish("通知所有人", "TZSYR");
+
+        putEnglish("设置汇率", "SZHL");
+        putEnglish("设置入款单笔手续费", "SZRKDBSXF");
+        putEnglish("取消", "QX");
+
+        putEnglish("删除操作员", "SCCZY");
+        putEnglish("删除操作人", "SCCZR");
+        putEnglish("设置操作员", "SZCZY");
+        putEnglish("设置操作人", "SZCZR");
+
+        putEnglish("关闭回复人显示", "GBHFRXS");
+        putEnglish("隐藏回复人显示", "YCHFRXS");
+        putEnglish("查询", "CX");
+
+        putEnglish("设置入款手续费", "SZRKSXF");
+        putEnglish("设置下发手续费", "SZXFSXF");
+        putEnglish("设置下发单笔手续费", "SZXFDBSXF");
+        putEnglish("设置单笔下发手续费", "SZDBXFSXF");
+        putEnglish("设置单笔入款手续费", "SZDBRKSXF");
+
+        // showArray 相关
+        putEnglish("设置手续费", "SZSXF");
+        putEnglish("下发", "XF");
+        putEnglish("显示明细", "XSMX");
+        putEnglish("隐藏明细", "YCMX");
+        putEnglish("将操作员显示", "JCZYXS");
+        putEnglish("显示操作人名称", "XSCZRMC");
+        putEnglish("显示操作人名字", "XSCZRMZ");
+        putEnglish("隐藏操作人名称", "YCCZRMC");
+        putEnglish("隐藏操作人名字", "YCCZRMZ");
+        putEnglish("显示操作人", "XSCZR");
+        putEnglish("显示操作员", "XSCZY");
+
+        putEnglish("隐藏名字", "YCMZ");
+        putEnglish("隐藏名称", "YCMC");
+        putEnglish("关闭显示", "GBXS");
+        putEnglish("将回复人显示", "JHFRXS");
+        putEnglish("显示回复人名称", "XSHFRMC");
+        putEnglish("显示余额", "XSYE");
+        putEnglish("显示金额", "XSJE");
+        putEnglish("显示USDT", "XSUSDT");
+        putEnglish("显示usdt", "XSusdt");
+        putEnglish("显示全部", "XSQB");
+
+        putEnglish("显示1条", "XS1T");
+        putEnglish("显示3条", "XS3T");
+        putEnglish("显示5条", "XS5T");
+        putEnglish("+0", "+0");
+        putEnglish("-0", "-0");
+        putEnglish("+0u", "+0U");
+        putEnglish("-0u", "-0U");
+        putEnglish("+0U", "+0U");
+        putEnglish("-0U", "-0U");
+        putEnglish("显示分类", "XSFL");
+        putEnglish("隐藏分类", "YCFL");
+
+        putEnglish("清理今天数据", "QLJTSJ");
+        putEnglish("删除今天数据", "SCJTSJ");
+        putEnglish("清理今天账单", "QLJTZD");
+        putEnglish("清理今日账单", "QLJRZD");
+        putEnglish("删除今日账单", "SCJRZD");
+        putEnglish("清理今天帐单", "QLJTZD");
+        putEnglish("删除今天账单", "SCJTZD");
+
+        putEnglish("删除账单", "SCZD");
+        putEnglish("删除今天帐单", "SCJTZD");
+        putEnglish("删除帐单", "SCZD");
+        putEnglish("清除账单", "QCZD");
+        putEnglish("清除帐单", "QCZD");
+        putEnglish("删除全部账单", "SCQBZD");
+        putEnglish("删除全部帐单", "SCQBZD");
+        putEnglish("清除全部账单", "QCQBZD");
+
+        putEnglish("撤销下发", "CXXF");
+        putEnglish("撤销入款", "CXRK");
+        putEnglish("显示手续费", "XSSXF");
+        putEnglish("隐藏手续费", "YCSXF");
+
+        putEnglish("权限人", "QXR");
+        putEnglish("管理员", "GLY");
+        put("设置下发汇率", "SZXFHL");
+        put("设置下发费率", "SZXFFL");
     }
 
     private static void put(String zh, String en) {
         COMMAND_MAP.put(zh, en);
     }
+    private static void putEnglish(String zh, String en) {
+        COMMAND_MAP_ENGLISH.put(zh, en);
+    }
+
     public String get(String zh) {
         return COMMAND_MAP.get(zh);
     }
@@ -110,66 +220,6 @@ public class ConstantMap {
         }
         return sb.toString();
     }
-
-
-    /**
-     * 获取所有中文命令
-     */
-    public static Set<String> getChineseCommands() {
-        return COMMAND_MAP.keySet();
-    }
-
-    /**
-     * 获取所有英文命令
-     */
-    public static Collection<String> getEnglishCommands() {
-        return COMMAND_MAP.values();
-    }
-
-    /**
-     * 根据中文获取英文
-     */
-    public static String getEnglish(String chinese) {
-        return COMMAND_MAP.get(chinese);
-    }
-
-    /**
-     * 判断输入是否匹配任何命令（中英文）
-     */
-    public static boolean isMatchCommand(String input) {
-        return COMMAND_MAP.containsKey(input) || COMMAND_MAP.containsValue(input);
-    }
-
-    /**
-     * 判断输入是否是中文命令
-     */
-    public static boolean isChineseCommand(String input) {
-        return COMMAND_MAP.containsKey(input);
-    }
-
-    /**
-     * 判断输入是否是英文命令
-     */
-    public static boolean isEnglishCommand(String input) {
-        return COMMAND_MAP.containsValue(input);
-    }
-
-    /**
-     * 获取对应的命令（自动识别中英文）
-     */
-    public static String getCorrespondingCommand(String input) {
-        if (COMMAND_MAP.containsKey(input)) {
-            return COMMAND_MAP.get(input);
-        } else if (COMMAND_MAP.containsValue(input)) {
-            for (Map.Entry<String, String> entry : COMMAND_MAP.entrySet()) {
-                if (entry.getValue().equals(input)) {
-                    return entry.getKey();
-                }
-            }
-        }
-        return null;
-    }
-
 
 
 

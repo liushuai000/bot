@@ -34,12 +34,9 @@ public class Issue {
     private BigDecimal downed;    //已出帐
     @TableField("down")
     private BigDecimal down;    //未下发
-    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
-    @TableField("update_time")
-    private Date updateTime;//日切关闭时的时间
-    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
-    @TableField("set_time")
-    private Date setTime;//日切时间
+//    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
+//    @TableField("set_time")
+//    private Date setTime;//日切时间
     @TableField("add_time")
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
     private Date addTime;
@@ -47,4 +44,8 @@ public class Issue {
     private boolean riqie=false;   //是否设置了日切  用status里的 set_riqie 查询status里的日切时间
     @TableField("issue_handler_money")
     private BigDecimal issueHandlerMoney=BigDecimal.ZERO;//全局下方手续费
+
+    @TableField("message_id")
+    private Integer messageId;//用户发送消息的id用于取消用
+
 }
