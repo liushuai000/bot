@@ -19,8 +19,6 @@ public class ConstantMap {
         put("设置费率(Set Rate)", "SZFL");
         put("通知所有人(Notify All)", "TZSYR");
 
-        put("波场下载地址", "BCXZDZ");
-
         put("设置汇率(Set Exchange Rate)", "SZHL");
         put("取消(Cancel)", "QX");
 
@@ -31,7 +29,7 @@ public class ConstantMap {
 
         put("关闭回复人显示(Hide Replyer Display)", "GBHFRXS");
         put("隐藏回复人显示(Hide Replyer Info)", "YCHFRXS");
-        put("隐藏回复人名称(Hide Replyer name)", "YCHFRMC");
+        put("隐藏回复人名称(Hide reply name)", "YCHFRMC");
         put("查询(Query)", "CX");
 
         put("设置入款手续费(Set Deposit Fee)", "SZRKSXF");
@@ -75,8 +73,8 @@ public class ConstantMap {
         put("-0u(Subtract Zero USDT)", "-0U");
         put("+0U(Add Zero USDT)", "+0U");
         put("-0U(Subtract Zero USDT)", "-0U");
-        put("显示分类(Show Category)", "XSFL");
-        put("隐藏分类(Hide Category)", "YCFL");
+        put("显示分类(Show categories)", "XSFL");
+        put("隐藏分类(Hide categories)", "YCFL");
 
         put("清理今天数据(Clear Today Data)", "QLJTSJ");
         put("删除今天数据(Delete Today Data)", "SCJTSJ");
@@ -91,14 +89,15 @@ public class ConstantMap {
         put("删除帐单(Delete Bill)", "SCZD");
         put("清除账单(Clear Bill)", "QCZD");
         put("清除帐单(Clear Bill)", "QCZD");
+
         put("删除全部账单(Delete All Bills)", "SCQBZD");
         put("删除全部帐单(Delete All Bills)", "SCQBZD");
         put("清除全部账单(Clear All Bills)", "QCQBZD");
 
         put("撤销下发(Undo Withdrawal)", "CXXF");
         put("撤销入款(Undo Deposit)", "CXRK");
-        put("显示手续费(Show Fee)", "XSSXF");
-        put("隐藏手续费(Hide Fee)", "YCSXF");
+        put("显示手续费(Show handling fee)", "XSSXF");
+        put("隐藏手续费(Hidden fees)", "YCSXF");
 
         put("账单(Bill)", "ZD");
         put("查看账单(View Bill)", "CKZD");
@@ -116,12 +115,13 @@ public class ConstantMap {
         put("设置下发地址(Set the delivery address)", "SZXFDZ");
         put("修改下发地址(Modify the delivery address)", "XGXFDZ");
         put("查看下发地址(View the sending address)", "CKXFDZ");
-
+        put("下发地址(Sending address)", "CKXFDZ");
     }
     static {
         putEnglish("设置下发地址", "SZXFDZ");
         putEnglish("修改下发地址)", "XGXFDZ");
         putEnglish("查看下发地址", "CKXFDZ");
+        putEnglish("下发地址", "XFDZ");
         putEnglish("切换中文", "QHZW");
         putEnglish("切换英文", "QHYW");
         // 初始化映射关系
@@ -131,7 +131,6 @@ public class ConstantMap {
         putEnglish("关闭日切", "GBRQ");
         putEnglish("设置费率", "set rate ");
         putEnglish("通知所有人", "TZSYR");
-        putEnglish("波场下载地址", "BCXZDZ");
         putEnglish("设置汇率", "SZHL");
         putEnglish("设置入款单笔手续费", "SZRKDBSXF");
         putEnglish("取消", "QX");

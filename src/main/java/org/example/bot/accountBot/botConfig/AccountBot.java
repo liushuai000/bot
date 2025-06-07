@@ -39,8 +39,6 @@ public class AccountBot extends TelegramLongPollingBot {
     protected String botUserId;
     @Value("${adminUserId}")
     protected String adminUserId;
-    @Value("${vueUrl}")
-    protected String url;
     @Autowired
     protected RateService rateService;
     @Autowired
@@ -118,7 +116,16 @@ public class AccountBot extends TelegramLongPollingBot {
         }
         userDTO.setInfo(message);
         sendMessage.setChatId(String.valueOf(message.getChatId()==null?"":message.getChatId()));
-        if (update.hasMessage() && update.getMessage().hasText()) this.BusinessHandler(message,sendMessage,replyToText,replayToMessageId,userDTO,update);
+        if (update.hasMessage() && update.getMessage().hasText()){
+            this.BusinessHandler(message,sendMessage,replyToText,replayToMessageId,userDTO,update);
+        }else if (update.hasMessage() && update.getMessage().getChat().isGroupChat()||message.getChat().isSuperGroupChat()){
+            Status status=statusService.getInitStatus(userDTO.getGroupId(),userDTO.getGroupTitle());
+            // 判断是否是带有 caption 的图片或视频消息
+            if ((message.hasPhoto() || message.hasVideo()) && message.getCaption() != null && !message.getCaption().isEmpty()) {
+                String caption = message.getCaption();
+                downAddress.validAddress(caption, sendMessage, status);
+            }
+        }
     }
     public void BusinessHandler(Message message,SendMessage sendMessage, String replyToText,Integer replayToMessageId, UserDTO userDTO,Update update) {
         GroupInfoSetting groupInfoSetting = groupInfoSettingMapper.selectOne(new QueryWrapper<GroupInfoSetting>().eq("group_id", userDTO.getGroupId()));
@@ -139,23 +146,6 @@ public class AccountBot extends TelegramLongPollingBot {
             }
             sendMessageDetail.setText(sc+allCommandsDetail);
             this.sendMessage(sendMessageDetail);
-        }
-        if (message.getChat().isGroupChat()||message.getChat().isSuperGroupChat()){
-            if (message.getText()!=null && StringUtils.isNotBlank(message.getText()) && message.getText().equals("波场下载地址")){
-                Integer messageId = this.sendMessage(sendMessage, url + "api/generate-tron-keys?count=50");
-                // 异步延迟30秒后删除消息
-                CompletableFuture.runAsync(() -> {
-                    try {
-                        TimeUnit.SECONDS.sleep(30); // 等待30秒
-                        DeleteMessage deleteMessage = new DeleteMessage();
-                        deleteMessage.setChatId(String.valueOf(userDTO.getGroupId()));
-                        deleteMessage.setMessageId(messageId);
-                        execute(deleteMessage);
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                    }
-                });
-            }
         }
         //私聊的机器人  处理个人消息
         if (message.getChat().isUserChat()){
@@ -183,6 +173,9 @@ public class AccountBot extends TelegramLongPollingBot {
         //计算器功能
         utils.counter(message,sendMessage);
         notificationService.initNotification(userDTO);
+        Status status=statusService.getInitStatus(userDTO.getGroupId(),userDTO.getGroupTitle());
+        downAddress.viewAddress(message.getText(),sendMessage,status);
+        downAddress.validAddress(message.getText(),sendMessage,status);//验证地址
         UserNormal userNormalTempAdmin =userNormalService.selectByGroupId(userDTO.getGroupId());//超级管理
         if (message.getText().equals("权限人") || message.getText().equals("管理员")
                 || message.getText().toLowerCase().equals("authorized person")||  message.getText().toLowerCase().equals("admin")){
@@ -241,7 +234,6 @@ public class AccountBot extends TelegramLongPollingBot {
         String[] split3 = message.getText().split("-");
         //初始化
         Rate rate=rateService.getInitRate(userDTO.getGroupId());
-        Status status=statusService.getInitStatus(userDTO.getGroupId(),userDTO.getGroupTitle());
         Account updateAccount = new Account();
         Issue issue=new Issue();
         updateAccount.setGroupId(userDTO.getGroupId());
@@ -255,8 +247,8 @@ public class AccountBot extends TelegramLongPollingBot {
         //设置日切 如果日切时间没结束 第二次设置日切 也需要修改账单的日切时间
         dateOperator.isOver24HourCheck(message, sendMessage, userDTO, status,accountList,issueList);
         //设置操作人员
-        settingOperatorPerson.setHandle(split1, sendMessage,message.getText(),userDTO,user1,status,groupInfoSetting,userNormalTempAdmin);
-        settingOperatorPersonEnglish.setHandle(sendMessage,message.getText(),userDTO,user1,status,groupInfoSetting,userNormalTempAdmin);
+        settingOperatorPerson.setHandle(split1, sendMessage,message.getText(),userDTO,user1,status,groupInfoSetting,userNormalTempAdmin,update);
+        settingOperatorPersonEnglish.setHandle(sendMessage,message.getText(),userDTO,user1,status,groupInfoSetting,userNormalTempAdmin,update);
         downAddress.downAddress(sendMessage,userDTO,status,userNormalTempAdmin,userOperation);//设置下发地址
         //设置费率/汇率
         ruzhangOperations.setRate(message,sendMessage,rate);
@@ -264,7 +256,7 @@ public class AccountBot extends TelegramLongPollingBot {
         ruzhangOperations.repeal(message,sendMessage,accountList,replyToText,replayToMessageId,userDTO,issueList);
         ruzhangOperations.repealEn(message,sendMessage,accountList,replyToText,replayToMessageId,userDTO,issueList);
         //删除今日数据/关闭日切/
-        dateOperator.deleteTodayData(message,sendMessage,userDTO.getGroupId(),status,accountList,issueList);
+        dateOperator.deleteTodayData(message,sendMessage,userDTO.getGroupId(),status);
         //入账操作
         ruzhangOperations.inHandle(split2,message.getText(),  updateAccount,  sendMessage, accountList, message,split3,
                 rate,issue,issueList,userDTO,status,groupInfoSetting);

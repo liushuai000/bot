@@ -94,7 +94,7 @@ public class DateOperator{
 
 
     // 操作人跟最高权限人都可以删除。 删除今日数据/关闭日切 到时间后账单数据自动保存为历史数据，软件界面内数据全部自动清空，操作员权限保留。
-    public void deleteTodayData(Message message, SendMessage sendMessage,String groupId,Status status,List<Account> accountList,List<Issue> issueList) {
+    public void deleteTodayData(Message message, SendMessage sendMessage,String groupId,Status status) {
         String text = message.getText().toLowerCase();
         if (text.length()>=4){
             //删除今日账单关键词： 清理今天数据 删除今天数据 清理今天账单 删除今天账单 是否判断操作员权限？
@@ -106,9 +106,14 @@ public class DateOperator{
                     ||text.equals(constantMap.get("清理今日账单"))||text.equals("删除今日账单")||text.equals("清理今天帐单")
                     ||text.equals(constantMap.get("删除今天账单"))||text.equals(constantMap.get("删除账单")) ||text.equals(constantMap.get("删除今天帐单"))||text.equals(constantMap.get("删除帐单"))
                     ||text.equals(constantMap.get("清除账单"))||text.equals(constantMap.get("删除账单"))||text.equals(constantMap.get("清除帐单"))||text.equals(constantMap.get("删除帐单")))){
+                //如果有日切才能使用
+                if (!status.isRiqie()){
+                    return;
+                }
                 accountService.deleteTodayData(status,groupId);
                 issueService.deleteTodayIssueData(status,groupId);
                 accountBot.sendMessage(sendMessage,"操作成功 ，今日账单已删除");
+
             }else if (text.equals("删除全部账单")||text.equals("清除全部账单")||text.equals(constantMap.get("删除全部账单")) || text.equals(constantMap.get("清除全部账单"))
             ||text.equals("delete all bills")||text.equals("delete all records")|| text.equals("clear all bills")){
                 accountService.deleteHistoryData(groupId);
@@ -120,6 +125,15 @@ public class DateOperator{
                 status.setSetTime(date);//设置日切时间
                 statusService.update(status);
                 accountBot.sendMessage(sendMessage,"操作成功,关闭日切");
+            }else if (text.equals("clear today data") || text.equals("delete today data")||text.equals("clear bill")||
+            text.equals("clear today bill")|| text.equals("delete today bill") || text.equals("delete bill")) {
+                //如果有日切才能使用
+                if (!status.isRiqie()) {
+                    return;
+                }
+                accountService.deleteTodayData(status, groupId);
+                issueService.deleteTodayIssueData(status, groupId);
+                accountBot.sendMessage(sendMessage, "操作成功 ，今日账单已删除");
             }
         }
     }

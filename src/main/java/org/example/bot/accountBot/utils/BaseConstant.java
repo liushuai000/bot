@@ -126,18 +126,18 @@ public class BaseConstant {
             "Delete Operator", "Delete Operator", "Set Operator", "Set Operator Person",
             "Set Single Deposit Fee","Set Deposit Fee","Set Withdrawal Fee","Set Single Withdrawal Fee",
             "Set Single Withdrawal Fee","Set Single Deposit Fee","Set the exchange rate", "Set the delivery rate",
-            "Switch to Chinese","Switch to English", "Set the delivery address","Modify the delivery address","View the sending address"
+            "Switch to Chinese","Switch to English", "Set the delivery address","Modify the delivery address","View the sending address","Sending address",
     };
 
     public final static String[] showArrayEnglish2 = {
             "Set Fee", "Withdraw",
-            "Show Details", "Hide Details", "Show Operator Name", "Show Operator Names", "Show Operator Name", "Hide Operator Name",
+            "Show Details", "Hide Details", "Show Operator Name", "Show Operator Names", "Show Operator", "Hide Operator Name",
             "Hide Name","Hide Names", "Hide Titles","Hide Display","Show Replyer","Show Replyer Name",
             "Hide All", "Show Replier", "Show Replier Name", "Show Balance", "Display amount", "Show USDT", "Show All",
-            "Show 1 item", "Show 3 item", "Show 5 item", "+0", "-0", "+0u", "-0u", "+0U", "-0U", "Show Category", "Hide Category","Cancel","Bill","Show Bill","View Bill",
+            "Show 1 item", "Show 3 item", "Show 5 item", "+0", "-0", "+0u", "-0u", "+0U", "-0U", "Show categories", "Hide categories","Cancel","Bill","Show Bill","View Bill",
             "Clear Today Data","Delete Today Data","Clear Today Bill","Delete Today Bill",
             "Delete Bill","Clear Bill","Delete All Bills","Clear All Bills","Undo Withdrawal","Undo Deposit",
-            "Show Fee","Hide Fee","Bill","View Bill","Show Bill","Hide Replyer Display", "Hide Replyer Info","Hide Replyer name",
+            "Show handling fee","Hidden fees","Bill","View Bill","Show Bill","Hide Replyer Display", "Hide Replyer Info","Hide reply name",
 
     };
 
@@ -193,6 +193,7 @@ public class BaseConstant {
         return temp;
     }
     public static boolean getMessageContentIsContainEnglish2(String text) {
+        text=text.toLowerCase();
         // 合并两个数组
         String[] combinedArray = Arrays.copyOf(arrayEnglish2, arrayEnglish2.length + showArrayEnglish2.length);
         System.arraycopy(showArrayEnglish2, 0, combinedArray, arrayEnglish2.length, showArrayEnglish2.length);
@@ -227,7 +228,7 @@ public class BaseConstant {
     }
     public static boolean equalsAny(String[] array, String input) {
         for (String str : array) {
-            if (input.contains(str)) {
+            if (input.contains(str.toLowerCase())) {
                 return true; // 如果input包含array中的某个元素，则返回true
             }
         }
@@ -235,6 +236,7 @@ public class BaseConstant {
     }
     public static boolean containsAny(String[] array, String input) {
         for (String str : array) {
+            str=str.toLowerCase();
             if (array[0]==null){
                 System.err.println(input+"-"+array[0]+" - "+array[1]);
             }

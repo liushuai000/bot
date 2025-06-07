@@ -57,20 +57,12 @@ public class IssueService {
         mapper.update(null,updateWrapper);
     }
     public void deleteTodayIssueData(Status status, String groupId) {
-        LocalDateTime startOfDay = LocalDateTime.now().withHour(0).withMinute(0).withSecond(0);
-        LocalDateTime endOfDay = LocalDateTime.now().withHour(23).withMinute(59).withSecond(59);
         QueryWrapper<Issue> wrapper = new QueryWrapper<>();
         wrapper.eq("group_id", groupId);
-        if (!status.isRiqie()){
-            wrapper.eq("riqie", false);
-        }else {
-            wrapper.eq("riqie", true);
-        }
-        wrapper.ge("add_time", Date.from(startOfDay.atZone(ZoneId.systemDefault()).toInstant()))
-                .le("add_time", Date.from(endOfDay.atZone(ZoneId.systemDefault()).toInstant()));
-
+        wrapper.eq("riqie", status.isRiqie());
+        wrapper.ge("add_time", status.getSetStartTime())
+                .le("add_time", status.getSetTime());
         mapper.delete(wrapper);
-
     }
     public void deleteHistoryIssueData(String groupId) {
         QueryWrapper<Issue> wrapper = new QueryWrapper<>();

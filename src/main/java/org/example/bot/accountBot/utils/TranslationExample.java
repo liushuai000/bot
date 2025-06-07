@@ -10,6 +10,10 @@ import java.net.URL;
 import java.net.URLEncoder;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class TranslationExample {
 
@@ -25,11 +29,70 @@ public class TranslationExample {
             return text;
         }
         try {
-            String translatedText = translateTextWithoutTags(text, newLanguage);
-            return translatedText.replaceAll("<a href=\"tg://user\\?\" id=(\\d+)\">", "<a href=\"tg://user?id=$1\">");
+            StringBuilder inputBuilder = new StringBuilder(text);
+            Map<String, String> placeholders = extractLinks(inputBuilder);
+            String translatedText = translateTextWithoutTags(inputBuilder.toString(), newLanguage);
+            translatedText=translatedText.replaceAll("<a href=\"tg://user\\?\" id=(\\d+)\">", "<a href=\"tg://user?id=$1\">");//中文状态翻译问题
+            String finalText = restoreLinks(translatedText, placeholders);
+            return normalizeTelegramLinks(finalText);//英文
         }catch (Exception e){
             return e.getMessage();
         }
+    }
+
+    public static Map<String, String> extractLinks(StringBuilder text) {
+        Map<String, String> placeholders = new LinkedHashMap<>();
+
+        // 仅匹配 href 以 http 或 https 开头的链接
+        Pattern pattern = Pattern.compile("<a\\s+href=\"(https?://[^\"]+)\">([^<]*)</a>");
+        Matcher matcher = pattern.matcher(text);
+        int index = 0;
+
+        while (matcher.find()) {
+            String href = matcher.group(1);
+            String inner = matcher.group(2);
+            String placeholder = "-" + index ;
+            String fullMatch = matcher.group(0);
+
+            placeholders.put(placeholder, "<a href=\"" + href + "\">" + inner + "</a>");
+            int start = matcher.start();
+            int end = matcher.end();
+            text.replace(start, end, placeholder);
+
+            matcher = pattern.matcher(text); // 重建 matcher，因为 text 被修改了
+            index++;
+        }
+
+        return placeholders;
+    }
+
+
+    // 还原翻译后的文本中的占位符为原始HTML
+    public static String restoreLinks(String translatedText, Map<String, String> placeholders) {
+        for (Map.Entry<String, String> entry : placeholders.entrySet()) {
+            translatedText = translatedText.replace(entry.getKey(), " "+entry.getValue());
+        }
+        return translatedText;
+    }
+
+    public static String normalizeTelegramLinks(String input) {
+        // 匹配被破坏的 tg 链接
+        Pattern pattern = Pattern.compile(
+                "<\\s*a\\s+href\\s*=\\s*\"tg\\s*:\\s*/\\s*/\\s*user\\s*\\?\\s*id\\s*=\\s*(\\d+)\\s*\"\\s*>",
+                Pattern.CASE_INSENSITIVE
+        );
+
+        Matcher matcher = pattern.matcher(input);
+        StringBuffer sb = new StringBuffer();
+
+        while (matcher.find()) {
+            String userId = matcher.group(1);
+            String fixed = "<a href=\"tg://user?id=" + userId + "\">";
+            matcher.appendReplacement(sb, Matcher.quoteReplacement(fixed));
+        }
+
+        matcher.appendTail(sb);
+        return sb.toString();
     }
 
     public static String translateTextWithoutTags(String text, boolean newLanguage) throws Exception {

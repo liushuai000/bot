@@ -11,6 +11,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
+import org.telegram.telegrambots.meta.api.objects.Update;
 
 import java.math.BigDecimal;
 import java.util.*;
@@ -54,13 +55,33 @@ public class SettingOperatorPerson{
         Matcher matcher = pattern.matcher(text);
         return matcher.matches();
     }
-    public void setHandle(String[] split1, SendMessage sendMessage, String text, UserDTO userDTO, User user6, Status status, GroupInfoSetting groupInfoSetting,UserNormal userNormalTempAdmin) {
+    public void setHandle(String[] split1, SendMessage sendMessage, String text, UserDTO userDTO, User user6, Status status, GroupInfoSetting groupInfoSetting, UserNormal userNormalTempAdmin, Update update) {
         boolean isShowAdminMessage = false;
         text = text.toLowerCase();
         if (split1[0].equals("设置操作员")||split1[0].equals("设置操作人")
                 || split1[0].equals(constantMap.get("设置操作员"))||split1[0].equals(constantMap.get("设置操作人"))) {
             if (!user6.isSuperAdmin()) {//是普通权限
                 accountBot.sendMessage(sendMessage, "您没有设置操作员权限! 只能管理设置");
+                return;
+            }
+            if (update.getMessage().getReplyToMessage()!=null){
+                UserOperation userOperation = userOperationService.selectByUserAndGroupId(userDTO.getCallBackUserId(), userDTO.getGroupId());
+                if (userOperation != null && userOperation.isOperation()) {
+                    accountBot.sendMessage(sendMessage, "已设置该操作员无需重复设置");
+                } else if (userOperation != null && !userOperation.isOperation()) {
+                    userOperation.setOperation(true);
+                    userOperationService.update(userOperation);
+                    accountBot.sendMessage(sendMessage, "设置成功!");
+                } else if (userOperation == null) {
+                    userOperation = new UserOperation();
+                    userOperation.setOperation(true);
+                    userOperation.setUserId(userDTO.getCallBackUserId());
+                    userOperation.setAdminUserId(userNormalTempAdmin.getUserId());
+                    userOperation.setUsername(userDTO.getCallBackName());
+                    userOperation.setGroupId(userDTO.getGroupId());
+                    userOperationService.insertUserOperation(userOperation);
+                    accountBot.sendMessage(sendMessage, "设置成功!");
+                }
                 return;
             }
             if (!isValidSetOperatorCommand(text)) {
@@ -201,9 +222,19 @@ public class SettingOperatorPerson{
                     continue;
                 }
                 if (ua.getUsername()!=null && StringUtils.isNotBlank(ua.getUsername())){
-                    users.add(userService.findByUsername(ua.getUsername()));
+                    User byUsername = userService.findByUsername(ua.getUsername());
+                    users.add(byUsername);
+                    if (ua.getUserId() == null || StringUtils.isBlank(ua.getUserId())){
+                        ua.setUserId(byUsername.getUserId());
+                        userOperationService.update(ua);
+                    }
                 } else if (ua.getUserId()!=null && StringUtils.isNotBlank(ua.getUserId())) {
-                    users.add(userService.findByUserId(ua.getUserId()));
+                    User byUserId = userService.findByUserId(ua.getUserId());
+                    users.add(byUserId);
+                    if (ua.getUsername() == null || StringUtils.isBlank(ua.getUsername())){
+                        ua.setUsername(byUserId.getUsername());
+                        userOperationService.update(ua);
+                    }
                 }
             }
             if (users.isEmpty()){

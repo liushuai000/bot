@@ -447,17 +447,11 @@ public class AccountServiceImpl implements AccountService {
     }
 
     public void deleteTodayData(Status status, String groupId) {
-        LocalDateTime startOfDay = LocalDateTime.now().withHour(0).withMinute(0).withSecond(0);
-        LocalDateTime endOfDay = LocalDateTime.now().withHour(23).withMinute(59).withSecond(59);
         QueryWrapper<Account> wrapper = new QueryWrapper<>();
         wrapper.eq("group_id", groupId);
-        wrapper.ge("add_time", Date.from(startOfDay.atZone(ZoneId.systemDefault()).toInstant()))
-                .le("add_time", Date.from(endOfDay.atZone(ZoneId.systemDefault()).toInstant()));
-        if (!status.isRiqie()){
-            wrapper.eq("riqie", false);
-        }else {
-            wrapper.eq("riqie", true);
-        }
+        wrapper.ge("add_time", status.getSetStartTime())
+                .le("add_time", status.getSetTime());
+        wrapper.eq("riqie", status.isRiqie());
         accountMapper.delete(wrapper);
     }
 

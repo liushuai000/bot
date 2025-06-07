@@ -186,13 +186,13 @@ public class PaperPlaneBotSinglePerson {
         String regex = "^授权-[a-zA-Z0-9]+-[a-zA-Z0-9]+$";
         String regexEn = "^authorization-[a-zA-Z0-9]+-[a-zA-Z0-9]+$";
         String[] split3 = text.split("-");
-        if (text.equals("获取个人信息") || text.equals("personal information")){
+        if (text.equals("获取个人信息（personal information）")){
             this.getUserInfoMessage(message,sendMessage,userDTO);
             return;
-        }else if (text.equals("监听列表") || text.equals("listening address")){
+        }else if (text.equals("监听列表（listening address）")){
             this.getListening(message,sendMessage,userDTO);
             return;
-        }else if (text.equals("使用说明") || text.equals("illustrate")){
+        }else if (text.equals("使用说明（illustrate）")){
             this.useInfo(message,sendMessage,userDTO);
             return;
         }else if (text.contains("##") &&text.length()>=37){
@@ -358,65 +358,87 @@ public class PaperPlaneBotSinglePerson {
                 "本机器人用户名 ： </b><code>@"+username+"</code>\n" +//（点击复制）
                 "\n" +
                 "<b>联系客服：</b>@vipkefu\n" +
-                "<b>双向客服：</b>@yewuvipBot");
+                "<b>双向客服：</b>@yaokevipBot");
     }
 
     //使用说明
     private void useInfo(Message message, SendMessage sendMessage, UserDTO userDTO) {
-        accountBot.sendMessage(sendMessage,"①增加机器人进群。群右上角--Add member-输入  @Evipbot\n" +
-                "②输入”设置费率X.X“\n" +
-                "③输入”设置汇率X.X“\n" +
-                "④取消命令：  撤销入款        撤销下发\n" +
+        String msg="1\uFE0F⃣增加机器人进群。群右上角--Add member-输入 @TTpayvipbot\n" +
+                " Add robots to the group. In the upper right corner of the group--Add member-enter @TTpayvipbot\n" +
                 "\n" +
-                "设置操作人 @***** ，注意：@前面有个空格 。\n" +
-                "显示操作人\n" +
-                "删除操作人 @***** ，注意：@前面有个空格 。\n" +
+                " 2\uFE0F⃣ 设置操作人 @AAA\n" +
+                " Set operator @AAA\n" +
+                "删除操作人 @AAA\n" +
+                "Delete operator @AAA\n" +
+                "先打空格在打@，会弹出选择更方便\n" +
+                "Type space first and then @, a pop-up will appear for easier selection\n" +
+                "显示操作人（Show operator）\n" +
                 "\n" +
+                "  如果对方没有设置用户名，可以回复对方信息并发送“设置操作员”或“删除操作员”来新增或删除操作员\n" +
+                "If the other party has not set a user name, you can reply to the other party's message and send \"Set operator\" or \"Delete operator\" to add or delete an operator.\n" +
                 "\n" +
-                "清理今天数据：删除账单  \n" +
+                "3\uFE0F⃣输入”设置费率X.X%“\n" +
+                "Enter \"set rate X.X%\"\n" +
+                "输入”设置汇率X.X%“\n" +
+                "Enter \"Set exchange rate  X.X%\"\n" +
                 "\n" +
-                "删除所有账单(关闭日切模式使用)\n" +
+                " 4\uFE0F⃣ 入款指令；+     修正；D-\n" +
+                "Deposit instruction; + correction; D-\n" +
+                " 下发指令；-       修正；T-\n" +
+                "Withdrawal instruction;- Amendment;T-\n" +
                 "\n" +
-                "Z0：欧易商家实时交易汇率top10\n" +
+                " 如果输入错误，可以用 入款-XXX  或 下发-XXX，来修正\n" +
+                "If you make an input error, you can use Deposit-XXX or Issue-XXX to correct it.\n" +
+                "“撤销入款”：可撤销最近一条入款记录\n" +
+                "“Cancel deposit”: You can cancel the most recent deposit record\n" +
+                "“撤销下发”：可撤销最近一条下发记录\n" +
+                "“Undo delivery”: You can revoke the most recent delivery record.\n" +
                 "\n" +
-                "计算器功能：\n" +
-                "（100+100）（1000*0.05）\n" +
-                "（1000/5）   （1000-5）\n" +
+                " 5\uFE0F⃣“OTC”, “币价”，“Z0”,即可查询OKex官方最新OTC交易价格,底部可查询微信支付宝和银行卡价格.\n" +
+                "\"OTC\", \"Coin Price\" and \"Z0\" can view the latest OTC transaction prices on OKex. At the bottom, you can view the prices of WeChat, Alipay and bank cards.\n" +
+                " 6\uFE0F⃣账单（bill）\n" +
+                "删除账单（删除今日账单）\n" +
+                "Delete bill (delete today's bill)\n" +
+                "删除全部帐单（删除历史账单谨慎使用）\n" +
+                "Delete all bills (be careful when deleting historical bills)\n" +
                 "\n" +
-                "临时入款汇率：+金额/汇率      演示公式： +100/5\n" +
+                " 7\uFE0F⃣计算器 （calculator）\n" +
+                "100+100            1000*5\n" +
+                "1000/5               1000-5\n" +
+                "8\uFE0F⃣TRC20地址信息查询（TRC20 address information query）\n" +
+                "查询TEtYFNQCaDWZXsjoMwxxJ9tymhXx*****\n" +
+                "QueryTEtYFNQCaDWZXsjoMwxxJ9tymhXx*****\n" +
                 "\n" +
-                "*注：\n" +
-                "\n" +
-                "“设置记账时间12”：设置记账时间+（0到23之间的整数）\n" +
-                "（日切数据默认北京时间中午12点重置）\n" +
-                "\n" +
-                "单笔手续费：\n" +
-                "“设置入款单笔手续费“关键字 ： 设置入款单笔手续费5\n" +
-                "“设置下发单笔手续费“关键字 ： 设置下发单笔手续费5\n" +
-                "\n" +
-                "电报界面显示命令：\n" +
-                "显示操作人名字（显示操作人名字）\n" +
-                "显示回复人名字（显示回复人名字）\n" +
-                "隐藏名字\n" +
-                "显示明细\n" +
-                "隐藏明细\n" +
-                "显示分类\n" +
-                "隐藏分类\n" +
-                "显示余额\n" +
-                "显示USDT\n" +
-                "显示usdt\n" +
-                "显示全部\n" +
-                "显示1条\n" +
-                "显示3条\n" +
-                "显示5条\n" +
-                "关闭日切\n" +
-                "开启日切\n" +
-                "显示手续费\n" +
-                "隐藏手续费\n" +
-                "通知所有人（ 操作员发送才可生效 ）\n" +
-                "查询地址余额：群内发送 查询+地址\n" +
-                "\n" +
-                "售后客服： @vipkefu"  );
+                "9\uFE0F⃣“设置日切12”：设置每日截止时间+（0~23之间的整数）（可修改各组每日截止时间，默认为中国北京时间12:00）\n" +
+                "\"Set daily cut-off 12\": Set the daily cut-off time + (an integer between 0 and 23) (the daily cut-off time of each group can be modified, the default is 12:00 Beijing time, China)\n" +
+                "\uD83D\uDD1F其他功能（Other functions）\n" +
+                "通知（notify）\n" +
+                "显示操作人名称（Show operator name）\n" +
+                "隐藏操作人名称（Hide operator name）\n" +
+                "显示回复人名称（Show replyer name）\n" +
+                "隐藏回复人名称（Hide reply name）\n" +
+                "隐藏名称（Hide name）\n" +
+                "切换中文（Switch to Chinese）\n" +
+                "切换英文（Switch to English）\n" +
+                "显示分类（Show categories）\n" +
+                "隐藏分类（Hide categories）\n" +
+                "设置手续费10（Setup fee 10）0为关闭（0 is off）\n" +
+                "隐藏手续费（Hidden fees）\n" +
+                "显示手续费（Show handling fee）\n" +
+                "显示1条（Show 1 item）\n" +
+                "显示3条（Show 3 item）\n" +
+                "显示5条（Show 5 item）\n" +
+                "显示金额（Display amount）\n" +
+                "显示usdt（show usdt）\n" +
+                "显示全部（Show all）\n" +
+                "显示明细（Show details）\n" +
+                "隐藏明细（hide details）\n" +
+                "“设置下发地址“：设置下发地+下发地址信息\n" +
+                "“查看下发地址“ ： 群内输入关键字    下发地址\n" +
+                "After-sales customer service: @vipkefu @yaokevipBot\n" +
+                "售后客服： @vipkefu @yaokevipBot";
+        sendMessage.setText(msg);
+        accountBot.sendMessage(sendMessage);
     }
 
     private void getListening(Message message, SendMessage sendMessage, UserDTO userDTO) {

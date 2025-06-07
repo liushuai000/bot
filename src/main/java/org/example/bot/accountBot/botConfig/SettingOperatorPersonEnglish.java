@@ -13,6 +13,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
+import org.telegram.telegrambots.meta.api.objects.Update;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
@@ -59,7 +60,7 @@ public class SettingOperatorPersonEnglish {
      * @param sendMessage 发生的消息
      * @param text  消息文本 6976772117
      */
-    public void setHandle(SendMessage sendMessage, String text, UserDTO userDTO, User user6, Status status, GroupInfoSetting groupInfoSetting, UserNormal userNormalTempAdmin) {
+    public void setHandle(SendMessage sendMessage, String text, UserDTO userDTO, User user6, Status status, GroupInfoSetting groupInfoSetting, UserNormal userNormalTempAdmin, Update update) {
         boolean isShowAdminMessage = false;
         String lowerText = text.toLowerCase();// 统一转小写处理
         if (lowerText.startsWith("set operator")){
@@ -67,13 +68,33 @@ public class SettingOperatorPersonEnglish {
                 accountBot.sendMessage(sendMessage,"您没有设置操作员权限! 只能管理设置");
                 return;
             }
-            if (!isValidSetOperatorCommand(text)) {
+            if (update.getMessage().getReplyToMessage()!=null){
+                UserOperation userOperation = userOperationService.selectByUserAndGroupId(userDTO.getCallBackUserId(), userDTO.getGroupId());
+                if (userOperation != null && userOperation.isOperation()) {
+                    accountBot.sendMessage(sendMessage, "已设置该操作员无需重复设置");
+                } else if (userOperation != null && !userOperation.isOperation()) {
+                    userOperation.setOperation(true);
+                    userOperationService.update(userOperation);
+                    accountBot.sendMessage(sendMessage, "设置成功!");
+                } else if (userOperation == null) {
+                    userOperation = new UserOperation();
+                    userOperation.setOperation(true);
+                    userOperation.setUserId(userDTO.getCallBackUserId());
+                    userOperation.setAdminUserId(userNormalTempAdmin.getUserId());
+                    userOperation.setUsername(userDTO.getCallBackName());
+                    userOperation.setGroupId(userDTO.getGroupId());
+                    userOperationService.insertUserOperation(userOperation);
+                    accountBot.sendMessage(sendMessage, "设置成功!");
+                }
+                return;
+            }
+            if (!isValidSetOperatorCommand(lowerText)) {
                 accountBot.sendMessage(sendMessage, "命令错误，添加操作员请@对方的用户名，例如：设置操作员 @XXX");
                 return;
             }
             Pattern compile = Pattern.compile("@(\\w+)");
-            if (compile.matcher(text).find()){
-                Matcher matcher = compile.matcher(text);//应该循环添加id
+            if (compile.matcher(lowerText).find()){
+                Matcher matcher = compile.matcher(lowerText);//应该循环添加id
                 List<String> userNames = new ArrayList<>();
                 while (matcher.find()) {
                     // 将匹配到的用户名添加到列表中
@@ -108,7 +129,7 @@ public class SettingOperatorPersonEnglish {
                     }
                 }
                 //回复用
-            }else if ( !compile.matcher(text).find()){
+            }else if ( !compile.matcher(lowerText).find()){
                 User callBackUser = userService.findByUserId(userDTO.getCallBackUserId());
                 UserOperation userOperation = userOperationService.selectByUserAndGroupId(userDTO.getCallBackUserId(), userDTO.getGroupId());
                 User user2 = userService.findByUsername(userDTO.getCallBackName());
@@ -179,9 +200,19 @@ public class SettingOperatorPersonEnglish {
                     continue;
                 }
                 if (ua.getUsername()!=null && StringUtils.isNotBlank(ua.getUsername())){
-                    users.add(userService.findByUsername(ua.getUsername()));
+                    User byUsername = userService.findByUsername(ua.getUsername());
+                    users.add(byUsername);
+                    if (ua.getUserId() == null || StringUtils.isBlank(ua.getUserId())){
+                        ua.setUserId(byUsername.getUserId());
+                        userOperationService.update(ua);
+                    }
                 } else if (ua.getUserId()!=null && StringUtils.isNotBlank(ua.getUserId())) {
-                    users.add(userService.findByUserId(ua.getUserId()));
+                    User byUserId = userService.findByUserId(ua.getUserId());
+                    users.add(byUserId);
+                    if (ua.getUsername() == null || StringUtils.isBlank(ua.getUsername())){
+                        ua.setUsername(byUserId.getUsername());
+                        userOperationService.update(ua);
+                    }
                 }
             }
             if (users.isEmpty()){
@@ -254,11 +285,11 @@ public class SettingOperatorPersonEnglish {
                     }
                 }
             }
-        }else if (lowerText.startsWith("show fee")){
+        }else if (lowerText.startsWith("show handling fee")){
             status.setShowHandlerMoneyStatus(0);
             statusService.updateStatus("show_handler_money_status"     ,0, userDTO.getGroupId());
             accountBot.sendMessage(sendMessage,"操作成功");
-        }else if (lowerText.startsWith("hide fee")){
+        }else if (lowerText.startsWith("hidden fees")){
             status.setShowHandlerMoneyStatus(1);
             statusService.updateStatus("show_handler_money_status"     ,1, userDTO.getGroupId());
             accountBot.sendMessage(sendMessage,"操作成功");
@@ -290,11 +321,11 @@ public class SettingOperatorPersonEnglish {
             status.setAccountHandlerMoney(money);
             statusService.updateMoneyStatus("account_handler_money"    ,money, userDTO.getGroupId());
             accountBot.sendMessage(sendMessage,"操作成功");
-        }else if (lowerText.equals("show category")){
+        }else if (lowerText.equals("show categories")){
             status.setDisplaySort(0);
             statusService.updateStatus("display_sort"     ,0, userDTO.getGroupId());
             accountBot.sendMessage(sendMessage,"操作成功");
-        }else if (lowerText.equals("hide category")){
+        }else if (lowerText.equals("hide categories")){
             status.setDisplaySort(1);
             statusService.updateStatus("display_sort"     ,1, userDTO.getGroupId());
             accountBot.sendMessage(sendMessage,"操作成功");
@@ -314,7 +345,7 @@ public class SettingOperatorPersonEnglish {
             status.setCallBackStatus(0);
             statusService.updateStatus("handle_status"     ,1, userDTO.getGroupId());
             statusService.updateStatus("call_back_status" , 0, userDTO.getGroupId());
-        }else if (lowerText.equals("hide replyer display")||lowerText.equals("hide replyer name")||lowerText.equals("hide replyer info") ){
+        }else if (lowerText.equals("hide replyer display")||lowerText.equals("hide reply name")||lowerText.equals("hide replyer info") ){
             status.setCallBackStatus(1);
             statusService.updateStatus("call_back_status" , 1, userDTO.getGroupId());
             accountBot.sendMessage(sendMessage,"操作成功");
@@ -357,38 +388,45 @@ public class SettingOperatorPersonEnglish {
     }
 
     //删除操作人员
-    public void deleteHandleEnglish(String text,SendMessage sendMessage,UserDTO userDTO) {
-        if (text.length()<4){
+    public void deleteHandleEnglish(String text, SendMessage sendMessage, UserDTO userDTO) {
+        if (!isValidDeleteOperatorCommand(text)) {
+            return; // 不符合格式，直接返回，不处理
+        }
+        if (text.length() < 15) {
             return;
         }
         String lowerText = text.toLowerCase();
-        if (lowerText.startsWith("delete operator")){
-            String[] split = splitOperatorSkipFirst(text);
-            for (String deleteName : split) {
-                String userName=deleteName.substring(1, deleteName.length());//@ggg_id
-                User byUsername = userService.findByUsername(userName);
-                if (byUsername!=null){
-                    //修改为普通用户
-                    userOperationService.deleteByUsername(userName,userDTO.getGroupId());
-                    accountBot.sendMessage(sendMessage,"删除成功");
-                }else {
-                    byUsername=userService.findByFirstName(deleteName);
-                    if (byUsername==null){
-                        accountBot.sendMessage(sendMessage,"未查询到此操作人!删除失败");
-                    }
-                    userOperationService.deleteByUserId(byUsername.getUserId(),userDTO.getGroupId());
-                    accountBot.sendMessage(sendMessage,"删除成功");
+        if (lowerText.startsWith("delete operator")) {
+            List<String> usernamesToDelete = extractUsernames(text);
+            if (usernamesToDelete.isEmpty()) {
+                accountBot.sendMessage(sendMessage, "未检测到要删除的操作员");
+                return;
+            }
+            for (String username : usernamesToDelete) {
+                User byUsername = userService.findByUsername(username);
+                if (byUsername != null) {
+                    userOperationService.deleteByUsername(username, userDTO.getGroupId());
+                    accountBot.sendMessage(sendMessage, "✅ 删除操作员 @" + username + " 成功");
+                } else {
+                    accountBot.sendMessage(sendMessage, "❌ 用户 @" + username + " 不存在或未设置为操作员");
                 }
-
-
             }
         }
     }
-    public static String[] splitOperatorSkipFirst(String operator) {
-        String[] parts = operator.split(" ");
-        if (parts.length > 1) {
-            return Arrays.copyOfRange(parts, 1, parts.length);
-        }
-        return new String[0];
+    private boolean isValidDeleteOperatorCommand(String text) {
+        String regex = "^delete\\s+operator(\\s+@\\w+)+$";
+        return text.toLowerCase().matches(regex);
     }
+
+    public static List<String> extractUsernames(String input) {
+        List<String> usernames = new ArrayList<>();
+        // 正则匹配 @username 形式，username 可以包含字母、数字、下划线
+        Pattern pattern = Pattern.compile("@(\\w+)");
+        Matcher matcher = pattern.matcher(input);
+        while (matcher.find()) {
+            usernames.add(matcher.group(1)); // group(1) 是括号内的内容
+        }
+        return usernames;
+    }
+
 }

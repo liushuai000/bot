@@ -83,7 +83,7 @@ public class AccountController {
 //
 //        return ResponseEntity.ok().headers(headers).body(excelBytes);
 //    }
-    @GetMapping("/generate-tron-keys")
+    @GetMapping("/generateTron")
     public void generateTronKeys(@RequestParam(required = false, defaultValue = "100") Integer count, HttpServletResponse response) {
         try {
             List<Map<String, String>> keys = new ArrayList<>();

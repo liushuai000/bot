@@ -25,15 +25,9 @@ public class PaperPlaneBotButton {
         // 创建按钮行
         KeyboardRow row1 = new KeyboardRow();
         KeyboardRow row2 = new KeyboardRow();
-        if (groupInfoSetting.getEnglish()){
-            row1.add(new KeyboardButton("获取个人信息"));
-            row2.add(new KeyboardButton("监听列表"));
-            row2.add(new KeyboardButton("使用说明"));
-        }else {
-            row1.add(new KeyboardButton("personal information"));
-            row2.add(new KeyboardButton("listening address"));
-            row2.add(new KeyboardButton("illustrate"));
-        }
+        row1.add(new KeyboardButton("获取个人信息（personal information）"));
+        row2.add(new KeyboardButton("监听列表（listening address）"));
+        row2.add(new KeyboardButton("使用说明（illustrate）"));
         // 将按钮行添加到键盘列表中
         List<KeyboardRow> keyboard = new ArrayList<>();
         keyboard.add(row1);
