@@ -87,7 +87,7 @@ public class AccountServiceImpl implements AccountService {
             returnFromType.setIssueData(issueDTOList);
             if (accountDTOList==null && issueDTOList==null)return returnFromType;
             Rate rate = rateService.selectRateList(groupId).get(0);
-            returnFromType.setRateData(accountAssembler.rateToDTO(rate,accountDTOList,issueDTOList));
+            returnFromType.setRateData(accountAssembler.rateToDTO(rate,accountDTOList,issueDTOList,status));
             List<CallbackUserDTO> callbackUserDTOList=this.getCallbackDTO(accountDTOList,issueDTOList);
             returnFromType.setCallbackData(callbackUserDTOList);
             List<OperationUserDTO> operationUserDTOList=this.getOperationUserDTO(accountDTOList,issueDTOList);

@@ -1,5 +1,6 @@
 package org.example.bot.accountBot.dto;
 
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
@@ -44,5 +45,13 @@ public class RateDTO {
     private BigDecimal downUSDT=BigDecimal.ZERO;    //未下发
     @ApiModelProperty("count")
     private BigDecimal countUSDT=BigDecimal.ZERO;//总入款
+    @ApiModelProperty("downExchange")
+    private BigDecimal downExchange=BigDecimal.ZERO;    //下发汇率
+    @ApiModelProperty("downRate")
+    private BigDecimal downRate=BigDecimal.ZERO;    //下发费率
+
+
+
+
 
 }

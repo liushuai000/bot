@@ -144,7 +144,15 @@ public class RuzhangOperations{
                     Issue issue = issueMapper.selectOne(new QueryWrapper<Issue>().eq("message_id", replayToMessageId));
                     issueMapper.delete(new QueryWrapper<Issue>().eq("message_id",replayToMessageId));
                     accountService.updateNewestData(issue.getDown(),userDTO.getGroupId());
-                }else {
+                }else if (replyToText.startsWith("下发")){
+                    Issue issue = issueMapper.selectOne(new QueryWrapper<Issue>().eq("message_id", replayToMessageId));
+                    issueMapper.delete(new QueryWrapper<Issue>().eq("message_id",replayToMessageId));
+                    accountService.updateNewestData(issue.getDown(),userDTO.getGroupId());
+                }else if (replyToText.startsWith("入款")){
+                    Account account = accountMapper.selectOne(new QueryWrapper<Account>().eq("message_id", replayToMessageId));
+                    accountMapper.delete(new QueryWrapper<Account>().eq("message_id",replayToMessageId));
+                    issueService.updateIssueDown(account.getDown(),userDTO.getGroupId());
+                }else{
                     return;
                 }
                 accountBot.sendMessage(sendMessage,"取消成功");
@@ -165,7 +173,7 @@ public class RuzhangOperations{
     public void repealEn(Message message, SendMessage sendMessage, List<Account> accounts, String replyToText,Integer replayToMessageId, UserDTO userDTO, List<Issue> issueList) {
         String text = message.getText().toLowerCase();
         if (replyToText!=null){
-            if (text.equals("Revoke Deposit")){
+            if (text.equals("revoke deposit")){
                 if (accounts.isEmpty()){
                     accountBot.sendMessage(sendMessage,"撤销未成功! 账单为空");
                 }else {
@@ -175,7 +183,7 @@ public class RuzhangOperations{
                     issueService.updateIssueDown(sortedUserList.get(sortedUserList.size()-1).getDown(),userDTO.getGroupId());
                     accountBot.sendMessage(sendMessage,"撤销成功");
                 }
-            }else if (text.equals("Cancel")&& replyToText!=null){
+            }else if (text.equals("cancel")&& replyToText!=null){
                 log.info("replyToXXXTentacion:{}",replyToText);
                 if (replyToText.charAt(0)=='+'){
                     Account account = accountMapper.selectOne(new QueryWrapper<Account>().eq("message_id", replayToMessageId));
@@ -185,11 +193,19 @@ public class RuzhangOperations{
                     Issue issue = issueMapper.selectOne(new QueryWrapper<Issue>().eq("message_id", replayToMessageId));
                     issueMapper.delete(new QueryWrapper<Issue>().eq("message_id",replayToMessageId));
                     accountService.updateNewestData(issue.getDown(),userDTO.getGroupId());
-                }else {
+                }else if (replyToText.startsWith("withdraw")){
+                    Issue issue = issueMapper.selectOne(new QueryWrapper<Issue>().eq("message_id", replayToMessageId));
+                    issueMapper.delete(new QueryWrapper<Issue>().eq("message_id",replayToMessageId));
+                    accountService.updateNewestData(issue.getDown(),userDTO.getGroupId());
+                }else if (replyToText.startsWith("deposit")){
+                    Account account = accountMapper.selectOne(new QueryWrapper<Account>().eq("message_id", replayToMessageId));
+                    accountMapper.delete(new QueryWrapper<Account>().eq("message_id",replayToMessageId));
+                    issueService.updateIssueDown(account.getDown(),userDTO.getGroupId());
+                }else{
                     return;
                 }
                 accountBot.sendMessage(sendMessage,"取消成功");
-            }else if (text.equals("Revoke Withdrawal")){
+            }else if (text.equals("revoke withdrawal")){
                 if (issueList.isEmpty()){
                     accountBot.sendMessage(sendMessage,"撤销未成功! 账单为空");
                     return;
@@ -208,11 +224,17 @@ public class RuzhangOperations{
     public void inHandle(String[] split2, String text, Account updateAccount,SendMessage sendMessage,
                          List<Account> accountList, Message message, String[] split3, Rate rate,
                          Issue issue, List<Issue> issueList, UserDTO userDTO,Status status,GroupInfoSetting groupInfoSetting) {
+        text=text.toLowerCase();
         BigDecimal total;
         BigDecimal down;
         //判断是否符合公式 true 是匹配
         boolean isMatcher = utils.isMatcher(text);
-        if (!text.startsWith("下发")&&!text.toLowerCase().contains("withdraw") &&!text.startsWith("入款")&&!text.toLowerCase().contains("deposit") ){
+        if (!text.startsWith("下发")&&!text.toLowerCase().contains("withdraw") &&!text.startsWith("入款")&&!text.toLowerCase().contains("deposit")
+        &&!text.startsWith("显示操作员")&&!text.startsWith("显示操作人")&&!text.toLowerCase().contains("show operator")
+                &&!text.startsWith("设置下发地址")&&!text.toLowerCase().contains("set the delivery address")
+                &&!text.startsWith("修改下发地址")&&!text.toLowerCase().contains("modify the delivery address")
+                &&!text.startsWith("查看下发地址")&&!text.toLowerCase().contains("view the sending address")
+        ){
             //+0 -0显示账单
             if (showOperatorName.isEmptyMoney(text) || BaseConstant.showReplay(text)|| BaseConstant.showReplayEnglish(text)||BaseConstant.showReplayEnglish2(text)){
                 showOperatorName.replay(sendMessage,userDTO,updateAccount,rate,issueList,issue,text,status,groupInfoSetting);
@@ -384,10 +406,18 @@ public class RuzhangOperations{
         StringBuilder issuesStringBuilder = new StringBuilder();
         for (int i = 0; i < status.getShowFew(); i++) {
             if (issuesList.size()>i){
-                issuesStringBuilder.append(
-                        newIssueList.get(i)+"  "+ issuesList.get(i).getDowned().setScale(2, RoundingMode.HALF_UP)
-                                +(showDetailList.isEmpty()? ""
-                                : showDetailList.get(i))+operatorNameList.get(i));
+                String chatId = issuesList.get(i).getGroupId();
+                int messageId = issuesList.get(i).getMessageId();
+                String link;
+                if (chatId.startsWith("-100")) {//表示超级群组
+                    chatId = chatId.substring(4); // 去掉 -100
+                    String url = String.format("https://t.me/c/%s/%d", chatId, messageId);
+                    link =String.format("<a href=\"%s\">%s</a>", url, issuesList.get(i).getDowned().setScale(2, RoundingMode.HALF_UP));
+                }else{//普通群组 没有跳转链接
+                    link =issuesList.get(i).getDowned().setScale(2, RoundingMode.HALF_UP)+"";
+                }
+                issuesStringBuilder.append(newIssueList.get(i)+"  "+ link +(showDetailList.isEmpty()? ""
+                        : showDetailList.get(i))+operatorNameList.get(i));
                 if (!callBackNames.isEmpty() && callBackNames.size()>i){
                     issuesStringBuilder.append(callBackNames.get(i));
                 }
@@ -475,11 +505,20 @@ public class RuzhangOperations{
             }
             StringBuilder stringBuilder=new StringBuilder();
             for (int i = 0; i < status.getShowFew(); i++) {
-                if (accounts.size()>i){
-                    stringBuilder.append(
-                            newList.get(i)+" "+ accounts.get(i).getTotal().setScale(2, RoundingMode.HALF_UP)+" "
-                                    +accountDetails.get(i)+" "+accountOperatorNames.get(i)+" ");
-                    if (!accountCallBackNames.isEmpty() && accountCallBackNames.size()>i){
+                if (accounts.size() > i) {
+                    Integer messageId = accounts.get(i).getMessageId();
+                    String chatId = accounts.get(i).getGroupId(); // 确保这个字段存在且是字符串类型
+                    String link;
+                    if (chatId.startsWith("-100")) {//表示超级群组
+                        chatId = chatId.substring(4); // 去掉 -100
+                        String url = String.format("https://t.me/c/%s/%d", chatId, messageId);
+                        link =String.format("<a href=\"%s\">%s</a>", url, accounts.get(i).getTotal().setScale(2, RoundingMode.HALF_UP));
+                    }else{//普通群组 没有跳转链接
+                        link =accounts.get(i).getTotal().setScale(2, RoundingMode.HALF_UP)+"";
+                    }
+                    stringBuilder.append(newList.get(i) + " " + link + " " +
+                                    accountDetails.get(i) + " " + accountOperatorNames.get(i) + " ");
+                    if (!accountCallBackNames.isEmpty() && accountCallBackNames.size() > i) {
                         stringBuilder.append(accountCallBackNames.get(i));
                     }
                     stringBuilder.append("\n");

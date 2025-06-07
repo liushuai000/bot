@@ -19,8 +19,9 @@ public class ConstantMap {
         put("设置费率(Set Rate)", "SZFL");
         put("通知所有人(Notify All)", "TZSYR");
 
+        put("波场下载地址", "BCXZDZ");
+
         put("设置汇率(Set Exchange Rate)", "SZHL");
-        put("设置入款单笔手续费(Set Single Deposit Fee)", "SZRKDBSXF");
         put("取消(Cancel)", "QX");
 
         put("删除操作员(Delete Operator)", "SCCZY");
@@ -30,16 +31,18 @@ public class ConstantMap {
 
         put("关闭回复人显示(Hide Replyer Display)", "GBHFRXS");
         put("隐藏回复人显示(Hide Replyer Info)", "YCHFRXS");
+        put("隐藏回复人名称(Hide Replyer name)", "YCHFRMC");
         put("查询(Query)", "CX");
 
         put("设置入款手续费(Set Deposit Fee)", "SZRKSXF");
         put("设置下发手续费(Set Withdrawal Fee)", "SZXFSXF");
         put("设置下发单笔手续费(Set Single Withdrawal Fee)", "SZXFDBSXF");
         put("设置单笔下发手续费(Set Single Withdrawal Fee)", "SZDBXFSXF");
+        put("设置入款单笔手续费(Set Single Deposit Fee)", "SZRKDBSXF");
         put("设置单笔入款手续费(Set Single Deposit Fee)", "SZDBRKSXF");
 
         // showArray 相关
-        put("设置手续费(Set Fee)", "SZSXF");
+        put("设置手续费(Setup fee 10)0为关闭", "SZSXF");
         put("下发(Withdraw)", "XF");
         put("入款(Deposit)", "RK");
         put("显示明细(Show Details)", "XSMX");
@@ -58,14 +61,14 @@ public class ConstantMap {
         put("将回复人显示(Show Replyer)", "JHFRXS");
         put("显示回复人名称(Show Replyer Name)", "XSHFRMC");
         put("显示余额(Show Balance)", "XSYE");
-        put("显示金额(Show Amount)", "XSJE");
+        put("显示金额(Display amount)", "XSJE");
         put("显示USDT(Show USDT)", "XSUSDT");
         put("显示usdt(Show USDT)", "XSusdt");
         put("显示全部(Show All)", "XSQB");
 
-        put("显示1条(Show 1 Record)", "XS1T");
-        put("显示3条(Show 3 Record)", "XS3T");
-        put("显示5条(Show 5 Record)", "XS5T");
+        put("显示1条(Show 1 item)", "XS1T");
+        put("显示3条(Show 3 item)", "XS3T");
+        put("显示5条(Show 5 item)", "XS5T");
         put("+0(Add Zero)", "+0");
         put("-0(Subtract Zero)", "-0");
         put("+0u(Add Zero USDT)", "+0U");
@@ -106,9 +109,21 @@ public class ConstantMap {
 
         put("设置下发汇率(Set the exchange rate)", "SZXFHL");
         put("设置下发费率(Set the delivery rate)", "SZXFFL");
+
+        put("切换中文(Switch to Chinese)", "QHZW");
+        put("切换英文(Switch to English)", "QHYW");
+
+        put("设置下发地址(Set the delivery address)", "SZXFDZ");
+        put("修改下发地址(Modify the delivery address)", "XGXFDZ");
+        put("查看下发地址(View the sending address)", "CKXFDZ");
+
     }
     static {
-
+        putEnglish("设置下发地址", "SZXFDZ");
+        putEnglish("修改下发地址)", "XGXFDZ");
+        putEnglish("查看下发地址", "CKXFDZ");
+        putEnglish("切换中文", "QHZW");
+        putEnglish("切换英文", "QHYW");
         // 初始化映射关系
         putEnglish("通知", "TZ");
         putEnglish("设置日切", "SZRQ");
@@ -116,7 +131,7 @@ public class ConstantMap {
         putEnglish("关闭日切", "GBRQ");
         putEnglish("设置费率", "set rate ");
         putEnglish("通知所有人", "TZSYR");
-
+        putEnglish("波场下载地址", "BCXZDZ");
         putEnglish("设置汇率", "SZHL");
         putEnglish("设置入款单笔手续费", "SZRKDBSXF");
         putEnglish("取消", "QX");
@@ -128,6 +143,7 @@ public class ConstantMap {
 
         putEnglish("关闭回复人显示", "GBHFRXS");
         putEnglish("隐藏回复人显示", "YCHFRXS");
+        putEnglish("隐藏回复人名称", "YCHFRMC");
         putEnglish("查询", "CX");
 
         putEnglish("设置入款手续费", "SZRKSXF");

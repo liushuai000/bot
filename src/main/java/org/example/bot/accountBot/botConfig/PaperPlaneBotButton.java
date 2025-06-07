@@ -30,9 +30,9 @@ public class PaperPlaneBotButton {
             row2.add(new KeyboardButton("监听列表"));
             row2.add(new KeyboardButton("使用说明"));
         }else {
-            row1.add(new KeyboardButton("Access to personal information"));
-            row2.add(new KeyboardButton("Listening List"));
-            row2.add(new KeyboardButton("Instructions"));
+            row1.add(new KeyboardButton("personal information"));
+            row2.add(new KeyboardButton("listening address"));
+            row2.add(new KeyboardButton("illustrate"));
         }
         // 将按钮行添加到键盘列表中
         List<KeyboardRow> keyboard = new ArrayList<>();

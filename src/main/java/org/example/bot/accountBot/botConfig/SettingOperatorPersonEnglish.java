@@ -1,12 +1,10 @@
 package org.example.bot.accountBot.botConfig;
 
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 import org.example.bot.accountBot.dto.UserDTO;
 import org.example.bot.accountBot.mapper.StatusMapper;
-import org.example.bot.accountBot.pojo.GroupInfoSetting;
-import org.example.bot.accountBot.pojo.Status;
-import org.example.bot.accountBot.pojo.User;
-import org.example.bot.accountBot.pojo.UserOperation;
+import org.example.bot.accountBot.pojo.*;
 import org.example.bot.accountBot.service.StatusService;
 import org.example.bot.accountBot.service.UserOperationService;
 import org.example.bot.accountBot.service.UserService;
@@ -47,6 +45,13 @@ public class SettingOperatorPersonEnglish {
     protected String username;
     @Autowired
     ButtonList buttonList;
+    public boolean isValidSetOperatorCommand(String text) {
+        // 匹配“设置操作员”或对应的英文关键词开头，并且后面跟着一个或多个 @username
+        String regex = "^(设置操作员|设置操作人|set operator|add operator)(\\s+@\\w+)+$";
+        Pattern pattern = Pattern.compile(regex);
+        Matcher matcher = pattern.matcher(text);
+        return matcher.matches();
+    }
     /**
      * 设置操作人员
      * @param text 传输的文本 是否是 设置操作员
@@ -54,12 +59,16 @@ public class SettingOperatorPersonEnglish {
      * @param sendMessage 发生的消息
      * @param text  消息文本 6976772117
      */
-    public void setHandle( SendMessage sendMessage, String text, UserDTO userDTO, User user6, Status status, GroupInfoSetting groupInfoSetting) {
+    public void setHandle(SendMessage sendMessage, String text, UserDTO userDTO, User user6, Status status, GroupInfoSetting groupInfoSetting, UserNormal userNormalTempAdmin) {
         boolean isShowAdminMessage = false;
         String lowerText = text.toLowerCase();// 统一转小写处理
         if (lowerText.startsWith("set operator")){
             if (!user6.isSuperAdmin()){//是普通权限
                 accountBot.sendMessage(sendMessage,"您没有设置操作员权限! 只能管理设置");
+                return;
+            }
+            if (!isValidSetOperatorCommand(text)) {
+                accountBot.sendMessage(sendMessage, "命令错误，添加操作员请@对方的用户名，例如：设置操作员 @XXX");
                 return;
             }
             Pattern compile = Pattern.compile("@(\\w+)");
@@ -160,31 +169,91 @@ public class SettingOperatorPersonEnglish {
                 accountBot.sendMessage(sendMessage,"已设置该操作员无需重复设置");
             }
         }else if (lowerText.startsWith("show operator")){
-            StringBuilder sb = new StringBuilder("当前操作人: ");
+            String  admin = String.format("<a href=\"tg://user?id=%d\">@%s</a>", Long.parseLong(userNormalTempAdmin.getUserId()), userNormalTempAdmin.getUsername());
+            StringBuilder sb = new StringBuilder("本群机器人最高权限管理员为："+admin+"\n");
+            sb.append("其他操作员为: ");
             List<UserOperation> userAuthorities=userOperationService.selectByUserOperator(userDTO.getGroupId(),true);
             List<User> users = new ArrayList<>();
-            userAuthorities.stream().filter(Objects::nonNull).forEach(ua->{
-                users.add(userService.selectUserNameOrUserId(ua.getUsername(),ua.getUserId()));
-            });
-            List<User> userNormalList = users.stream()
-                    .collect(Collectors.collectingAndThen(
-                            Collectors.toMap(User::getUserId, p -> p, (p1, p2) -> p1),
-                            map -> new ArrayList<>(map.values())
-                    ));
+            for (UserOperation ua:userAuthorities){
+                if (ua.getUserId()!=null && StringUtils.isNotBlank(ua.getUserId())&& ua.getUserId().equals(userNormalTempAdmin.getUserId())){
+                    continue;
+                }
+                if (ua.getUsername()!=null && StringUtils.isNotBlank(ua.getUsername())){
+                    users.add(userService.findByUsername(ua.getUsername()));
+                } else if (ua.getUserId()!=null && StringUtils.isNotBlank(ua.getUserId())) {
+                    users.add(userService.findByUserId(ua.getUserId()));
+                }
+            }
+            if (users.isEmpty()){
+                return;
+            }
+            List<User> userNormalList = users.stream().collect(Collectors.collectingAndThen(
+                    Collectors.toMap(User::getUserId, p -> p, (p1, p2) -> p1),
+                    map -> new ArrayList<>(map.values())));
             for (int i = 0; i < userNormalList.size(); i++) {
                 String lastName = userNormalList.get(i).getLastName()==null?"":userNormalList.get(i).getLastName();
-                String callBackName=userNormalList.get(i).getFirstName()==null?"":userNormalList.get(i).getFirstName()+lastName+ "   ";
+                String firstName=userNormalList.get(i).getFirstName()==null?"":userNormalList.get(i).getFirstName()+ "";
+                String nickName=firstName+lastName;
+                String username1 = userNormalList.get(i).getUsername();
                 String format;
                 //如果没有用户id就显示用户名
-                if (userNormalList.get(i).getUserId()!=null){
-                    format = String.format("<a href=\"tg://user?id=%d\">%s</a>", Long.parseLong(userNormalList.get(i).getUserId()), callBackName);
+                if (userNormalList.get(i).getUserId()!=null && StringUtils.isNotBlank(username1)) {
+                    format = String.format("<a href=\"tg://user?id=%d\">@%s</a>", Long.parseLong(userNormalList.get(i).getUserId()), username1);
+                }else if (userNormalList.get(i).getUserId()!=null && StringUtils.isNotBlank(nickName)){
+                    format = String.format("<a href=\"tg://user?id=%d\">@%s</a>", Long.parseLong(userNormalList.get(i).getUserId()), nickName);
+                }else if (userNormalList.get(i).getUserId()==null || StringUtils.isBlank(userNormalList.get(i).getUserId())){
+                    format= "@"+nickName;
                 }else {
-                    format=callBackName;
+                    format= String.format("<a href=\"tg://user?id=%d\">@%s</a>", Long.parseLong(userNormalList.get(i).getUserId()), userNormalList.get(i).getUserId());
                 }
-                sb.append(format);
+                sb.append(format+" ");
             }
             buttonList.implList(sendMessage,userDTO.getGroupId(),userDTO.getGroupTitle(),groupInfoSetting);
             accountBot.sendMessage(sendMessage,sb.toString());
+        }else if (lowerText.startsWith("delete operator")){
+            if (userDTO.getCallBackUserId()!=null && StringUtils.isNotBlank(userDTO.getCallBackUserId())){
+                if (userNormalTempAdmin.getUserId().equals(userDTO.getCallBackUserId())){
+                    accountBot.sendMessage(sendMessage,"不能删除管理员!");
+                    return;
+                }
+                UserOperation byUsername = userOperationService.selectByUserAndGroupId(userDTO.getCallBackUserId(),userDTO.getGroupId());
+                if (byUsername!=null){
+                    //修改为普通用户
+                    userOperationService.deleteByUserId(userDTO.getCallBackUserId(),userDTO.getGroupId());
+                    accountBot.sendMessage(sendMessage,"删除成功");
+                }else if (byUsername==null){
+                    byUsername= userOperationService.selectByUserName(userDTO.getCallBackName(),userDTO.getGroupId());
+                    if (byUsername!=null) {
+                        //修改为普通用户
+                        userOperationService.deleteByUsername(userDTO.getCallBackName(), userDTO.getGroupId());
+                        accountBot.sendMessage(sendMessage, "删除成功");
+                    }else {
+                        accountBot.sendMessage(sendMessage,"未查询到此操作人!删除失败");
+                    }
+                }
+            }
+        }else if (lowerText.startsWith("delete operator person")){
+            if (userDTO.getCallBackUserId()!=null && StringUtils.isNotBlank(userDTO.getCallBackUserId())){
+                if (userNormalTempAdmin.getUserId().equals(userDTO.getCallBackUserId())){
+                    accountBot.sendMessage(sendMessage,"不能删除管理员!");
+                    return;
+                }
+                UserOperation byUsername = userOperationService.selectByUserAndGroupId(userDTO.getCallBackUserId(),userDTO.getGroupId());
+                if (byUsername!=null){
+                    //修改为普通用户
+                    userOperationService.deleteByUserId(userDTO.getCallBackUserId(),userDTO.getGroupId());
+                    accountBot.sendMessage(sendMessage,"删除成功");
+                }else if (byUsername==null){
+                    byUsername= userOperationService.selectByUserName(userDTO.getCallBackName(),userDTO.getGroupId());
+                    if (byUsername!=null) {
+                        //修改为普通用户
+                        userOperationService.deleteByUsername(userDTO.getCallBackName(), userDTO.getGroupId());
+                        accountBot.sendMessage(sendMessage, "删除成功");
+                    }else {
+                        accountBot.sendMessage(sendMessage,"未查询到此操作人!删除失败");
+                    }
+                }
+            }
         }else if (lowerText.startsWith("show fee")){
             status.setShowHandlerMoneyStatus(0);
             statusService.updateStatus("show_handler_money_status"     ,0, userDTO.getGroupId());
@@ -193,25 +262,26 @@ public class SettingOperatorPersonEnglish {
             status.setShowHandlerMoneyStatus(1);
             statusService.updateStatus("show_handler_money_status"     ,1, userDTO.getGroupId());
             accountBot.sendMessage(sendMessage,"操作成功");
-        }else if (lowerText.startsWith("set fee")){
-            BigDecimal money=BigDecimal.valueOf(Long.parseLong(lowerText.substring("set fee".length(), lowerText.length())));
+        }else if (lowerText.startsWith("setup fee ")){
+            BigDecimal money=BigDecimal.valueOf(Long.parseLong(lowerText.substring("setup fee ".length(), lowerText.length())));
             status.setAccountHandlerMoney(money);
             status.setIssueHandlerMoney(money);
+            status.setShowHandlerMoneyStatus(0);
             statusService.updateMoneyStatus("issue_handler_money"     ,money, userDTO.getGroupId());
             statusService.updateMoneyStatus("account_handler_money"    ,money, userDTO.getGroupId());
             accountBot.sendMessage(sendMessage,"操作成功");
-        }else if (lowerText.startsWith("set withdrawal fee per transaction")){
-            BigDecimal money=BigDecimal.valueOf(Long.parseLong(lowerText.substring("set withdrawal fee per transaction".length(), lowerText.length())));
-            status.setIssueHandlerMoney(money);
-            statusService.updateMoneyStatus("issue_handler_money"     ,money, userDTO.getGroupId());
-            accountBot.sendMessage(sendMessage,"操作成功");
         }else if (lowerText.startsWith("set withdrawal fee")){
-            BigDecimal money=BigDecimal.valueOf(Long.parseLong(lowerText.substring("set withdrawal fee".length()), lowerText.length()));
+            BigDecimal money=BigDecimal.valueOf(Long.parseLong(lowerText.substring("set withdrawal fee".length(), lowerText.length())));
             status.setIssueHandlerMoney(money);
             statusService.updateMoneyStatus("issue_handler_money"     ,money, userDTO.getGroupId());
             accountBot.sendMessage(sendMessage,"操作成功");
-        }else if (lowerText.startsWith("set deposit fee per transaction")){
-            BigDecimal money=BigDecimal.valueOf(Long.parseLong(lowerText.substring("set deposit fee per transaction".length()), lowerText.length()));
+        }else if (lowerText.startsWith("set single withdrawal fee")){
+            BigDecimal money=BigDecimal.valueOf(Long.parseLong(lowerText.substring("set single withdrawal fee".length()), lowerText.length()));
+            status.setIssueHandlerMoney(money);
+            statusService.updateMoneyStatus("issue_handler_money"     ,money, userDTO.getGroupId());
+            accountBot.sendMessage(sendMessage,"操作成功");
+        }else if (lowerText.startsWith("set single deposit fee")){
+            BigDecimal money=BigDecimal.valueOf(Long.parseLong(lowerText.substring("set single deposit fee".length()), lowerText.length()));
             status.setAccountHandlerMoney(money);
             statusService.updateMoneyStatus("account_handler_money"    ,money, userDTO.getGroupId());
             accountBot.sendMessage(sendMessage,"操作成功");
@@ -244,7 +314,7 @@ public class SettingOperatorPersonEnglish {
             status.setCallBackStatus(0);
             statusService.updateStatus("handle_status"     ,1, userDTO.getGroupId());
             statusService.updateStatus("call_back_status" , 0, userDTO.getGroupId());
-        }else if (lowerText.equals("disable replier display")||lowerText.equals("hide replier display") ){
+        }else if (lowerText.equals("hide replyer display")||lowerText.equals("hide replyer name")||lowerText.equals("hide replyer info") ){
             status.setCallBackStatus(1);
             statusService.updateStatus("call_back_status" , 1, userDTO.getGroupId());
             accountBot.sendMessage(sendMessage,"操作成功");
@@ -256,7 +326,7 @@ public class SettingOperatorPersonEnglish {
             status.setDetailStatus(1);
             statusService.updateStatus("detail_status"     ,1, userDTO.getGroupId());
             accountBot.sendMessage(sendMessage,"操作成功");
-        }else if (lowerText.equals("show balance")||lowerText.equals("show amount")) {
+        }else if (lowerText.equals("show balance")||lowerText.equals("display amount")) {
             status.setShowMoneyStatus(0);
             statusService.updateStatus("show_money_status"  ,0, userDTO.getGroupId());
             accountBot.sendMessage(sendMessage, "操作成功");
@@ -268,7 +338,7 @@ public class SettingOperatorPersonEnglish {
             status.setShowMoneyStatus(2);
             statusService.updateStatus("show_money_status"  ,2, userDTO.getGroupId());
             accountBot.sendMessage(sendMessage, "操作成功");
-        }else if (lowerText.equals("show 1 record")||lowerText.equals("show 3 record")||lowerText.equals("show 5 record")) {
+        }else if (lowerText.equals("show 1 item")||lowerText.equals("show 3 item")||lowerText.equals("show 5 item")) {
             int i = Integer.parseInt(lowerText.substring(5,6));
             status.setShowFew(i);
             statusService.updateStatus("show_few"            ,i , userDTO.getGroupId());

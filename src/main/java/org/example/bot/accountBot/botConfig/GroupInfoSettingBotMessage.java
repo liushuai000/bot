@@ -16,24 +16,25 @@ public class GroupInfoSettingBotMessage {
     @Autowired
     private AccountBot accountBot;
     public GroupInfoSetting getGroupOrCreate(String text,Long chatId){
+        text=text.toLowerCase();
         GroupInfoSetting groupInfoSetting=groupInfoSettingMapper.selectOne(new QueryWrapper<GroupInfoSetting>().eq("group_id", chatId));
         if (groupInfoSetting==null){// false是英语 true是中文
             groupInfoSetting=new GroupInfoSetting();
-            if (!text.equals("切换中文") || !text.equals("切换英文")){
+            if (!text.equals("切换中文") || !text.equals("切换英文") ||  !text.equals("switch to chinese")||  text.equals("switch to english")){
                 groupInfoSetting.setEnglish(true);
-            }else if (text.equals("切换中文") ){
+            }else if (text.equals("切换中文") || text.equals("switch to chinese")){
                 groupInfoSetting.setEnglish(true);
-            } else if (text.equals("切换英文")) {
+            } else if (text.equals("切换英文")|| text.equals("switch to english")) {
                 groupInfoSetting.setEnglish(false);
             }else {
                 groupInfoSetting.setEnglish(true);
             }
             groupInfoSetting.setGroupId(Long.valueOf(chatId));
             groupInfoSettingMapper.insert(groupInfoSetting);
-        }else if (text.equals("切换中文") || text.equals("切换英文")){
-            if (text.equals("切换中文") ){
+        }else if (text.equals("切换中文") || text.equals("切换英文") ||  text.equals("switch to chinese")||  text.equals("switch to english")){
+            if (text.equals("切换中文") || text.equals("switch to chinese")){
                 groupInfoSetting.setEnglish(true);
-            } else if (text.equals("切换英文")) {
+            } else if (text.equals("切换英文") || text.equals("switch to english")) {
                 groupInfoSetting.setEnglish(false);
             }else {
                 groupInfoSetting.setEnglish(true);

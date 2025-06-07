@@ -1,6 +1,7 @@
 package org.example.bot.accountBot.botConfig;
 
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 import org.example.bot.accountBot.dto.UserDTO;
 import org.example.bot.accountBot.mapper.StatusMapper;
 import org.example.bot.accountBot.pojo.*;
@@ -46,16 +47,28 @@ public class SettingOperatorPerson{
      * @param text  消息文本 6976772117
      */
     Map<String, String> constantMap = ConstantMap.COMMAND_MAP_ENGLISH;//关键词的对应关系
-    public void setHandle(String[] split1, SendMessage sendMessage, String text, UserDTO userDTO, User user6, Status status, GroupInfoSetting groupInfoSetting) {
+    public boolean isValidSetOperatorCommand(String text) {
+        // 匹配“设置操作员”或对应的英文关键词开头，并且后面跟着一个或多个 @username
+        String regex = "^(设置操作员|设置操作人|set operator|add operator)(\\s+@\\w+)+$";
+        Pattern pattern = Pattern.compile(regex);
+        Matcher matcher = pattern.matcher(text);
+        return matcher.matches();
+    }
+    public void setHandle(String[] split1, SendMessage sendMessage, String text, UserDTO userDTO, User user6, Status status, GroupInfoSetting groupInfoSetting,UserNormal userNormalTempAdmin) {
         boolean isShowAdminMessage = false;
+        text = text.toLowerCase();
         if (split1[0].equals("设置操作员")||split1[0].equals("设置操作人")
-                || split1[0].equals(constantMap.get("设置操作员"))||split1[0].equals(constantMap.get("设置操作人"))){
-            if (!user6.isSuperAdmin()){//是普通权限
-                accountBot.sendMessage(sendMessage,"您没有设置操作员权限! 只能管理设置");
+                || split1[0].equals(constantMap.get("设置操作员"))||split1[0].equals(constantMap.get("设置操作人"))) {
+            if (!user6.isSuperAdmin()) {//是普通权限
+                accountBot.sendMessage(sendMessage, "您没有设置操作员权限! 只能管理设置");
+                return;
+            }
+            if (!isValidSetOperatorCommand(text)) {
+                accountBot.sendMessage(sendMessage, "命令错误，添加操作员请@对方的用户名，例如：设置操作员 @XXX");
                 return;
             }
             Pattern compile = Pattern.compile("@(\\w+)");
-            if (compile.matcher(text).find()){
+            if (compile.matcher(text).find()) {
                 Matcher matcher = compile.matcher(text);//应该循环添加id
                 List<String> userNames = new ArrayList<>();
                 while (matcher.find()) {
@@ -65,11 +78,11 @@ public class SettingOperatorPerson{
                 for (String usernameTemp : userNames) {
                     User user = userService.findByUsername(usernameTemp);
                     UserOperation userOperation1 = userOperationService.findByUsername(usernameTemp, userDTO.getGroupId());
-                    if (user!=null && usernameTemp.equals(user.getUsername())){
-                        if (userOperation1!=null && userOperation1.isOperation()){//是操作员
+                    if (user != null && usernameTemp.equals(user.getUsername())) {
+                        if (userOperation1 != null && userOperation1.isOperation()) {//是操作员
                             isShowAdminMessage = true;
-                        }else {
-                            userOperation1=new UserOperation();
+                        } else {
+                            userOperation1 = new UserOperation();
                             userOperation1.setOperation(true);//是操作员
                             userOperation1.setUserId(user.getUserId());
                             userOperation1.setUsername(usernameTemp);
@@ -77,7 +90,7 @@ public class SettingOperatorPerson{
                             userOperation1.setAdminUserId(userDTO.getUserId());
                             userOperationService.insertUserOperation(userOperation1);
                         }
-                    }else {
+                    } else {
                         User user1 = new User();
                         UserOperation userOperation = new UserOperation();
                         userOperation.setUsername(usernameTemp);
@@ -92,54 +105,54 @@ public class SettingOperatorPerson{
                     }
                 }
                 //回复用
-            }else if ( !compile.matcher(text).find()){
+            } else if (!compile.matcher(text).find()) {
                 User callBackUser = userService.findByUserId(userDTO.getCallBackUserId());
                 UserOperation userOperation = userOperationService.selectByUserAndGroupId(userDTO.getCallBackUserId(), userDTO.getGroupId());
                 User user2 = userService.findByUsername(userDTO.getCallBackName());
                 UserOperation userOperation2 = userOperationService.findByUsername(userDTO.getCallBackName(), userDTO.getGroupId());
-                if (callBackUser!=null){
-                    if (userOperation!=null && userOperation.isOperation()) {
+                if (callBackUser != null) {
+                    if (userOperation != null && userOperation.isOperation()) {
                         isShowAdminMessage = true;
-                    }else {
+                    } else {
                         callBackUser.setUserId(userDTO.getCallBackUserId());
-                        callBackUser.setUsername(userDTO.getCallBackName()==null?"":userDTO.getCallBackName());
-                        callBackUser.setFirstName(userDTO.getCallBackFirstName()==null?"":userDTO.getCallBackFirstName());
-                        callBackUser.setLastName(userDTO.getCallBackLastName()==null?"":userDTO.getCallBackLastName());
+                        callBackUser.setUsername(userDTO.getCallBackName() == null ? "" : userDTO.getCallBackName());
+                        callBackUser.setFirstName(userDTO.getCallBackFirstName() == null ? "" : userDTO.getCallBackFirstName());
+                        callBackUser.setLastName(userDTO.getCallBackLastName() == null ? "" : userDTO.getCallBackLastName());
                         userService.updateUser(callBackUser);
-                        userOperation=new UserOperation();
+                        userOperation = new UserOperation();
                         userOperation.setAdminUserId(userDTO.getUserId());
                         userOperation.setUserId(userDTO.getCallBackUserId());
-                        userOperation.setUsername(userDTO.getCallBackName()==null?"":userDTO.getCallBackName());
+                        userOperation.setUsername(userDTO.getCallBackName() == null ? "" : userDTO.getCallBackName());
                         userOperation.setOperation(true);
                         userOperation.setGroupId(userDTO.getGroupId());
                         userOperationService.insertUserOperation(userOperation);
                     }
-                } else if (user2!=null) {
-                    if (userOperation2!=null &&userOperation2.isOperation()) {
+                } else if (user2 != null) {
+                    if (userOperation2 != null && userOperation2.isOperation()) {
                         isShowAdminMessage = true;
-                    }else {
+                    } else {
                         user2.setUserId(userDTO.getCallBackUserId());
-                        user2.setUsername(userDTO.getCallBackName()==null?"":userDTO.getCallBackName());
-                        user2.setFirstName(userDTO.getCallBackFirstName()==null?"":userDTO.getCallBackFirstName());
-                        user2.setLastName(userDTO.getCallBackLastName()==null?"":userDTO.getCallBackLastName());
+                        user2.setUsername(userDTO.getCallBackName() == null ? "" : userDTO.getCallBackName());
+                        user2.setFirstName(userDTO.getCallBackFirstName() == null ? "" : userDTO.getCallBackFirstName());
+                        user2.setLastName(userDTO.getCallBackLastName() == null ? "" : userDTO.getCallBackLastName());
                         userService.updateUser(user2);
-                        userOperation2=new UserOperation();
+                        userOperation2 = new UserOperation();
                         userOperation2.setAdminUserId(userDTO.getUserId());
                         userOperation2.setGroupId(userDTO.getGroupId());
                         userOperation2.setUserId(userDTO.getCallBackUserId());
-                        userOperation2.setUsername(userDTO.getCallBackName()==null?"":userDTO.getCallBackName());
+                        userOperation2.setUsername(userDTO.getCallBackName() == null ? "" : userDTO.getCallBackName());
                         userOperation2.setOperation(true);
                         userOperationService.insertUserOperation(userOperation2);
                     }
-                }else {
+                } else {
                     User user = new User();
                     user.setUserId(userDTO.getCallBackUserId());
-                    user.setUsername(userDTO.getCallBackName()==null?"":userDTO.getCallBackName());
-                    user.setFirstName(userDTO.getCallBackFirstName()==null?"":userDTO.getCallBackFirstName());
-                    user.setLastName(userDTO.getCallBackLastName()==null?"":userDTO.getCallBackLastName());
+                    user.setUsername(userDTO.getCallBackName() == null ? "" : userDTO.getCallBackName());
+                    user.setFirstName(userDTO.getCallBackFirstName() == null ? "" : userDTO.getCallBackFirstName());
+                    user.setLastName(userDTO.getCallBackLastName() == null ? "" : userDTO.getCallBackLastName());
                     userService.insertUser(user);
                     UserOperation userOperation1 = new UserOperation();
-                    userOperation1.setUsername(userDTO.getCallBackName()==null?"":userDTO.getCallBackName());
+                    userOperation1.setUsername(userDTO.getCallBackName() == null ? "" : userDTO.getCallBackName());
                     userOperation1.setOperation(true);//设置操作员
                     userOperation1.setUserId(userDTO.getCallBackUserId());
                     userOperation1.setGroupId(userDTO.getGroupId());
@@ -147,35 +160,75 @@ public class SettingOperatorPerson{
                     userOperationService.insertUserOperation(userOperation1);
                 }
             }
-            if (!isShowAdminMessage){
-                accountBot.sendMessage(sendMessage,"设置成功");
-            }else {
-                accountBot.sendMessage(sendMessage,"已设置该操作员无需重复设置");
+            if (!isShowAdminMessage) {
+                accountBot.sendMessage(sendMessage, "设置成功");
+            } else {
+                accountBot.sendMessage(sendMessage, "已设置该操作员无需重复设置");
+            }
+        }else if (split1[0].startsWith("删除操作人")||split1[0].startsWith("删除操作员")){
+            if (userDTO.getCallBackUserId()!=null && StringUtils.isNotBlank(userDTO.getCallBackUserId())){
+                if (userNormalTempAdmin.getUserId().equals(userDTO.getCallBackUserId())){
+                    accountBot.sendMessage(sendMessage,"不能删除管理员!");
+                    return;
+                }
+                UserOperation byUsername = userOperationService.selectByUserAndGroupId(userDTO.getCallBackUserId(),userDTO.getGroupId());
+                if (byUsername!=null){
+                    //修改为普通用户
+                    userOperationService.deleteByUserId(userDTO.getCallBackUserId(),userDTO.getGroupId());
+                    accountBot.sendMessage(sendMessage,"删除成功");
+                }else if (byUsername==null){
+                    byUsername= userOperationService.selectByUserName(userDTO.getCallBackName(),userDTO.getGroupId());
+                    if (byUsername!=null) {
+                        //修改为普通用户
+                        userOperationService.deleteByUsername(userDTO.getCallBackName(), userDTO.getGroupId());
+                        accountBot.sendMessage(sendMessage, "删除成功");
+                    }else {
+                        accountBot.sendMessage(sendMessage,"未查询到此操作人!删除失败");
+                    }
+                }
             }
         }else if (split1[0].equals("显示操作人")||split1[0].equals("显示操作员")
                 ||  split1[0].equals(constantMap.get("显示操作人"))|| split1[0].equals(constantMap.get("显示操作员"))){
-            StringBuilder sb = new StringBuilder("当前操作人: ");
+            //本群机器人最高权限管理员为： @liuxiaolon
+            //其他操作员为： @6642983396  @ganzhou_id
+            String  admin = String.format("<a href=\"tg://user?id=%d\">@%s</a>", Long.parseLong(userNormalTempAdmin.getUserId()), userNormalTempAdmin.getUsername());
+            StringBuilder sb = new StringBuilder("本群机器人最高权限管理员为："+admin+"\n");
+            sb.append("其他操作员为: ");
             List<UserOperation> userAuthorities=userOperationService.selectByUserOperator(userDTO.getGroupId(),true);
             List<User> users = new ArrayList<>();
-            userAuthorities.stream().filter(Objects::nonNull).forEach(ua->{
-                users.add(userService.selectUserNameOrUserId(ua.getUsername(),ua.getUserId()));
-            });
-            List<User> userNormalList = users.stream()
-                    .collect(Collectors.collectingAndThen(
+            for (UserOperation ua:userAuthorities){
+                if (ua.getUserId()!=null && StringUtils.isNotBlank(ua.getUserId())&& ua.getUserId().equals(userNormalTempAdmin.getUserId())){
+                    continue;
+                }
+                if (ua.getUsername()!=null && StringUtils.isNotBlank(ua.getUsername())){
+                    users.add(userService.findByUsername(ua.getUsername()));
+                } else if (ua.getUserId()!=null && StringUtils.isNotBlank(ua.getUserId())) {
+                    users.add(userService.findByUserId(ua.getUserId()));
+                }
+            }
+            if (users.isEmpty()){
+                return;
+            }
+            List<User> userNormalList = users.stream().collect(Collectors.collectingAndThen(
                             Collectors.toMap(User::getUserId, p -> p, (p1, p2) -> p1),
-                            map -> new ArrayList<>(map.values())
-                    ));
+                            map -> new ArrayList<>(map.values())));
             for (int i = 0; i < userNormalList.size(); i++) {
                 String lastName = userNormalList.get(i).getLastName()==null?"":userNormalList.get(i).getLastName();
-                String callBackName=userNormalList.get(i).getFirstName()==null?"":userNormalList.get(i).getFirstName()+lastName+ "   ";
+                String firstName=userNormalList.get(i).getFirstName()==null?"":userNormalList.get(i).getFirstName()+ "";
+                String nickName=firstName+lastName;
+                String username1 = userNormalList.get(i).getUsername();
                 String format;
                 //如果没有用户id就显示用户名
-                if (userNormalList.get(i).getUserId()!=null){
-                    format = String.format("<a href=\"tg://user?id=%d\">%s</a>", Long.parseLong(userNormalList.get(i).getUserId()), callBackName);
+                if (userNormalList.get(i).getUserId()!=null && StringUtils.isNotBlank(username1)) {
+                    format = String.format("<a href=\"tg://user?id=%d\">@%s</a>", Long.parseLong(userNormalList.get(i).getUserId()), username1);
+                }else if (userNormalList.get(i).getUserId()!=null && StringUtils.isNotBlank(nickName)){
+                    format = String.format("<a href=\"tg://user?id=%d\">@%s</a>", Long.parseLong(userNormalList.get(i).getUserId()), nickName);
+                }else if (userNormalList.get(i).getUserId()==null || StringUtils.isBlank(userNormalList.get(i).getUserId())){
+                    format= "@"+nickName;
                 }else {
-                    format=callBackName;
+                    format= String.format("<a href=\"tg://user?id=%d\">@%s</a>", Long.parseLong(userNormalList.get(i).getUserId()), userNormalList.get(i).getUserId());
                 }
-                sb.append(format);
+                sb.append(format+" ");
             }
             buttonList.implList(sendMessage,userDTO.getGroupId(),userDTO.getGroupTitle(),groupInfoSetting);
             accountBot.sendMessage(sendMessage,sb.toString());
@@ -191,6 +244,7 @@ public class SettingOperatorPerson{
             BigDecimal money=BigDecimal.valueOf(Long.parseLong(split1[0].substring("设置手续费".length(), split1[0].length())));
             status.setAccountHandlerMoney(money);
             status.setIssueHandlerMoney(money);
+            status.setShowHandlerMoneyStatus(0);
             statusService.updateMoneyStatus("issue_handler_money"     ,money, userDTO.getGroupId());
             statusService.updateMoneyStatus("account_handler_money"    ,money, userDTO.getGroupId());
             accountBot.sendMessage(sendMessage,"操作成功");
@@ -198,17 +252,20 @@ public class SettingOperatorPerson{
             BigDecimal money=BigDecimal.valueOf(Long.parseLong(split1[0].substring(constantMap.get("设置手续费").length(), split1[0].length())));
             status.setAccountHandlerMoney(money);
             status.setIssueHandlerMoney(money);
+            status.setShowHandlerMoneyStatus(0);
             statusService.updateMoneyStatus("issue_handler_money"     ,money, userDTO.getGroupId());
             statusService.updateMoneyStatus("account_handler_money"    ,money, userDTO.getGroupId());
             accountBot.sendMessage(sendMessage,"操作成功");
         }else if (split1[0].contains("设置下发单笔手续费")||split1[0].contains("设置单笔下发手续费")){
             BigDecimal money=BigDecimal.valueOf(Long.parseLong(split1[0].substring(9, split1[0].length())));
             status.setIssueHandlerMoney(money);
+            status.setShowHandlerMoneyStatus(0);
             statusService.updateMoneyStatus("issue_handler_money"     ,money, userDTO.getGroupId());
             accountBot.sendMessage(sendMessage,"操作成功");
         }else if (split1[0].contains(constantMap.get("设置下发单笔手续费"))|| split1[0].contains(constantMap.get("设置单笔下发手续费"))){
             BigDecimal money=BigDecimal.valueOf(Long.parseLong(split1[0].substring(constantMap.get("设置下发单笔手续费").length(), split1[0].length())));
             status.setIssueHandlerMoney(money);
+            status.setShowHandlerMoneyStatus(0);
             statusService.updateMoneyStatus("issue_handler_money"     ,money, userDTO.getGroupId());
             accountBot.sendMessage(sendMessage,"操作成功");
         }else if (split1[0].contains("设置下发手续费")){
@@ -224,11 +281,13 @@ public class SettingOperatorPerson{
         }else if (split1[0].contains("设置入款单笔手续费")||split1[0].contains("设置单笔入款手续费")){
             BigDecimal money=BigDecimal.valueOf(Long.parseLong(split1[0].substring(9, split1[0].length())));
             status.setAccountHandlerMoney(money);
+            status.setShowHandlerMoneyStatus(0);
             statusService.updateMoneyStatus("account_handler_money"    ,money, userDTO.getGroupId());
             accountBot.sendMessage(sendMessage,"操作成功");
         }else if (split1[0].contains(constantMap.get("设置入款单笔手续费"))|| split1[0].contains(constantMap.get("设置单笔入款手续费"))){
             BigDecimal money=BigDecimal.valueOf(Long.parseLong(split1[0].substring(constantMap.get("设置入款单笔手续费").length(), split1[0].length())));
             status.setAccountHandlerMoney(money);
+            status.setShowHandlerMoneyStatus(0);
             statusService.updateMoneyStatus("account_handler_money"    ,money, userDTO.getGroupId());
             accountBot.sendMessage(sendMessage,"操作成功");
         }else if (split1[0].contains("设置入款手续费")){
@@ -271,7 +330,7 @@ public class SettingOperatorPerson{
             status.setCallBackStatus(0);
             statusService.updateStatus("handle_status"     ,1, userDTO.getGroupId());
             statusService.updateStatus("call_back_status" , 0, userDTO.getGroupId());
-        }else if (split1[0].equals("关闭回复人显示")||split1[0].equals("隐藏回复人显示") ||
+        }else if (split1[0].equals("关闭回复人显示")||split1[0].equals("隐藏回复人显示")||split1[0].equals("隐藏回复人名称") ||
                 split1.equals(constantMap.get("关闭回复人显示"))|| split1.equals(constantMap.get("隐藏回复人显示"))){
             status.setCallBackStatus(1);
             statusService.updateStatus("call_back_status" , 1, userDTO.getGroupId());
@@ -314,6 +373,8 @@ public class SettingOperatorPerson{
             status.setDownRate(downRate);
             statusMapper.updateById(status);
             accountBot.sendMessage(sendMessage, "操作成功");
+        } else if (text.startsWith("设置下发")) {
+            
         }
     }
 
@@ -334,8 +395,6 @@ public class SettingOperatorPerson{
                 }else if (byUsername==null){
                     accountBot.sendMessage(sendMessage,"未查询到此操作人!删除失败");
                 }
-
-
             }
         }
     }

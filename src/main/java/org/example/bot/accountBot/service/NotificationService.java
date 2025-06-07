@@ -51,6 +51,26 @@ public class NotificationService {
             }
             accountBot.sendMessage(sendMessage, sb.toString());
         }
+        if (text.toLowerCase().equals("notify all") || text.toLowerCase().equals("notice")){
+            // 计算 48 小时之前的时间
+            Calendar calendar = Calendar.getInstance();
+            calendar.add(Calendar.HOUR, -48);
+            Date dateThreshold = calendar.getTime();
+            QueryWrapper<Notification> queryWrapper = new QueryWrapper<>();
+            queryWrapper.eq("group_id", sendMessage.getChatId());
+            queryWrapper.gt("add_time",dateThreshold);
+            queryWrapper.lt("add_time",new Date());
+            List<Notification> notifications = mapper.selectList(queryWrapper);
+            StringBuilder sb = new StringBuilder();
+            sb.append("48 小时内在群组发言过的所有人: ");
+            for (int i = 0; i < notifications.size(); i++) {
+                String firstName=notifications.get(i).getFirstName()==null?"":notifications.get(i).getFirstName();
+                String lastName=notifications.get(i).getLastName()==null?"":notifications.get(i).getLastName();
+                sb.append(String.format("<a href=\"tg://user?id=%d\">%s</a>",
+                        Long.parseLong(notifications.get(i).getUserId()),firstName +lastName)+"  ");
+            }
+            accountBot.sendMessage(sendMessage, sb.toString());
+        }
     }
     //
     public void initNotification(UserDTO userDTO) {

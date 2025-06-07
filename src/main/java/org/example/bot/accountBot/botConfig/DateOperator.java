@@ -75,8 +75,8 @@ public class DateOperator{
         Date OverDue = Date.from(tomorrow.atZone(ZoneId.systemDefault()).toInstant());
         status.setRiqie(true);//是否开启日切 是
         status.setSetTime(OverDue);//设置日切时间
-        // ✅ 修改：设置日切开始时间为当前时间减去24小时
-        status.setSetStartTime(Date.from(Instant.now().minus(24, ChronoUnit.HOURS)));
+        //根据OverDue设置日切时间
+        status.setSetStartTime(Date.from(tomorrow.minus(24, ChronoUnit.HOURS).atZone(ZoneId.systemDefault()).toInstant()));
         statusService.update(status);//accountList 更新账单日切时间
         // 计算两个日期之间的毫秒差
         long differenceInMillis = OverDue.getTime()-new Date().getTime();
@@ -174,7 +174,11 @@ public class DateOperator{
                 calendar.add(Calendar.HOUR_OF_DAY, 24);
                 setTime = calendar.getTime(); // 获取更新后的时间
                 status.setSetTime(setTime);
-                status.setSetStartTime(new Date());
+                Calendar startTime = Calendar.getInstance();
+                startTime.setTime(status.getSetTime());
+                startTime.add(Calendar.HOUR_OF_DAY, -24);
+                status.setSetStartTime(startTime.getTime());
+                // status.setSetStartTime(new Date());
                 statusService.update(status);
                 //日切时间已更新，当前日切时间为 ：每天:11时59分59秒
                 accountBot.sendMessage(sendMessage,"日切时间已更新，当前日切时间为 ：每天:"+status.getSetTime().getHours()+"时"+

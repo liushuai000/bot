@@ -38,8 +38,11 @@ tranHistoryUrl: https://apilist.tronscanapi.com/api/filter/trc20/transfers?limit
 telegram:
   bot:
     #正式环境
-    token: 7823327297:AAFyk7Dmh4feR-X_MXfvq755WiMFl88eqR8
-    username: vip1111111bot #117
+#    token: 7823327297:AAFyk7Dmh4feR-X_MXfvq755WiMFl88eqR8
+#    username: vip1111111bot #117
+      token: 6764218833:AAGzUzy2LEzAK3iLz3fViDoGAkqitZU_s0U
+      username: HQpayvipbot #117
+
 #    token: 6749246766:AAGzDFvqbaQMBugLcdlSVli_UtocxsLSMxU
 #    username: Yvipbot #221服务  第二个打卡机器人
 

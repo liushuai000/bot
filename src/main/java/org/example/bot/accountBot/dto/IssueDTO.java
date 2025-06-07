@@ -21,6 +21,10 @@ public class IssueDTO{
     private BigDecimal exchange=BigDecimal.ONE;    //汇率
     @ApiModelProperty("rate")
     private BigDecimal rate=BigDecimal.ZERO;    //费率
+    @ApiModelProperty("downExchange")
+    private BigDecimal downExchange=BigDecimal.ZERO;    //下发汇率
+    @ApiModelProperty("downRate")
+    private BigDecimal downRate=BigDecimal.ZERO;    //下发费率
     @ApiModelProperty("groupId")
     private String groupId;//群组id
     @ApiModelProperty("userId")
@@ -42,6 +46,8 @@ public class IssueDTO{
     private Date addTime;
     @ApiModelProperty("downed")
     private BigDecimal downed;//金额
+    @ApiModelProperty("downedUSDT")
+    private BigDecimal downedUSDT=BigDecimal.ZERO;//下发的金额转USDT
     @ApiModelProperty("down")
     private BigDecimal down;//未下发
     @ApiModelProperty("issueHandlerMoney")

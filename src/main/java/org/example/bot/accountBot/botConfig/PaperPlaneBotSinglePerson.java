@@ -186,13 +186,13 @@ public class PaperPlaneBotSinglePerson {
         String regex = "^授权-[a-zA-Z0-9]+-[a-zA-Z0-9]+$";
         String regexEn = "^authorization-[a-zA-Z0-9]+-[a-zA-Z0-9]+$";
         String[] split3 = text.split("-");
-        if (text.equals("获取个人信息") || text.equals("access to personal information")){
+        if (text.equals("获取个人信息") || text.equals("personal information")){
             this.getUserInfoMessage(message,sendMessage,userDTO);
             return;
-        }else if (text.equals("监听列表") || text.equals("listening list")){
+        }else if (text.equals("监听列表") || text.equals("listening address")){
             this.getListening(message,sendMessage,userDTO);
             return;
-        }else if (text.equals("使用说明") || text.equals("instructions")){
+        }else if (text.equals("使用说明") || text.equals("illustrate")){
             this.useInfo(message,sendMessage,userDTO);
             return;
         }else if (text.contains("##") &&text.length()>=37){

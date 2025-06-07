@@ -68,6 +68,8 @@ public class NowExchange {
     private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(16);
     @Autowired
     private GroupInfoSettingMapper groupInfoSettingMapper;
+    @Autowired
+    private SettingOperatorPerson settingOperatorPerson;
 
     @PostConstruct
     public void init() {

@@ -58,8 +58,13 @@ public class Status {
     private BigDecimal downExchange=BigDecimal.ZERO;    //下发汇率
     @TableField("down_rate")
     private BigDecimal downRate=BigDecimal.ZERO;    //下发费率
-
-
+    /****** 以下是下发的信息 ******/
+    @TableField("d_address")
+    private String dAddress;//下发地址
+    @TableField("d_time")
+    private Date dTime;//下发地址 修改时间
+    @TableField("d_user_id")
+    private String dUserId;//下发地址 修改人id
 
 
 

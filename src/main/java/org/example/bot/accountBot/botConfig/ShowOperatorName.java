@@ -55,7 +55,6 @@ public class ShowOperatorName {
         List<Issue> issues = dateOperator.selectIsIssueRiqie(sendMessage,status,userDTO.getGroupId());
         log.info("issues,,{}",issues);
         //获取时间数据方便后续操作
-
         for (Account account : accounts) {
             SimpleDateFormat sdf = new SimpleDateFormat("HH:mm:ss");
             newList.add(sdf.format(account.getAddTime()));
@@ -76,6 +75,9 @@ public class ShowOperatorName {
     }
     //true 是0 显示账单
     public boolean isEmptyMoney(String text) {
+        if(new Utils().isMatcher(text)){
+            return false;
+        }
         if (text.equals("+0")){
             return true;
         } else if (text.equals("-0")) {

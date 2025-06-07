@@ -16,6 +16,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
+import org.telegram.telegrambots.meta.api.methods.updatingmessages.DeleteMessage;
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageText;
 import org.telegram.telegrambots.meta.api.objects.ChatMemberUpdated;
 import org.telegram.telegrambots.meta.api.objects.Message;
@@ -23,6 +24,8 @@ import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 
 @Slf4j
 @Service
@@ -36,6 +39,8 @@ public class AccountBot extends TelegramLongPollingBot {
     protected String botUserId;
     @Value("${adminUserId}")
     protected String adminUserId;
+    @Value("${vueUrl}")
+    protected String url;
     @Autowired
     protected RateService rateService;
     @Autowired
@@ -54,6 +59,8 @@ public class AccountBot extends TelegramLongPollingBot {
     protected RuzhangOperations ruzhangOperations;    //入账和入账时发送的消息
     @Autowired
     protected NotificationService notificationService;
+    @Autowired
+    protected DownAddress downAddress;//群内下发地址
     @Autowired
     protected PaperPlaneBotSinglePerson paperPlaneBotSinglePerson;
     @Autowired
@@ -132,6 +139,23 @@ public class AccountBot extends TelegramLongPollingBot {
             }
             sendMessageDetail.setText(sc+allCommandsDetail);
             this.sendMessage(sendMessageDetail);
+        }
+        if (message.getChat().isGroupChat()||message.getChat().isSuperGroupChat()){
+            if (message.getText()!=null && StringUtils.isNotBlank(message.getText()) && message.getText().equals("波场下载地址")){
+                Integer messageId = this.sendMessage(sendMessage, url + "api/generate-tron-keys?count=50");
+                // 异步延迟30秒后删除消息
+                CompletableFuture.runAsync(() -> {
+                    try {
+                        TimeUnit.SECONDS.sleep(30); // 等待30秒
+                        DeleteMessage deleteMessage = new DeleteMessage();
+                        deleteMessage.setChatId(String.valueOf(userDTO.getGroupId()));
+                        deleteMessage.setMessageId(messageId);
+                        execute(deleteMessage);
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                });
+            }
         }
         //私聊的机器人  处理个人消息
         if (message.getChat().isUserChat()){
@@ -231,8 +255,9 @@ public class AccountBot extends TelegramLongPollingBot {
         //设置日切 如果日切时间没结束 第二次设置日切 也需要修改账单的日切时间
         dateOperator.isOver24HourCheck(message, sendMessage, userDTO, status,accountList,issueList);
         //设置操作人员
-        settingOperatorPerson.setHandle(split1, sendMessage,message.getText(),userDTO,user1,status,groupInfoSetting);
-        settingOperatorPersonEnglish.setHandle(sendMessage,message.getText(),userDTO,user1,status,groupInfoSetting);
+        settingOperatorPerson.setHandle(split1, sendMessage,message.getText(),userDTO,user1,status,groupInfoSetting,userNormalTempAdmin);
+        settingOperatorPersonEnglish.setHandle(sendMessage,message.getText(),userDTO,user1,status,groupInfoSetting,userNormalTempAdmin);
+        downAddress.downAddress(sendMessage,userDTO,status,userNormalTempAdmin,userOperation);//设置下发地址
         //设置费率/汇率
         ruzhangOperations.setRate(message,sendMessage,rate);
         //撤销入款

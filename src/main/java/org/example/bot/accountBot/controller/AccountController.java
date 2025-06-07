@@ -6,14 +6,21 @@ import io.swagger.annotations.ApiOperation;
 import org.example.bot.accountBot.config.RestTemplateConfig;
 import org.example.bot.accountBot.dto.QueryType;
 import org.example.bot.accountBot.service.AccountService;
+import org.example.bot.accountBot.utils.ExcelExportUtil;
 import org.example.bot.accountBot.utils.JsonResult;
+import org.example.bot.accountBot.utils.TronKeyUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
 
 import javax.annotation.Resource;
+import javax.servlet.http.HttpServletResponse;
+import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
+import java.util.Map;
 
 @Api(tags="账单查询请求")
 @RestController
@@ -65,6 +72,31 @@ public class AccountController {
         System.err.println(body);
         return body;
     }
+    //    @GetMapping("/generate-keys-excel")
+//    public ResponseEntity<byte[]> generateAndExportKeys() throws IOException {
+//        List<TrxKeyGenerator.KeyPair> keys = TrxKeyGenerator.generateKeys(100);
+//        byte[] excelBytes = ExcelExporter.exportToExcel(keys);
+//
+//        HttpHeaders headers = new HttpHeaders();
+//        headers.setContentType(MediaType.APPLICATION_OCTET_STREAM);
+//        headers.setContentDispositionFormData("attachment", "trx_keys.xlsx");
+//
+//        return ResponseEntity.ok().headers(headers).body(excelBytes);
+//    }
+    @GetMapping("/generate-tron-keys")
+    public void generateTronKeys(@RequestParam(required = false, defaultValue = "100") Integer count, HttpServletResponse response) {
+        try {
+            List<Map<String, String>> keys = new ArrayList<>();
+            for (int i = 0; i < count; i++) {
+                keys.add(TronKeyUtil.generateTronKey());
+            }
+            ExcelExportUtil.exportToExcel(keys, response);
+        } catch (Exception e) {
+            throw new RuntimeException("导出失败", e);
+        }
+    }
+
+
 
 
 }
