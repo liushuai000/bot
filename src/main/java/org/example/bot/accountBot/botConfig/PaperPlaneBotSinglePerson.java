@@ -99,7 +99,7 @@ public class PaperPlaneBotSinglePerson {
                 Thread.currentThread().interrupt();
             }
             String url = tranHistoryUrl+w.getAddress();
-            List<TronHistoryDTO> historyTrading = restTemplateConfig.getForObjectHistoryTrading(url, Map.class);
+            List<TronHistoryDTO> historyTrading = restTemplateConfig.getForObjectHistoryTrading2(url, Map.class);
             historyTrading.stream().filter(Objects::nonNull).findFirst().ifPresent(t -> { // 在这里处理第一个非空的 HistoryTrading 对象
                 long now = System.currentTimeMillis();//这个缓存有问题 我这个userId不一样但是监听的地址都一样所以只提醒了一个应该是 TODO
                 long blockTime = t.getBlock_ts(); // TRON 时间戳是毫秒级
@@ -128,12 +128,18 @@ public class PaperPlaneBotSinglePerson {
                                 "转账时间："+sdf.format(new Date(t.getBlock_ts()))+"\n" +
                                 "\uD83D\uDCE3 监控地址 ("+w.getAddress()+")";
                     }
-                    SendMessage sendMessage = new SendMessage();
-                    sendMessage.setChatId(w.getUserId());
-                    sendMessage.disableWebPagePreview();//禁用预览链接
-                    accountBot.sendMessage(sendMessage,result);
-                    // 标记此交易已处理
-                    lastTransactionTimeMap.put(t.getTransaction_id()+w.getUserId(), now);
+                    System.err.println("当前用户id是:"+w.getUserId()+"昵称是:"+w.getNickname());
+                    try {
+                        SendMessage sendMessage = new SendMessage();
+                        sendMessage.setChatId(w.getUserId());
+                        sendMessage.disableWebPagePreview();//禁用预览链接
+                        accountBot.sendMessage(sendMessage,result);
+                        // 标记此交易已处理
+                        lastTransactionTimeMap.put(t.getTransaction_id()+w.getUserId(), now);
+                    }catch (Exception e){
+                        System.err.println(e.getMessage());
+//                        walletListenerService.deleteWalletListener(w);
+                    }
                 }
             });
         }));
@@ -152,6 +158,7 @@ public class PaperPlaneBotSinglePerson {
         String trxText = "[TRX余额](https://tronscan.org/#/address/"+ text + "/transfers)";
         AtomicReference<BigDecimal> bigDecimal= new AtomicReference<>();
         AtomicReference<String> trxBigDecimal= new AtomicReference<>();
+        if (tronAccount.getWithPriceTokens()!=null)
         tronAccount.getWithPriceTokens().stream().filter(Objects::nonNull).forEach(t -> {
             if (t.getTokenAbbr().equals("USDT")){
                 BigDecimal balance = new BigDecimal(tronAccount.getWithPriceTokens().get(1).getBalance());

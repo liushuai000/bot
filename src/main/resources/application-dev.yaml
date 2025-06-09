@@ -32,6 +32,8 @@ vueUrl: http://www.yaoke.cc/
 #Origin: http://43.134.137.221:8081
 
 apiKey: 2967e678-556e-497a-a892-a1dcee897ba5
+apiKey1: a7089da7-e17b-4d28-a3d3-29f799983cae
+apiKey2: e9b66829-5dde-4f5e-9611-37bc9f26f4c7
 #获取最新汇率
 tranAccountUrl: https://apilist.tronscanapi.com/api/accountv2?address=
 tranHistoryUrl: https://apilist.tronscanapi.com/api/filter/trc20/transfers?limit=10&start=0&sort=-timestamp&count=true&filterTokenValue=0&relatedAddress=

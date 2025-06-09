@@ -25,7 +25,11 @@ adminUserId: 6636253835  #刘小帅 我自己
 botUserId: 7203617407   #我机器人的id
 vueUrl: http://192.168.0.9:8080/
 Origin: http://43.128.113.117:8081
+Origin1: http://www.yaoke.cc
+Origin2: http://www.yaoke.cc:8081
 apiKey: 2967e678-556e-497a-a892-a1dcee897ba5
+apiKey1: a7089da7-e17b-4d28-a3d3-29f799983cae
+apiKey2: e9b66829-5dde-4f5e-9611-37bc9f26f4c7
 #获取最新汇率
 tranAccountUrl: https://apilist.tronscanapi.com/api/accountv2?address=
 #tranAccountUrl: https://apilist.tronscan.org/api/account?address=  备用地址

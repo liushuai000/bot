@@ -32,11 +32,11 @@ public class TranslationExample {
             // 1. 提取 <a href="http..."> 占位符
             StringBuilder inputBuilder = new StringBuilder(text);
             Map<String, String> httpLinks = extractLinks(inputBuilder);
-
             // 2. 提取 <a href="tg://user?..."> 占位符
             Map<String, String> tgLinks = extractTelegramLinks(inputBuilder);
+            // 3. 提取 <strong>等标签
+            Map<String, String> htmlTags = extractTags(inputBuilder);
 
-            // 3. 翻译干净文本（不含 <a> 标签）
             String translated = translateTextWithoutTags(inputBuilder.toString(), newLanguage);
 
             // 4. 还原 http 链接
@@ -44,6 +44,8 @@ public class TranslationExample {
 
             // 5. 还原 tg 链接
             translated = restoreTelegramLinks(translated, tgLinks);
+            // 还原 加粗HTML 标签
+            translated = restoreTags(translated, htmlTags);
 
             // 6. 修正标签格式空格问题
             return normalizeTelegramLinks(translated);
@@ -59,6 +61,40 @@ public class TranslationExample {
             return e.getMessage();
         }
     }
+
+    // 提取 <strong>标签
+    public static Map<String, String> extractTags(StringBuilder text) {
+        Map<String, String> placeholders = new LinkedHashMap<>();
+        Pattern pattern = Pattern.compile("<(/?(strong|code))[^>]*>");
+        Matcher matcher = pattern.matcher(text);
+        int index = 0;
+
+        while (matcher.find()) {
+            String fullTag = matcher.group(0);
+            String placeholder = "[" + index + "]";
+            placeholders.put(placeholder, fullTag);
+
+            int start = matcher.start();
+            int end = matcher.end();
+            text.replace(start, end, placeholder);
+
+            // 重新创建 matcher，因为文本已被修改
+            matcher = pattern.matcher(text);
+            index++;
+        }
+
+        return placeholders;
+    }
+
+    // 还原标签
+    public static String restoreTags(String translatedText, Map<String, String> placeholders) {
+        for (Map.Entry<String, String> entry : placeholders.entrySet()) {
+            translatedText = translatedText.replace(entry.getKey(), entry.getValue());
+        }
+        return translatedText;
+    }
+
+
 
     public static Map<String, String> extractLinks(StringBuilder text) {
         Map<String, String> placeholders = new LinkedHashMap<>();

@@ -149,7 +149,7 @@ public class DownAddress {
         String targetAddress = status.getDAddress();
         // 使用正则表达式提取所有可能的 TRON 地址
         List<String> candidates = extractTronAddresses(text);
-        if (candidates.isEmpty()) {
+        if (!this.isTronAddress(text)) {
             return; // 没有发现任何 TRON 地址
         }
         for (String candidate : candidates) {

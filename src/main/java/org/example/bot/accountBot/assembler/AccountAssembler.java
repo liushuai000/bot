@@ -91,7 +91,7 @@ public class AccountAssembler {
             // 计算 accountHandlerMoney 的总和
             AccountMoney = accountDTOList.stream().map(AccountDTO::getAccountHandlerMoney)
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
-            total = accountDTOList.stream().map(AccountDTO::getTotal)
+            total = accountDTOList.stream().filter(c-> !c.getPm()).map(AccountDTO::getTotal)
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
             totalUSDT = accountDTOList.stream()
                     .map(accountDTO -> accountDTO.getTotal().divide(accountDTO.getExchange(), 2, RoundingMode.HALF_UP))
