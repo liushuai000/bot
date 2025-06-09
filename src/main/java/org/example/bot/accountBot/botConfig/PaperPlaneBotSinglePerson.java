@@ -1,6 +1,7 @@
 package org.example.bot.accountBot.botConfig;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.example.bot.accountBot.config.RestTemplateConfig;
 import org.example.bot.accountBot.dto.TronAccountDTO;
@@ -22,15 +23,15 @@ import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardMarkup;
 
 import javax.annotation.PostConstruct;
+import javax.annotation.PreDestroy;
 import javax.annotation.Resource;
 import java.math.BigDecimal;
 import java.text.SimpleDateFormat;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.*;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
@@ -65,28 +66,46 @@ public class PaperPlaneBotSinglePerson {
 
     // 定时任务调度器
     private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(16);
+    private final ExecutorService asyncExecutor = Executors.newFixedThreadPool(4);
     @Qualifier("userOperationService")
     @Autowired
     private UserOperationService userOperationService;
-
+    // 设置缓存过期时间（比如1小时）
+    private static final long TRANSACTION_EXPIRE_TIME = TimeUnit.HOURS.toMillis(1);
+    private final Map<String, Long> lastTransactionTimeMap = new ConcurrentHashMap<>();
+    private void cleanUpCache() {
+        long now = System.currentTimeMillis();
+        lastTransactionTimeMap.entrySet().removeIf(entry -> now - entry.getValue() > TRANSACTION_EXPIRE_TIME);
+    }
+    @SneakyThrows
     @PostConstruct
     public void init() {
         // 启动定时任务，首次立即执行，之后每隔30秒执行一次
-        scheduler.scheduleAtFixedRate(this::fetchAndCacheData, 0, 15, TimeUnit.SECONDS);
+        scheduler.scheduleAtFixedRate(this::fetchAndCacheData, 0, 30, TimeUnit.SECONDS);
+        scheduler.scheduleAtFixedRate(this::cleanUpCache, 0, 1, TimeUnit.HOURS);
     }
-    private Set<String> processedTransactions = Collections.synchronizedSet(new HashSet<>());
-    //
+    @PreDestroy
+    public void destroy() {
+        scheduler.shutdownNow();
+        asyncExecutor.shutdownNow();
+    }
     private void fetchAndCacheData() {
-        List<WalletListener> walletListeners = walletListenerService.queryAll();
-        walletListeners.stream().filter(Objects::nonNull).forEach(w -> {
+        List<WalletListener> walletListeners = walletListenerService.queryAll();//每秒最多调用5次查询
+        walletListeners.parallelStream().filter(Objects::nonNull).forEach(w ->  CompletableFuture.runAsync(() ->{
+            try {
+                // 每次请求前等待一段时间，控制频率
+                Thread.sleep( 200); // 200ms 间隔
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
             String url = tranHistoryUrl+w.getAddress();
             List<TronHistoryDTO> historyTrading = restTemplateConfig.getForObjectHistoryTrading(url, Map.class);
             historyTrading.stream().filter(Objects::nonNull).findFirst().ifPresent(t -> { // 在这里处理第一个非空的 HistoryTrading 对象
-                long difference = Math.abs(new Date().getTime() - t.getBlock_ts()); // 计算两个时间戳之间的差值
-                long thirtySecondsInMilliseconds = 30 * 1000; // 30 秒转换为毫秒
-                System.out.println("两个时间相差 " + difference/ 1000 + " 秒");
-                //如果当前时间相差大于30秒，则进行 通知用户否则不通知
-                if (difference <= thirtySecondsInMilliseconds && !processedTransactions.contains(t.getTransaction_id())) {
+                long now = System.currentTimeMillis();//这个缓存有问题 我这个userId不一样但是监听的地址都一样所以只提醒了一个应该是 TODO
+                long blockTime = t.getBlock_ts(); // TRON 时间戳是毫秒级
+                // 设置一个“有效时间窗口”，例如 60 秒内才视为新交易
+                long NEW_TRANSACTION_WINDOW = TimeUnit.SECONDS.toMillis(60);
+                if (now - blockTime <= NEW_TRANSACTION_WINDOW && !lastTransactionTimeMap.containsKey(t.getTransaction_id()+w.getUserId())) {
                     String result="";
                     BigDecimal balance = new BigDecimal(t.getQuant());
                     // 计算移动小数点后的 balance
@@ -95,16 +114,16 @@ public class PaperPlaneBotSinglePerson {
                     if (t.getTo_address().equals(w.getAddress())==true){
                         result="交易金额： "+bigDecimal+t.getTokenInfo().getTokenAbbr()+" 已确认 #"+type+"\n" +
                                 "交易币种： ❇\uFE0F #"+t.getTokenInfo().getTokenAbbr()+"\n" +
-                                "收款地址： "+t.getTo_address()+" (https://tronscan.org/#/address/"+t.getTo_address()+"/transfers)\n" +
-                                "支付地址： "+t.getFrom_address()+" (https://tronscan.org/#/address/"+t.getTo_address()+"/transfers)\n" +
+                                "收款地址： <code>"+t.getTo_address()+"</code>\n" +
+                                "支付地址： <code>"+t.getFrom_address()+"</code>\n" +
                                 "交易哈希： "+t.getTransaction_id()+" (https://tronscan.org/#/transaction/"+t.getTransaction_id()+")\n" +
                                 "转账时间："+sdf.format(new Date(t.getBlock_ts()))+"\n" +
                                 "\uD83D\uDCE3 监控地址 ("+w.getAddress()+")" ;
                     }else {
                         result="交易金额： "+bigDecimal+t.getTokenInfo().getTokenAbbr()+" 已确认 #"+type+"\n" +
                                 "交易币种： ❇\uFE0F #"+t.getTokenInfo().getTokenAbbr()+"\n" +
-                                "收款地址： "+t.getTo_address()+" (https://tronscan.org/#/address/"+t.getTo_address()+"/transfers)\n" +
-                                "支付地址： "+t.getFrom_address()+" (https://tronscan.org/#/address/"+t.getTo_address()+"/transfers)\n" +
+                                "收款地址： <code>"+t.getTo_address()+"</code>\n" +
+                                "支付地址： <code>"+t.getFrom_address()+"</code>\n" +
                                 "交易哈希： "+t.getTransaction_id()+" (https://tronscan.org/#/transaction/"+t.getTransaction_id()+")\n" +
                                 "转账时间："+sdf.format(new Date(t.getBlock_ts()))+"\n" +
                                 "\uD83D\uDCE3 监控地址 ("+w.getAddress()+")";
@@ -114,10 +133,10 @@ public class PaperPlaneBotSinglePerson {
                     sendMessage.disableWebPagePreview();//禁用预览链接
                     accountBot.sendMessage(sendMessage,result);
                     // 标记此交易已处理
-                    processedTransactions.add(t.getTransaction_id());
+                    lastTransactionTimeMap.put(t.getTransaction_id()+w.getUserId(), now);
                 }
             });
-        });
+        }));
     }
     //获取个人账户信息
     protected void handleTronAccountMessage(SendMessage sendMessage, Update update,UserDTO userDTO){
@@ -346,19 +365,24 @@ public class PaperPlaneBotSinglePerson {
                     tomorrow.getDayOfMonth()+"日"+ tomorrow.getHour()+"时"+tomorrow.getMinute()+"分" +tomorrow.getSecond()+"秒");
             return;
         }
-        if (text.equals("/start")) accountBot.tronAccountMessageTextHtml(sendMessage,userDTO.getUserId(),"你好！<b>欢迎使用本机器人：\n" +
-                "\n" +
-                "点击下方底部按钮：获取个人信息\n" +
-                "（将我拉入群组可免费使用8小时）\n" +
-                "\n" +
-                "将TRC20地址发送给我，即可设置入款通知；\n" +
-                "群友在群中发送U地址即可查询该地址当前余额； \n" +
-                "\n" +
-                "➖➖➖➖➖➖➖➖➖➖➖\n" +
-                "本机器人用户名 ： </b><code>@"+username+"</code>\n" +//（点击复制）
-                "\n" +
-                "<b>联系客服：</b>@vipkefu\n" +
-                "<b>双向客服：</b>@yaokevipBot");
+        if (text.equals("/start")) {
+            Map<String, String> map = new LinkedHashMap<>();
+            map.put("✅把我添加到群", "https://t.me/"+this.username+"?startgroup=add2chat");
+            buttonList.sendButton(sendMessage, map);
+            accountBot.tronAccountMessageTextHtml(sendMessage,userDTO.getUserId(),"你好！<b>欢迎使用本机器人：\n" +
+                    "\n" +
+                    "点击下方底部按钮：获取个人信息\n" +
+                    "（将我拉入群组可免费使用8小时）\n" +
+                    "\n" +
+                    "将TRC20地址发送给我，即可设置入款通知；\n" +
+                    "群友在群中发送U地址即可查询该地址当前余额； \n" +
+                    "\n" +
+                    "➖➖➖➖➖➖➖➖➖➖➖\n" +
+                    "本机器人用户名 ： </b><code>@"+username+"</code>\n" +
+                    "\n" +
+                    "<b>联系客服：</b>@vipkefu\n" +
+                    "<b>双向客服：</b>@yaokevipBot");
+        }
     }
 
     //使用说明
@@ -435,6 +459,7 @@ public class PaperPlaneBotSinglePerson {
                 "隐藏明细（hide details）\n" +
                 "“设置下发地址“：设置下发地+下发地址信息\n" +
                 "“查看下发地址“ ： 群内输入关键字    下发地址\n" +
+                "P余额功能+指令，P100{增加余额，只显示在独立分类}\n" +
                 "After-sales customer service: @vipkefu @yaokevipBot\n" +
                 "售后客服： @vipkefu @yaokevipBot";
         sendMessage.setText(msg);

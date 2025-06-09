@@ -1,7 +1,6 @@
 package org.example.bot.accountBot.botConfig;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
-import io.swagger.models.auth.In;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.example.bot.accountBot.dto.UserDTO;
@@ -10,13 +9,11 @@ import org.example.bot.accountBot.pojo.*;
 
 import org.example.bot.accountBot.service.*;
 import org.example.bot.accountBot.utils.BaseConstant;
-import org.example.bot.accountBot.utils.ConstantMap;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
-import org.telegram.telegrambots.meta.api.methods.updatingmessages.DeleteMessage;
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageText;
 import org.telegram.telegrambots.meta.api.objects.ChatMemberUpdated;
 import org.telegram.telegrambots.meta.api.objects.Message;
@@ -24,8 +21,6 @@ import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
 import java.util.*;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.TimeUnit;
 
 @Slf4j
 @Service
@@ -136,15 +131,13 @@ public class AccountBot extends TelegramLongPollingBot {
             groupInfoSetting= groupInfoSettingBotMessage.getGroupOrCreate(userDTO.getText(), Long.valueOf(userDTO.getUserId()));
         }
         if (userDTO.getText().equals("/detail"+"@"+username)||userDTO.getText().equals("/detail")){
-            String sc="<strong>中英文对应如下以下命令包括括号里的都可识别(The Chinese and English correspondence is as follows)</strong>\n";
-            String allCommandsDetail = new ConstantMap().getAllCommandsDetail();
             SendMessage sendMessageDetail = new SendMessage();
             if (message.getChat().isUserChat()){
                 sendMessageDetail.setChatId(userDTO.getUserId());
             }else {
                 sendMessageDetail.setChatId(userDTO.getGroupId());
             }
-            sendMessageDetail.setText(sc+allCommandsDetail);
+            sendMessageDetail.setText(this.getDetail());
             this.sendMessage(sendMessageDetail);
         }
         //私聊的机器人  处理个人消息
@@ -179,10 +172,10 @@ public class AccountBot extends TelegramLongPollingBot {
         UserNormal userNormalTempAdmin =userNormalService.selectByGroupId(userDTO.getGroupId());//超级管理
         if (message.getText().equals("权限人") || message.getText().equals("管理员")
                 || message.getText().toLowerCase().equals("authorized person")||  message.getText().toLowerCase().equals("admin")){
-            permissionUser.getPermissionUser(sendMessage,userDTO,user1,userNormalTempAdmin);
+            permissionUser.getPermissionUser(sendMessage,userDTO,user1,userNormalTempAdmin,groupInfoSetting);
         }
         if (message.getText().charAt(0)!='+' && message.getText().charAt(0)!='-' &&
-                (!BaseConstant.getMessageContentIsContain(message.getText()) && !BaseConstant.getMessageContentIsContainEnglish(message.getText())
+                (!BaseConstant.getMessageContentIsContain(message.getText())
                         && !BaseConstant.getMessageContentIsContainEnglish2(message.getText()))) {
             return ;
         }
@@ -255,8 +248,10 @@ public class AccountBot extends TelegramLongPollingBot {
         //撤销入款
         ruzhangOperations.repeal(message,sendMessage,accountList,replyToText,replayToMessageId,userDTO,issueList);
         ruzhangOperations.repealEn(message,sendMessage,accountList,replyToText,replayToMessageId,userDTO,issueList);
+        //识别P是否手动添加 是(true)
+        ruzhangOperations.pHandle(userDTO, status,updateAccount,issue);
         //删除今日数据/关闭日切/
-        dateOperator.deleteTodayData(message,sendMessage,userDTO.getGroupId(),status);
+        dateOperator.deleteTodayData(message,sendMessage,userDTO.getGroupId(),status,rate);
         //入账操作
         ruzhangOperations.inHandle(split2,message.getText(),  updateAccount,  sendMessage, accountList, message,split3,
                 rate,issue,issueList,userDTO,status,groupInfoSetting);
@@ -286,7 +281,7 @@ public class AccountBot extends TelegramLongPollingBot {
                         "\n" +
                         "我也可以查询TRC20地址如下：\n" +
                         "输入: 查询TEtYFxxxxxxxxj8W9pC\n" +
-                        "命令详情/detail"+
+                        "命令详情 /detail"+
                         "\n" +
                         "➖➖➖➖➖➖➖➖➖➖➖\n" +
                         "<b>详情使用说明请私聊我</b> @"+this.getBotUsername();
@@ -380,7 +375,7 @@ public class AccountBot extends TelegramLongPollingBot {
                         "\n" +
                         "我也可以查询TRC20地址如下：\n" +
                         "输入: 查询TEtYFxxxxxxxxj8W9pC\n" +
-                        "命令详情/detail"+
+                        "命令详情 /detail"+
                         "\n" +
                         "➖➖➖➖➖➖➖➖➖➖➖\n" +
                         "<b>详情使用说明请私聊我</b> @"+this.getBotUsername();
@@ -390,6 +385,84 @@ public class AccountBot extends TelegramLongPollingBot {
             }
         }
     }
+    public String getDetail(){
+        return "1\uFE0F⃣增加机器人进群。群右上角--Add member-输入 @TTpayvipbot\n" +
+                " Add robots to the group. In the upper right corner of the group--Add member-enter @TTpayvipbot\n" +
+                "\n" +
+                " 2\uFE0F⃣ 设置操作人 @AAA\n" +
+                " Set operator @AAA\n" +
+                "删除操作人 @AAA\n" +
+                "Delete operator @AAA\n" +
+                "先打空格在打@，会弹出选择更方便\n" +
+                "Type space first and then @, a pop-up will appear for easier selection\n" +
+                "显示操作人（Show operator）\n" +
+                "\n" +
+                "  如果对方没有设置用户名，可以回复对方信息并发送“设置操作员”或“删除操作员”来新增或删除操作员\n" +
+                "If the other party has not set a user name, you can reply to the other party's message and send \"Set operator\" or \"Delete operator\" to add or delete an operator.\n" +
+                "\n" +
+                "3\uFE0F⃣输入”设置费率X.X%“\n" +
+                "Enter \"set rate X.X%\"\n" +
+                "输入”设置汇率X.X%“\n" +
+                "Enter \"Set exchange rate  X.X%\"\n" +
+                "\n" +
+                " 4\uFE0F⃣ 入款指令；+     修正；D-\n" +
+                "Deposit instruction; + correction; D-\n" +
+                " 下发指令；-       修正；T-\n" +
+                "Withdrawal instruction;- Amendment;T-\n" +
+                "\n" +
+                " 如果输入错误，可以用 入款-XXX  或 下发-XXX，来修正\n" +
+                "If you make an input error, you can use Deposit-XXX or Issue-XXX to correct it.\n" +
+                "“撤销入款”：可撤销最近一条入款记录\n" +
+                "“Cancel deposit”: You can cancel the most recent deposit record\n" +
+                "“撤销下发”：可撤销最近一条下发记录\n" +
+                "“Undo delivery”: You can revoke the most recent delivery record.\n" +
+                "\n" +
+                " 5\uFE0F⃣“OTC”, “币价”，“Z0”,即可查询OKex官方最新OTC交易价格,底部可查询微信支付宝和银行卡价格.\n" +
+                "\"OTC\", \"Coin Price\" and \"Z0\" can view the latest OTC transaction prices on OKex. At the bottom, you can view the prices of WeChat, Alipay and bank cards.\n" +
+                " 6\uFE0F⃣账单（bill）\n" +
+                "删除账单（删除今日账单）\n" +
+                "Delete bill (delete today's bill)\n" +
+                "删除全部帐单（删除历史账单谨慎使用）\n" +
+                "Delete all bills (be careful when deleting historical bills)\n" +
+                "\n" +
+                " 7\uFE0F⃣计算器 （calculator）\n" +
+                "100+100            1000*5\n" +
+                "1000/5               1000-5\n" +
+                "8\uFE0F⃣TRC20地址信息查询（TRC20 address information query）\n" +
+                "查询TEtYFNQCaDWZXsjoMwxxJ9tymhXx*****\n" +
+                "QueryTEtYFNQCaDWZXsjoMwxxJ9tymhXx*****\n" +
+                "\n" +
+                "9\uFE0F⃣“设置日切12”：设置每日截止时间+（0~23之间的整数）（可修改各组每日截止时间，默认为中国北京时间12:00）\n" +
+                "\"Set daily cut-off 12\": Set the daily cut-off time + (an integer between 0 and 23) (the daily cut-off time of each group can be modified, the default is 12:00 Beijing time, China)\n" +
+                "\uD83D\uDD1F其他功能（Other functions）\n" +
+                "通知（notify）\n" +
+                "显示操作人名称（Show operator name）\n" +
+                "隐藏操作人名称（Hide operator name）\n" +
+                "显示回复人名称（Show replyer name）\n" +
+                "隐藏回复人名称（Hide reply name）\n" +
+                "隐藏名称（Hide name）\n" +
+                "切换中文（Switch to Chinese）\n" +
+                "切换英文（Switch to English）\n" +
+                "显示分类（Show categories）\n" +
+                "隐藏分类（Hide categories）\n" +
+                "设置手续费10（Setup fee 10）0为关闭（0 is off）\n" +
+                "隐藏手续费（Hidden fees）\n" +
+                "显示手续费（Show handling fee）\n" +
+                "显示1条（Show 1 item）\n" +
+                "显示3条（Show 3 item）\n" +
+                "显示5条（Show 5 item）\n" +
+                "显示金额（Display amount）\n" +
+                "显示usdt（show usdt）\n" +
+                "显示全部（Show all）\n" +
+                "显示明细（Show details）\n" +
+                "隐藏明细（hide details）\n" +
+                "“设置下发地址“：设置下发地+下发地址信息\n" +
+                "“查看下发地址“ ： 群内输入关键字    下发地址\n" +
+                "P余额功能+指令，P100{增加余额，只显示在独立分类}\n" +
+                "After-sales customer service: @vipkefu @yaokevipBot\n" +
+                "售后客服： @vipkefu @yaokevipBot";
+    }
+
 
     //判断消息是否是普通用户发送的消息 如果是就保存
     public void setIsAdminUser(SendMessage sendMessage,UserDTO userDTO,User user,User byUsername){

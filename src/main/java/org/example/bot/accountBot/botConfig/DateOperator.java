@@ -3,8 +3,10 @@ package org.example.bot.accountBot.botConfig;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.example.bot.accountBot.dto.UserDTO;
+import org.example.bot.accountBot.mapper.RateMapper;
 import org.example.bot.accountBot.pojo.Account;
 import org.example.bot.accountBot.pojo.Issue;
+import org.example.bot.accountBot.pojo.Rate;
 import org.example.bot.accountBot.pojo.Status;
 import org.example.bot.accountBot.service.AccountService;
 import org.example.bot.accountBot.service.IssueService;
@@ -16,6 +18,7 @@ import org.springframework.stereotype.Service;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Message;
 
+import java.math.BigDecimal;
 import java.time.*;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
@@ -39,6 +42,8 @@ public class DateOperator{
     AccountBot accountBot;
     @Autowired
     StatusService statusService;
+    @Autowired
+    RateMapper rateMapper;
     Map<String, String> constantMap = ConstantMap.COMMAND_MAP_ENGLISH;
     //判断是否过期 groupId text  查询是否过期
     public void isOver24HourCheck(Message message, SendMessage sendMessage, UserDTO userDTO, Status status,List<Account> accountList,List<Issue> issueList) {
@@ -48,8 +53,8 @@ public class DateOperator{
         ||(userDTO.getText().length()>=4&&userDTO.getText().substring(0,4).equals(constantMap.get("设置日切"))
                 ||userDTO.getText().length()>=4&&userDTO.getText().substring(0,4).equals(constantMap.get("开启日切"))) ){
             this.dataInfo(lowerCase,status,sendMessage,4,lowerCase.length());
-        }else if (lowerCase.startsWith("set daily switch")){
-            this.dataInfo(lowerCase,status,sendMessage,"set daily switch".length(),lowerCase.length());
+        }else if (lowerCase.startsWith("set daily cut-off")){
+            this.dataInfo(lowerCase,status,sendMessage,"set daily cut-off".length(),lowerCase.length());
         }else if (lowerCase.startsWith("enable daily switch")){
             this.dataInfo(lowerCase,status,sendMessage,"enable daily switch".length(),lowerCase.length());
         }
@@ -64,7 +69,7 @@ public class DateOperator{
                 tomorrow = LocalDateTime.now().plusDays(1).withHour(12).withMinute(0).withSecond(0).withNano(1);
             }
         }else {
-            Integer hours = Integer.parseInt(lowerCase.substring(length, endLength));
+            Integer hours = Integer.parseInt(lowerCase.substring(length, endLength).trim());
             //16 >15
             if (hours>new Date().getHours()){
                 tomorrow = LocalDateTime.now().plusDays(0).withHour(hours).withMinute(0).withSecond(0).withNano(1);
@@ -94,7 +99,7 @@ public class DateOperator{
 
 
     // 操作人跟最高权限人都可以删除。 删除今日数据/关闭日切 到时间后账单数据自动保存为历史数据，软件界面内数据全部自动清空，操作员权限保留。
-    public void deleteTodayData(Message message, SendMessage sendMessage,String groupId,Status status) {
+    public void deleteTodayData(Message message, SendMessage sendMessage, String groupId, Status status, Rate rate) {
         String text = message.getText().toLowerCase();
         if (text.length()>=4){
             //删除今日账单关键词： 清理今天数据 删除今天数据 清理今天账单 删除今天账单 是否判断操作员权限？
@@ -110,12 +115,30 @@ public class DateOperator{
                 if (!status.isRiqie()){
                     return;
                 }
+                status.setPmoney(BigDecimal.ZERO);
+                status.setDownExchange(BigDecimal.ZERO);
+                status.setDownRate(BigDecimal.ZERO);
+                status.setAccountHandlerMoney(BigDecimal.ZERO);
+                status.setIssueHandlerMoney(BigDecimal.ZERO);
+                statusService.update(status);
+                rate.setExchange(BigDecimal.ONE);
+                rate.setRate(BigDecimal.ZERO);
+                rateMapper.updateById(rate);
                 accountService.deleteTodayData(status,groupId);
                 issueService.deleteTodayIssueData(status,groupId);
                 accountBot.sendMessage(sendMessage,"操作成功 ，今日账单已删除");
 
             }else if (text.equals("删除全部账单")||text.equals("清除全部账单")||text.equals(constantMap.get("删除全部账单")) || text.equals(constantMap.get("清除全部账单"))
             ||text.equals("delete all bills")||text.equals("delete all records")|| text.equals("clear all bills")){
+                status.setPmoney(BigDecimal.ZERO);
+                status.setDownExchange(BigDecimal.ZERO);
+                status.setDownRate(BigDecimal.ZERO);
+                status.setAccountHandlerMoney(BigDecimal.ZERO);
+                status.setIssueHandlerMoney(BigDecimal.ZERO);
+                statusService.update(status);
+                rate.setExchange(BigDecimal.ONE);
+                rate.setRate(BigDecimal.ZERO);
+                rateMapper.updateById(rate);
                 accountService.deleteHistoryData(groupId);
                 issueService.deleteHistoryIssueData(groupId);
                 accountBot.sendMessage(sendMessage,"操作成功 ，全部账单已删除。");
@@ -131,6 +154,15 @@ public class DateOperator{
                 if (!status.isRiqie()) {
                     return;
                 }
+                status.setPmoney(BigDecimal.ZERO);
+                status.setDownExchange(BigDecimal.ZERO);
+                status.setDownRate(BigDecimal.ZERO);
+                status.setAccountHandlerMoney(BigDecimal.ZERO);
+                status.setIssueHandlerMoney(BigDecimal.ZERO);
+                statusService.update(status);
+                rate.setExchange(BigDecimal.ONE);
+                rate.setRate(BigDecimal.ZERO);
+                rateMapper.updateById(rate);
                 accountService.deleteTodayData(status, groupId);
                 issueService.deleteTodayIssueData(status, groupId);
                 accountBot.sendMessage(sendMessage, "操作成功 ，今日账单已删除");
@@ -192,8 +224,19 @@ public class DateOperator{
                 startTime.setTime(status.getSetTime());
                 startTime.add(Calendar.HOUR_OF_DAY, -24);
                 status.setSetStartTime(startTime.getTime());
+
+                status.setPmoney(BigDecimal.ZERO);
+                status.setDownExchange(BigDecimal.ZERO);
+                status.setDownRate(BigDecimal.ZERO);
+                status.setAccountHandlerMoney(BigDecimal.ZERO);
+                status.setIssueHandlerMoney(BigDecimal.ZERO);
                 // status.setSetStartTime(new Date());
                 statusService.update(status);
+                Rate rate = rateService.getInitRate(status.getGroupId());
+                rate.setExchange(BigDecimal.ONE);
+                rate.setRate(BigDecimal.ZERO);
+                rateMapper.updateById(rate);
+
                 //日切时间已更新，当前日切时间为 ：每天:11时59分59秒
                 accountBot.sendMessage(sendMessage,"日切时间已更新，当前日切时间为 ：每天:"+status.getSetTime().getHours()+"时"+
                         status.getSetTime().getMinutes()+"分"+status.getSetTime().getSeconds()+"秒");

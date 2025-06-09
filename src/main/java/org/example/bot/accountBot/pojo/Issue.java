@@ -52,6 +52,7 @@ public class Issue {
     private BigDecimal downExchange=BigDecimal.ZERO;    //下发汇率取status里的下发汇率
     @TableField("down_rate")
     private BigDecimal downRate=BigDecimal.ZERO;    //下发费率取status
-    
+    @TableField("pm")
+    private Boolean pm=false;//是否手动添加
 
 }

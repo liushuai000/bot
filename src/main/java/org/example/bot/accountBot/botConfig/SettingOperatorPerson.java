@@ -57,7 +57,6 @@ public class SettingOperatorPerson{
     }
     public void setHandle(String[] split1, SendMessage sendMessage, String text, UserDTO userDTO, User user6, Status status, GroupInfoSetting groupInfoSetting, UserNormal userNormalTempAdmin, Update update) {
         boolean isShowAdminMessage = false;
-        text = text.toLowerCase();
         if (split1[0].equals("设置操作员")||split1[0].equals("设置操作人")
                 || split1[0].equals(constantMap.get("设置操作员"))||split1[0].equals(constantMap.get("设置操作人"))) {
             if (!user6.isSuperAdmin()) {//是普通权限
@@ -238,6 +237,8 @@ public class SettingOperatorPerson{
                 }
             }
             if (users.isEmpty()){
+                buttonList.implList(sendMessage,userDTO.getGroupId(),userDTO.getGroupTitle(),groupInfoSetting);
+                accountBot.sendMessage(sendMessage,sb.toString());
                 return;
             }
             List<User> userNormalList = users.stream().collect(Collectors.collectingAndThen(
@@ -276,6 +277,7 @@ public class SettingOperatorPerson{
             status.setAccountHandlerMoney(money);
             status.setIssueHandlerMoney(money);
             status.setShowHandlerMoneyStatus(0);
+            statusService.updateStatus("show_handler_money_status"     ,0, userDTO.getGroupId());
             statusService.updateMoneyStatus("issue_handler_money"     ,money, userDTO.getGroupId());
             statusService.updateMoneyStatus("account_handler_money"    ,money, userDTO.getGroupId());
             accountBot.sendMessage(sendMessage,"操作成功");
@@ -284,6 +286,7 @@ public class SettingOperatorPerson{
             status.setAccountHandlerMoney(money);
             status.setIssueHandlerMoney(money);
             status.setShowHandlerMoneyStatus(0);
+            statusService.updateStatus("show_handler_money_status"     ,0, userDTO.getGroupId());
             statusService.updateMoneyStatus("issue_handler_money"     ,money, userDTO.getGroupId());
             statusService.updateMoneyStatus("account_handler_money"    ,money, userDTO.getGroupId());
             accountBot.sendMessage(sendMessage,"操作成功");
@@ -343,7 +346,7 @@ public class SettingOperatorPerson{
         ||split1[0].equals(constantMap.get("将操作员显示"))||split1[0].equals(constantMap.get("显示操作人名称"))||split1[0].equals(constantMap.get("显示操作人名字"))
         ){
             status.setHandleStatus(0);
-            status.setCallBackStatus(1);
+            status.setCallBackStatus(1);//显示操作人名称
             statusService.updateStatus("handle_status"    ,0, userDTO.getGroupId());
             statusService.updateStatus("call_back_status", 1, userDTO.getGroupId());
             accountBot.sendMessage(sendMessage,"操作成功");

@@ -1,6 +1,7 @@
 package org.example.bot.accountBot.botConfig;
 
 import org.example.bot.accountBot.pojo.GroupInfoSetting;
+import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
@@ -9,6 +10,7 @@ import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.Keyboard
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 此类设置机器人按钮
@@ -37,4 +39,23 @@ public class PaperPlaneBotButton {
         return replyKeyboardMarkup;
     }
 
+    public void sendButton(SendMessage sendMessage,  Map<String, String> buttonText) {
+        if (buttonText == null || buttonText.isEmpty()) {
+            return;
+        }
+        InlineKeyboardMarkup markup = new InlineKeyboardMarkup();
+        List<List<InlineKeyboardButton>> rowsInline = new ArrayList<>();
+        for (Map.Entry<String, String> entry : buttonText.entrySet()) {
+            String buttonTextName = entry.getKey();
+            String url = entry.getValue();
+            InlineKeyboardButton button = new InlineKeyboardButton();
+            button.setText(buttonTextName);
+            button.setUrl(url); // 使用 url 属性
+            List<InlineKeyboardButton> rowInline = new ArrayList<>();
+            rowInline.add(button);
+            rowsInline.add(rowInline);
+        }
+        markup.setKeyboard(rowsInline);
+        sendMessage.setReplyMarkup(markup);
+    }
 }

@@ -29,12 +29,32 @@ public class TranslationExample {
             return text;
         }
         try {
+            // 1. 提取 <a href="http..."> 占位符
             StringBuilder inputBuilder = new StringBuilder(text);
-            Map<String, String> placeholders = extractLinks(inputBuilder);
-            String translatedText = translateTextWithoutTags(inputBuilder.toString(), newLanguage);
-            translatedText=translatedText.replaceAll("<a href=\"tg://user\\?\" id=(\\d+)\">", "<a href=\"tg://user?id=$1\">");//中文状态翻译问题
-            String finalText = restoreLinks(translatedText, placeholders);
-            return normalizeTelegramLinks(finalText);//英文
+            Map<String, String> httpLinks = extractLinks(inputBuilder);
+
+            // 2. 提取 <a href="tg://user?..."> 占位符
+            Map<String, String> tgLinks = extractTelegramLinks(inputBuilder);
+
+            // 3. 翻译干净文本（不含 <a> 标签）
+            String translated = translateTextWithoutTags(inputBuilder.toString(), newLanguage);
+
+            // 4. 还原 http 链接
+            translated = restoreLinks(translated, httpLinks);
+
+            // 5. 还原 tg 链接
+            translated = restoreTelegramLinks(translated, tgLinks);
+
+            // 6. 修正标签格式空格问题
+            return normalizeTelegramLinks(translated);
+
+//
+//            StringBuilder inputBuilder = new StringBuilder(text);
+//            Map<String, String> placeholders = extractLinks(inputBuilder);
+//            String translatedText = translateTextWithoutTags(inputBuilder.toString(), newLanguage);
+//            translatedText=translatedText.replaceAll("<a href=\"tg://user\\?\" id=(\\d+)\">", "<a href=\"tg://user?id=$1\">");//中文状态翻译问题
+//            String finalText = restoreLinks(translatedText, placeholders);
+//            return normalizeTelegramLinks(finalText);//英文
         }catch (Exception e){
             return e.getMessage();
         }
@@ -51,7 +71,7 @@ public class TranslationExample {
         while (matcher.find()) {
             String href = matcher.group(1);
             String inner = matcher.group(2);
-            String placeholder = "-" + index ;
+            String placeholder = "{" + index ;
             String fullMatch = matcher.group(0);
 
             placeholders.put(placeholder, "<a href=\"" + href + "\">" + inner + "</a>");
@@ -60,6 +80,35 @@ public class TranslationExample {
             text.replace(start, end, placeholder);
 
             matcher = pattern.matcher(text); // 重建 matcher，因为 text 被修改了
+            index++;
+        }
+
+        return placeholders;
+    }
+    public static String restoreTelegramLinks(String input, Map<String, String> placeholders) {
+        for (Map.Entry<String, String> entry : placeholders.entrySet()) {
+            input = input.replace(entry.getKey(), entry.getValue());
+        }
+        return input;
+    }
+
+    public static Map<String, String> extractTelegramLinks(StringBuilder text) {
+        Map<String, String> placeholders = new LinkedHashMap<>();
+        Pattern pattern = Pattern.compile("<a\\s+href=\"(tg://user\\?id=\\d+)\">(.*?)</a>");
+        Matcher matcher = pattern.matcher(text);
+        int index = 0;
+
+        while (matcher.find()) {
+            String href = matcher.group(1);
+            String inner = matcher.group(2);
+            String placeholder = "$" + index ;
+
+            placeholders.put(placeholder, "<a href=\"" + href + "\">" + inner + "</a>");
+            int start = matcher.start();
+            int end = matcher.end();
+            text.replace(start, end, placeholder);
+
+            matcher = pattern.matcher(text); // 必须重建 matcher
             index++;
         }
 

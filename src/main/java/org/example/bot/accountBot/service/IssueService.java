@@ -41,7 +41,7 @@ public class IssueService {
 //                    .le("add_time", Date.from(endOfDay.atZone(ZoneId.systemDefault()).toInstant()));
 //        }
         queryWrapper.eq("group_id",groupId);//如果groupId为空是否查的到呢
-        queryWrapper.orderByDesc("add_time");
+        queryWrapper.orderByAsc("add_time");
         return mapper.selectList(queryWrapper);
     }
 
@@ -75,12 +75,5 @@ public class IssueService {
         updateWrapper.eq("id", id);
         updateWrapper.eq("group_id", groupId);
         mapper.delete(updateWrapper);
-    }
-
-    public void updateLastUpdateRiqie(int id,Date setTime) {
-        UpdateWrapper<Issue> updateWrapper = new UpdateWrapper<>();
-        updateWrapper.eq("id",id);
-        updateWrapper.set("set_time",setTime);
-        mapper.update(null,updateWrapper);
     }
 }

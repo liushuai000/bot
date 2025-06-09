@@ -12,14 +12,14 @@ public class ConstantMap {
 
     static {
         // 初始化映射关系
-        put("通知(Notice)", "TZ");
-        put("设置日切(Set Daily Switch)", "SZRQ");
+        put("通知(notify)", "TZ");
+        put("设置日切(Set daily cut-off)", "SZRQ");
         put("开启日切(Enable Daily Switch)", "KQRQ");
         put("关闭日切(Disable Daily Switch)", "GBRQ");
         put("设置费率(Set Rate)", "SZFL");
         put("通知所有人(Notify All)", "TZSYR");
 
-        put("设置汇率(Set Exchange Rate)", "SZHL");
+        put("设置汇率(Set exchange rate)", "SZHL");
         put("取消(Cancel)", "QX");
 
         put("删除操作员(Delete Operator)", "SCCZY");
@@ -94,8 +94,8 @@ public class ConstantMap {
         put("删除全部帐单(Delete All Bills)", "SCQBZD");
         put("清除全部账单(Clear All Bills)", "QCQBZD");
 
-        put("撤销下发(Undo Withdrawal)", "CXXF");
-        put("撤销入款(Undo Deposit)", "CXRK");
+        put("撤销下发(Undo delivery)", "CXXF");
+        put("撤销入款(Cancel deposit)", "CXRK");
         put("显示手续费(Show handling fee)", "XSSXF");
         put("隐藏手续费(Hidden fees)", "YCSXF");
 
@@ -212,8 +212,8 @@ public class ConstantMap {
 
         putEnglish("权限人", "QXR");
         putEnglish("管理员", "GLY");
-        put("设置下发汇率", "SZXFHL");
-        put("设置下发费率", "SZXFFL");
+        putEnglish("设置下发汇率", "SZXFHL");
+        putEnglish("设置下发费率", "SZXFFL");
     }
 
     private static void put(String zh, String en) {

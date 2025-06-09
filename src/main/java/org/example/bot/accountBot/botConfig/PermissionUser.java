@@ -2,6 +2,7 @@ package org.example.bot.accountBot.botConfig;
 
 import org.apache.commons.lang3.StringUtils;
 import org.example.bot.accountBot.dto.UserDTO;
+import org.example.bot.accountBot.pojo.GroupInfoSetting;
 import org.example.bot.accountBot.pojo.User;
 import org.example.bot.accountBot.pojo.UserNormal;
 import org.example.bot.accountBot.pojo.UserOperation;
@@ -26,7 +27,9 @@ public class PermissionUser {
     private AccountBot accountBot;
     @Autowired
     private UserService userService;
-    public void getPermissionUser(SendMessage sendMessage, UserDTO userDTO, User user1, UserNormal userNormalTempAdmin) {
+    @Autowired
+    private ButtonList buttonList;
+    public void getPermissionUser(SendMessage sendMessage, UserDTO userDTO, User user1, UserNormal userNormalTempAdmin, GroupInfoSetting groupInfoSetting) {
         String  admin = String.format("<a href=\"tg://user?id=%d\">@%s</a>", Long.parseLong(userNormalTempAdmin.getUserId()), userNormalTempAdmin.getUsername());
         StringBuilder sb = new StringBuilder("本群机器人最高权限管理员为："+admin+"\n");
         sb.append("其他操作员为: ");
@@ -53,6 +56,8 @@ public class PermissionUser {
             }
         }
         if (users.isEmpty()){
+            buttonList.implList(sendMessage,userDTO.getGroupId(),userDTO.getGroupTitle(),groupInfoSetting);
+            accountBot.sendMessage(sendMessage,sb.toString());
             return;
         }
         //p -> p.getUserId() != null 这里过滤了掉用户名为空的用户
@@ -77,6 +82,7 @@ public class PermissionUser {
             }
             sb.append(format+" ");
         }
+        buttonList.implList(sendMessage,userDTO.getGroupId(),userDTO.getGroupTitle(),groupInfoSetting);
         accountBot.sendMessage(sendMessage, sb.toString());
 
 

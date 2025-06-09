@@ -51,7 +51,7 @@ public class NotificationService {
             }
             accountBot.sendMessage(sendMessage, sb.toString());
         }
-        if (text.toLowerCase().equals("notify all") || text.toLowerCase().equals("notice")){
+        if (text.toLowerCase().equals("notify all") || text.toLowerCase().equals("notify")){
             // 计算 48 小时之前的时间
             Calendar calendar = Calendar.getInstance();
             calendar.add(Calendar.HOUR, -48);

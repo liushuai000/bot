@@ -48,8 +48,6 @@ import java.util.stream.Collectors;
 @Service
 public class NowExchange {
 
-    @Value("${getExchangeUrl}")
-    protected String url;
     @Value("${tranAccountUrl}")
     protected String tranAccountUrl;//查询账户余额
     @Value("${tranHistoryUrl}")
@@ -63,19 +61,13 @@ public class NowExchange {
     @Resource
     protected AccountBot accountBot;
     private final OkHttpClient client = new OkHttpClient();
-
     // 定时任务调度器
-    private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(16);
+//    private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(16);
     @Autowired
     private GroupInfoSettingMapper groupInfoSettingMapper;
-    @Autowired
-    private SettingOperatorPerson settingOperatorPerson;
+//    @Autowired
+//    private SettingOperatorPerson settingOperatorPerson;
 
-    @PostConstruct
-    public void init() {
-        // 启动定时任务，首次立即执行，之后每隔20秒执行一次
-        scheduler.scheduleAtFixedRate(this::fetchAndCacheData, 0, 10, TimeUnit.SECONDS);
-    }
 
     public void Query(SendMessage sendMessage,Update update){
         String text = update.getMessage().getText();
@@ -128,28 +120,6 @@ public class NowExchange {
         accountBot.tronAccountMessageText(sendMessage,groupId+"",result);
     }
 
-    // 定时任务方法，用于获取最新数据并缓存
-    private void fetchAndCacheData() {
-        try {
-            List<String> payMethodList=new ArrayList();
-            payMethodList.add("0");// 所有
-            payMethodList.add("1");// 银行卡
-            payMethodList.add("2");// 支付宝
-            payMethodList.add("3");// 微信
-            for (String payMethod : payMethodList){
-                String url = this.url + "?coinId=2&currency=172&tradeType=sell&currPage=1&payMethod=" + payMethod +
-                        "&acceptOrder=0&country=&blockType=general&online=1&range=0&amount=&isThumbsUp=false&isMerchant=false" +
-                        "&isTraded=false&onlyTradable=false&isFollowed=false&makerCompleteRate=0";
-                List<Merchant> merchants = restTemplateConfig.getForObjectMerchant(url, NowExchangeDTO.class);
-                StringBuilder stringBuilder = new StringBuilder();
-                for (int i = 0; i < merchants.size(); i++) {
-                    stringBuilder.append(i + 1).append(")   ").append(merchants.get(i).getPrice()).append("   ").append("<code>").append(merchants.get(i).getUserName()).append("</code>").append("\n");
-                }
-            }
-        } catch (Exception e) {
-            log.error("Error fetching and caching data", e);
-        }
-    }
     //查询交易记录
     private void queryHistoryTrading(Message message,SendMessage sendMessage) {
         String text = message.getText();

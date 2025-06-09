@@ -49,7 +49,8 @@ public class RateDTO {
     private BigDecimal downExchange=BigDecimal.ZERO;    //下发汇率
     @ApiModelProperty("downRate")
     private BigDecimal downRate=BigDecimal.ZERO;    //下发费率
-
+    @ApiModelProperty("pmoney")
+    private BigDecimal pmoney=BigDecimal.ZERO;   //手动添加费用 实体类用的
 
 
 

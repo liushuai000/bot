@@ -21,6 +21,7 @@ public class AccountAssembler {
         accountDTO.setUsername(user.getUsername());
         accountDTO.setAccountHandlerMoney(account.getAccountHandlerMoney());
         accountDTO.setFirstName(user.getFirstLastName());
+        accountDTO.setPm(account.getPm());
         if (rate.isCalcU()){
             accountDTO.setTotal(account.getTotal());
         }else {
@@ -52,6 +53,7 @@ public class AccountAssembler {
         issueDTO.setDownRate(issue.getDownRate());
         issueDTO.setDownExchange(issue.getDownExchange());
         issueDTO.setAddTime(issue.getAddTime());
+        issueDTO.setPm(issue.getPm());
         if (callBackUser!=null){
             issueDTO.setCallBackUserId(callBackUser.getUserId());
             issueDTO.setCallBackName(callBackUser.getUsername());
@@ -126,6 +128,7 @@ public class AccountAssembler {
                 .setCount(total)//.subtract(total.multiply(rate.getRate())).multiply(BigDecimal.valueOf(0.01))
                 .setDown(downing.subtract(downed))
                 .setDowned(downed)
+                .setPmoney(status.getPmoney())
                 .setDownRate(status.getDownRate())
                 .setDownExchange(status.getDownExchange())
                 .setGroupId(rate.getGroupId())

@@ -27,7 +27,6 @@ vueUrl: http://192.168.0.9:8080/
 Origin: http://43.128.113.117:8081
 apiKey: 2967e678-556e-497a-a892-a1dcee897ba5
 #获取最新汇率
-getExchangeUrl: https://www.htx.com/-/x/otc/v1/data/trade-market
 tranAccountUrl: https://apilist.tronscanapi.com/api/accountv2?address=
 #tranAccountUrl: https://apilist.tronscan.org/api/account?address=  备用地址
 tranHistoryUrl: https://apilist.tronscanapi.com/api/filter/trc20/transfers?limit=10&start=0&sort=-timestamp&count=true&filterTokenValue=0&relatedAddress=

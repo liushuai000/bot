@@ -23,7 +23,8 @@ logging:
 #这个是超级管理员 可以私聊别人设置管理员权限
 adminUserId: 68522929 #耀科账号
 botUserId: 6764218833
-Origin: http://43.128.113.117:8081
+#http://43.128.113.117:8081
+Origin: http://www.yaoke.cc
 vueUrl: http://www.yaoke.cc/
 #adminUserId: 6721175591 #昊天
 #botUserId: 6749246766
@@ -32,7 +33,6 @@ vueUrl: http://www.yaoke.cc/
 
 apiKey: 2967e678-556e-497a-a892-a1dcee897ba5
 #获取最新汇率
-getExchangeUrl: https://www.htx.com/-/x/otc/v1/data/trade-market
 tranAccountUrl: https://apilist.tronscanapi.com/api/accountv2?address=
 tranHistoryUrl: https://apilist.tronscanapi.com/api/filter/trc20/transfers?limit=10&start=0&sort=-timestamp&count=true&filterTokenValue=0&relatedAddress=
 telegram:

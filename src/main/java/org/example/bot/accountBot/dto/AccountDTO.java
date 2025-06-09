@@ -45,8 +45,8 @@ public class AccountDTO{
     private BigDecimal total;//金额
     @ApiModelProperty("accountHandlerMoney")
     private BigDecimal accountHandlerMoney=BigDecimal.ZERO;//全局入款手续费 account issue 里的手续费是记录单笔历史的
-
     @ApiModelProperty("downing")
     private BigDecimal downing=BigDecimal.ZERO;  //应下发
-
+    @TableField("pm")
+    private Boolean pm=false;//是否手动添加
 }

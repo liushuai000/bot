@@ -58,7 +58,11 @@ public class Status {
     private BigDecimal downExchange=BigDecimal.ZERO;    //下发汇率
     @TableField("down_rate")
     private BigDecimal downRate=BigDecimal.ZERO;    //下发费率
-    /****** 以下是下发的信息 ******/
+    @TableField("pmoney")
+    private BigDecimal pmoney=BigDecimal.ZERO;    //p手动添加   P100{增加余额，只显示在独立分类} P+100和p100都是+100 而且只加未下发上
+
+
+    /****** 以下是下发的信息 暂时没有用 ******/
     @TableField("d_address")
     private String dAddress;//下发地址
     @TableField("d_time")

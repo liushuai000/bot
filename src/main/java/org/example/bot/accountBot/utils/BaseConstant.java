@@ -108,7 +108,7 @@ public class BaseConstant {
             "删除操作员", "删除操作人","设置操作员", "设置操作人",
             "设置入款单笔手续费","设置入款手续费","设置下发手续费", "设置下发单笔手续费",
             "设置单笔下发手续费","设置单笔入款手续费","设置下发费率","设置下发汇率",
-            "切换英文", "切换中文","设置下发地址","修改下发地址","查看下发地址"
+            "切换英文", "切换中文","设置下发地址","修改下发地址","查看下发地址",
     };
     //这个是需要显示账单的第一行都是contains 其余行都是equals 因为第一行有  下发-30.equals(下发)
     public final static String[] showArray={
@@ -118,10 +118,10 @@ public class BaseConstant {
             "显示1条","显示3条","显示5条", "+0","-0","+0u","-0u","+0U","-0U","显示分类","隐藏分类","取消","账单","显示账单",
             "清理今天数据", "删除今天数据","清理今天账单","清理今日账单","删除今日账单","清理今天帐单","删除今天账单",
             "删除账单", "删除今天帐单","删除帐单","清除账单","清除帐单", "删除全部账单","删除全部帐单", "删除全部账单","清除全部账单",
-            "撤销下发","撤销入款","显示手续费","隐藏手续费","关闭回复人显示","隐藏回复人显示","隐藏回复人名称",
+            "撤销下发","撤销入款","显示手续费","隐藏手续费","关闭回复人显示","隐藏回复人显示","隐藏回复人名称","D","T","issue","P"
     };
     public final static String[] arrayEnglish2 = {
-            "Notice", "Set Daily Switch", "Enable Daily Switch", "Disable Daily Switch", "Set Rate", "Notify All",
+            "notify", "Set daily cut-off", "Enable Daily Switch", "Disable Daily Switch", "Set Rate", "Notify All",
             "Set Exchange Rate", "Set Single Deposit Fee", "Cancel",
             "Delete Operator", "Delete Operator", "Set Operator", "Set Operator Person",
             "Set Single Deposit Fee","Set Deposit Fee","Set Withdrawal Fee","Set Single Withdrawal Fee",
@@ -130,15 +130,15 @@ public class BaseConstant {
     };
 
     public final static String[] showArrayEnglish2 = {
-            "Set Fee", "Withdraw",
+            "Setup fee", "Withdraw",
             "Show Details", "Hide Details", "Show Operator Name", "Show Operator Names", "Show Operator", "Hide Operator Name",
-            "Hide Name","Hide Names", "Hide Titles","Hide Display","Show Replyer","Show Replyer Name",
+            "Hide Name","Hide Name", "Hide Titles","Hide Display","Show Replyer","Show Replyer Name",
             "Hide All", "Show Replier", "Show Replier Name", "Show Balance", "Display amount", "Show USDT", "Show All",
             "Show 1 item", "Show 3 item", "Show 5 item", "+0", "-0", "+0u", "-0u", "+0U", "-0U", "Show categories", "Hide categories","Cancel","Bill","Show Bill","View Bill",
             "Clear Today Data","Delete Today Data","Clear Today Bill","Delete Today Bill",
-            "Delete Bill","Clear Bill","Delete All Bills","Clear All Bills","Undo Withdrawal","Undo Deposit",
+            "Delete Bill","Clear Bill","Delete All Bills","Clear All Bills","Undo delivery","Cancel deposit",
             "Show handling fee","Hidden fees","Bill","View Bill","Show Bill","Hide Replyer Display", "Hide Replyer Info","Hide reply name",
-
+            "D","T","issue","P"
     };
 
     /**
@@ -151,37 +151,14 @@ public class BaseConstant {
         String[] combinedArray = Arrays.copyOf(array, array.length + showArray.length);
         System.arraycopy(showArray, 0, combinedArray, array.length, showArray.length);
         boolean b = equalsAny(array, text);
-        boolean b1 = containsAny(showArray, text);
+        boolean b1 = startsWithAny(showArray, text);
         boolean temp;
         if (b){
             temp= true;
         }else {
             temp = b1;
         }
-        if (text.startsWith("设置手续费")||text.toLowerCase().contains("setup fee ")){
-            return true;
-        }
-        if (text.startsWith("下发")||text.toLowerCase().contains("withdraw")){
-            return true;
-        }
-        if (text.startsWith("入款")||text.toLowerCase().contains("deposit")){
-            return true;
-        }
-        return temp;
-    }
-    public static boolean getMessageContentIsContainEnglish(String text) {
-        // 合并两个数组
-        String[] combinedArray = Arrays.copyOf(arrayEnglish, arrayEnglish.length + showArrayEnglish.length);
-        System.arraycopy(showArrayEnglish, 0, combinedArray, arrayEnglish.length, showArrayEnglish.length);
-        boolean b = equalsAny(arrayEnglish, text);
-        boolean b1 = containsAny(showArrayEnglish, text);
-        boolean temp;
-        if (b){
-            temp= true;
-        }else {
-            temp = b1;
-        }
-        if (text.startsWith("设置手续费")||text.toLowerCase().contains("setup fee ")){
+        if (text.startsWith("设置手续费")||text.toLowerCase().contains("setup fee")){
             return true;
         }
         if (text.startsWith("下发")||text.toLowerCase().contains("withdraw")){
@@ -198,14 +175,14 @@ public class BaseConstant {
         String[] combinedArray = Arrays.copyOf(arrayEnglish2, arrayEnglish2.length + showArrayEnglish2.length);
         System.arraycopy(showArrayEnglish2, 0, combinedArray, arrayEnglish2.length, showArrayEnglish2.length);
         boolean b = equalsAny(arrayEnglish2, text);
-        boolean b1 = containsAny(showArrayEnglish2, text);
+        boolean b1 = startsWithAny(showArrayEnglish2, text);
         boolean temp;
         if (b){
             temp= true;
         }else {
             temp = b1;
         }
-        if (text.startsWith("设置手续费")||text.toLowerCase().contains("setup fee ")){
+        if (text.startsWith("设置手续费")||text.toLowerCase().contains("setup fee")){
             return true;
         }
         if (text.startsWith("下发")||text.toLowerCase().contains("withdraw")){
@@ -218,13 +195,13 @@ public class BaseConstant {
     }
     //判断群组内消息 是否直接显示账单
     public static boolean showReplay(String text) {
-        return  containsAny(showArray, text);//包含0  equals0
+        return  startsWithAny(showArray, text);//包含0  equals0
     }
     public static boolean showReplayEnglish(String text) {
-        return  containsAny(showArrayEnglish, text);//包含0  equals0
+        return  startsWithAny(showArrayEnglish, text);//包含0  equals0
     }
     public static boolean showReplayEnglish2(String text) {
-        return  containsAny(showArrayEnglish2, text);//包含0  equals0
+        return  startsWithAny(showArrayEnglish2, text);//包含0  equals0
     }
     public static boolean equalsAny(String[] array, String input) {
         for (String str : array) {
@@ -234,7 +211,7 @@ public class BaseConstant {
         }
         return false; // 如果没有任何元素匹配，返回false
     }
-    public static boolean containsAny(String[] array, String input) {
+    public static boolean startsWithAny(String[] array, String input) {
         for (String str : array) {
             str=str.toLowerCase();
             if (array[0]==null){
@@ -244,7 +221,10 @@ public class BaseConstant {
                     ||input.toLowerCase().contains("set the exchange rate")||input.toLowerCase().contains("set the delivery rate")){
                 return false;
             }
-            if(input.contains(array[0])||input.contains(array[1])){
+//            if (input.startsWith("t-")||input.startsWith("d-")||input.startsWith("issue")){
+//                return true;
+//            }
+            if(input.startsWith(str)){
                 return true;
             }
             if (input.equals(str)) {

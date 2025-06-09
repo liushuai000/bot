@@ -7,10 +7,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.example.bot.accountBot.assembler.AccountAssembler;
 import org.example.bot.accountBot.dto.*;
-import org.example.bot.accountBot.mapper.AccountMapper;
-import org.example.bot.accountBot.mapper.IssueMapper;
-import org.example.bot.accountBot.mapper.RateMapper;
-import org.example.bot.accountBot.mapper.UserMapper;
+import org.example.bot.accountBot.mapper.*;
 import org.example.bot.accountBot.pojo.*;
 import org.example.bot.accountBot.service.AccountService;
 import org.example.bot.accountBot.service.RateService;
@@ -49,7 +46,8 @@ public class AccountServiceImpl implements AccountService {
     private RateService rateService;
     @Autowired
     private StatusService statusService;
-
+    @Autowired
+    private GroupInfoSettingMapper groupInfoSettingMapper;
     public ReturnFromType findAccountByGroupId(QueryType queryType) {
         Date addTime = queryType.getAddTime();
         Date addEndTime = queryType.getAddEndTime();
@@ -92,6 +90,8 @@ public class AccountServiceImpl implements AccountService {
             returnFromType.setCallbackData(callbackUserDTOList);
             List<OperationUserDTO> operationUserDTOList=this.getOperationUserDTO(accountDTOList,issueDTOList);
             returnFromType.setOperationData(operationUserDTOList);
+            GroupInfoSetting groupInfoSetting = groupInfoSettingMapper.selectOne(new QueryWrapper<GroupInfoSetting>().eq("group_id", groupId));
+            returnFromType.setEnglish(groupInfoSetting.getEnglish());
             return returnFromType;
         } catch (Exception e) {
             // 记录日志或返回空列表
@@ -271,7 +271,7 @@ public class AccountServiceImpl implements AccountService {
                 queryWrapper.eq("riqie", status.isRiqie());
             }
         }
-        queryWrapper.orderByDesc("add_time");
+        queryWrapper.orderByAsc("add_time");
         List<Issue> issues = issueMapper.selectList(queryWrapper);
         List<Issue> issueList=issues;
         if (!findAll) {
@@ -348,7 +348,7 @@ public class AccountServiceImpl implements AccountService {
                 queryWrapper.eq("riqie", status.isRiqie());
             }
         }
-        queryWrapper.orderByDesc("add_time");
+        queryWrapper.orderByAsc("add_time");
         List<Account> accounts = accountMapper.selectList(queryWrapper);
         if (accounts.isEmpty())return null;
         List<Account> accountList = accounts;
@@ -422,22 +422,13 @@ public class AccountServiceImpl implements AccountService {
 //                    .le("add_time", Date.from(endOfDay.atZone(ZoneId.systemDefault()).toInstant()));
 //        }
         queryWrapper.eq("group_id",groupId);//如果groupId为空是否查的到呢
-        queryWrapper.orderByDesc("add_time");
-        return accountMapper.selectList(queryWrapper);
-    }
-    public List<Account> selectAccounts( String groupId) {
-        QueryWrapper<Account> queryWrapper = new QueryWrapper<>();
-        queryWrapper.eq("group_id",groupId);//如果groupId为空是否查的到呢
-        queryWrapper.orderByDesc("add_time");
+        queryWrapper.orderByAsc("add_time");
         return accountMapper.selectList(queryWrapper);
     }
 
 
     public void insertAccount(Account account) {
         accountMapper.insert(account);
-    }
-    public void deleteById(int id) {
-        accountMapper.deleteById(id);
     }
     public void deleteHistoryData(String groupId) {
         UpdateWrapper<Account> updateWrapper = new UpdateWrapper<>();

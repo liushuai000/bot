@@ -93,8 +93,8 @@ public class SettingOperatorPersonEnglish {
                 return;
             }
             Pattern compile = Pattern.compile("@(\\w+)");
-            if (compile.matcher(lowerText).find()){
-                Matcher matcher = compile.matcher(lowerText);//应该循环添加id
+            if (compile.matcher(text).find()){
+                Matcher matcher = compile.matcher(text);//应该循环添加id
                 List<String> userNames = new ArrayList<>();
                 while (matcher.find()) {
                     // 将匹配到的用户名添加到列表中
@@ -189,7 +189,7 @@ public class SettingOperatorPersonEnglish {
             }else {
                 accountBot.sendMessage(sendMessage,"已设置该操作员无需重复设置");
             }
-        }else if (lowerText.startsWith("show operator")){
+        }else if (lowerText.equals("show operator")){
             String  admin = String.format("<a href=\"tg://user?id=%d\">@%s</a>", Long.parseLong(userNormalTempAdmin.getUserId()), userNormalTempAdmin.getUsername());
             StringBuilder sb = new StringBuilder("本群机器人最高权限管理员为："+admin+"\n");
             sb.append("其他操作员为: ");
@@ -216,6 +216,8 @@ public class SettingOperatorPersonEnglish {
                 }
             }
             if (users.isEmpty()){
+                buttonList.implList(sendMessage,userDTO.getGroupId(),userDTO.getGroupTitle(),groupInfoSetting);
+                accountBot.sendMessage(sendMessage,sb.toString());
                 return;
             }
             List<User> userNormalList = users.stream().collect(Collectors.collectingAndThen(
@@ -298,6 +300,7 @@ public class SettingOperatorPersonEnglish {
             status.setAccountHandlerMoney(money);
             status.setIssueHandlerMoney(money);
             status.setShowHandlerMoneyStatus(0);
+            statusService.updateStatus("show_handler_money_status"     ,0, userDTO.getGroupId());
             statusService.updateMoneyStatus("issue_handler_money"     ,money, userDTO.getGroupId());
             statusService.updateMoneyStatus("account_handler_money"    ,money, userDTO.getGroupId());
             accountBot.sendMessage(sendMessage,"操作成功");
@@ -336,7 +339,7 @@ public class SettingOperatorPersonEnglish {
             statusService.updateStatus("call_back_status", 1, userDTO.getGroupId());
             accountBot.sendMessage(sendMessage,"操作成功");
         }else if (lowerText.equals("turn off display")||lowerText.equals("hide operator name")
-                ||lowerText.equals("hide names")||lowerText.equals("hide titles")){
+                ||lowerText.equals("hide name")||lowerText.equals("hide titles")){
             status.setHandleStatus(1);
             statusService.updateStatus("handle_status"    ,1, userDTO.getGroupId());
             accountBot.sendMessage(sendMessage,"操作成功");
