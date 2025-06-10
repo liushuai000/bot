@@ -246,8 +246,8 @@ public class AccountBot extends TelegramLongPollingBot {
         //设置费率/汇率
         ruzhangOperations.setRate(message,sendMessage,rate);
         //撤销入款
-        ruzhangOperations.repeal(message,sendMessage,accountList,replyToText,replayToMessageId,userDTO,issueList);
-        ruzhangOperations.repealEn(message,sendMessage,accountList,replyToText,replayToMessageId,userDTO,issueList);
+        ruzhangOperations.repeal(message,sendMessage,accountList,replyToText,replayToMessageId,userDTO,issueList,status);
+        ruzhangOperations.repealEn(message,sendMessage,accountList,replyToText,replayToMessageId,userDTO,issueList,status);
         //识别P是否手动添加 是(true)
         ruzhangOperations.pHandle(userDTO, status,updateAccount,issue);
         //删除今日数据/关闭日切/
@@ -386,8 +386,8 @@ public class AccountBot extends TelegramLongPollingBot {
         }
     }
     public String getDetail(){
-        return "1\uFE0F⃣增加机器人进群。群右上角--Add member-输入 @TTpayvipbot\n" +
-                " Add robots to the group. In the upper right corner of the group--Add member-enter @TTpayvipbot\n" +
+        return "1\uFE0F⃣增加机器人进群。群右上角--Add member-输入 @"+this.getBotUsername()+"\n" +
+                " Add robots to the group. In the upper right corner of the group--Add member-enter @"+this.getBotUsername()+"\n" +
                 "\n" +
                 " 2\uFE0F⃣ 设置操作人 @AAA\n" +
                 " Set operator @AAA\n" +

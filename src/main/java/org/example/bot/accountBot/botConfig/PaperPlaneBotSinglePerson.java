@@ -50,6 +50,8 @@ public class PaperPlaneBotSinglePerson {
     @Value("${telegram.bot.username}")
     protected String username;
     @Autowired
+    ButtonList buttonList;
+    @Autowired
     UserNormalService userNormalService;
     @Autowired
     private GroupInfoSettingMapper groupInfoSettingMapper;
@@ -138,7 +140,7 @@ public class PaperPlaneBotSinglePerson {
                         lastTransactionTimeMap.put(t.getTransaction_id()+w.getUserId(), now);
                     }catch (Exception e){
                         System.err.println(e.getMessage());
-//                        walletListenerService.deleteWalletListener(w);
+                        walletListenerService.deleteWalletListener(w);
                     }
                 }
             });
@@ -159,15 +161,15 @@ public class PaperPlaneBotSinglePerson {
         AtomicReference<BigDecimal> bigDecimal= new AtomicReference<>();
         AtomicReference<String> trxBigDecimal= new AtomicReference<>();
         if (tronAccount.getWithPriceTokens()!=null)
-        tronAccount.getWithPriceTokens().stream().filter(Objects::nonNull).forEach(t -> {
-            if (t.getTokenAbbr().equals("USDT")){
-                BigDecimal balance = new BigDecimal(tronAccount.getWithPriceTokens().get(1).getBalance());
-                // 计算移动小数点后的 balance
-                bigDecimal.set(balance.divide(BigDecimal.TEN.pow(tronAccount.getWithPriceTokens().get(1).getTokenDecimal())));
-            }else if (t.getTokenAbbr().equals("trx")){
-                trxBigDecimal.set(t.getAmount());
-            }
-        });
+            tronAccount.getWithPriceTokens().stream().filter(Objects::nonNull).forEach(t -> {
+                if (t.getTokenAbbr().equals("USDT")){
+                    BigDecimal balance = new BigDecimal(tronAccount.getWithPriceTokens().get(1).getBalance());
+                    // 计算移动小数点后的 balance
+                    bigDecimal.set(balance.divide(BigDecimal.TEN.pow(tronAccount.getWithPriceTokens().get(1).getTokenDecimal())));
+                }else if (t.getTokenAbbr().equals("trx")){
+                    trxBigDecimal.set(t.getAmount());
+                }
+            });
         String usdt="";
         String trx="";
         if (bigDecimal.get()!=null){
@@ -373,9 +375,6 @@ public class PaperPlaneBotSinglePerson {
             return;
         }
         if (text.equals("/start")) {
-            Map<String, String> map = new LinkedHashMap<>();
-            map.put("✅把我添加到群", "https://t.me/"+this.username+"?startgroup=add2chat");
-            buttonList.sendButton(sendMessage, map);
             accountBot.tronAccountMessageTextHtml(sendMessage,userDTO.getUserId(),"你好！<b>欢迎使用本机器人：\n" +
                     "\n" +
                     "点击下方底部按钮：获取个人信息\n" +
@@ -394,8 +393,8 @@ public class PaperPlaneBotSinglePerson {
 
     //使用说明
     private void useInfo(Message message, SendMessage sendMessage, UserDTO userDTO) {
-        String msg="1\uFE0F⃣增加机器人进群。群右上角--Add member-输入 @TTpayvipbot\n" +
-                " Add robots to the group. In the upper right corner of the group--Add member-enter @TTpayvipbot\n" +
+        String msg="1\uFE0F⃣增加机器人进群。群右上角--Add member-输入 @"+this.username+"\n" +
+                " Add robots to the group. In the upper right corner of the group--Add member-enter @"+this.username+"\n" +
                 "\n" +
                 " 2\uFE0F⃣ 设置操作人 @AAA\n" +
                 " Set operator @AAA\n" +
@@ -528,6 +527,10 @@ public class PaperPlaneBotSinglePerson {
                 "<b>用户ID：</b><code>"+userDTO.getUserId()+"</code>\n" +
                 "<b>用户昵称：</b>"+firstName+lastName+"\n" +
                 "<b>有效期：</b>"+time;
+        PaperPlaneBotButton buttonList = new PaperPlaneBotButton();
+        Map<String, String> map = new LinkedHashMap<>();
+        map.put("✅把我添加到群", "https://t.me/"+this.username+"?startgroup=add2chat");
+        buttonList.sendButton(sendMessage, map);
         accountBot.tronAccountMessageTextHtml(sendMessage,userDTO.getUserId(),message1);
     }
 

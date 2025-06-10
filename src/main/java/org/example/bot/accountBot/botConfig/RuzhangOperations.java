@@ -126,7 +126,8 @@ public class RuzhangOperations {
     }
 
     //撤销入款
-    public void repeal(Message message, SendMessage sendMessage, List<Account> accounts, String replyToText, Integer replayToMessageId, UserDTO userDTO, List<Issue> issueList) {
+    public void repeal(Message message, SendMessage sendMessage, List<Account> accounts, String replyToText, Integer replayToMessageId,
+                       UserDTO userDTO, List<Issue> issueList,Status status) {
         String text = message.getText();
         if (text.equals("取消") || text.equals(constantMap.get("取消")) && replyToText != null) {
             log.info("replyToXXXTentacion:{}", replyToText);
@@ -173,7 +174,16 @@ public class RuzhangOperations {
             } else {
                 List<Account> sortedUserList = accounts.stream().sorted(Comparator.comparing(Account::getAddTime)) // 按时间倒序排序
                         .collect(Collectors.toList());
-                accountService.deleteInData(String.valueOf(sortedUserList.get(sortedUserList.size() - 1).getId()), userDTO.getGroupId());
+                Account account = sortedUserList.get(sortedUserList.size() - 1);
+                if (account.getPm()){
+                    if (account.getTotal().compareTo(BigDecimal.ZERO)>0){
+                        status.setPmoney(status.getPmoney().subtract(account.getTotal()));
+                    }else{
+                        status.setPmoney(status.getPmoney().add(account.getTotal()));
+                    }
+                    statusService.update( status);
+                }
+                accountService.deleteInData(String.valueOf(account.getId()), userDTO.getGroupId());
                 issueService.updateIssueDown(sortedUserList.get(sortedUserList.size() - 1).getDown(), userDTO.getGroupId());
                 accountBot.sendMessage(sendMessage, "撤销成功");
             }
@@ -183,15 +193,25 @@ public class RuzhangOperations {
             } else {
                 List<Issue> sortedUserList = issueList.stream().sorted(Comparator.comparing(Issue::getAddTime)) // 按时间倒序排序
                         .collect(Collectors.toList());
-                issueService.deleteNewestIssue(String.valueOf(sortedUserList.get(sortedUserList.size() - 1).getId()), userDTO.getGroupId());
+                Issue issue = sortedUserList.get(sortedUserList.size() - 1);
+                if (issue.getPm()){//是手动添加的需要撤销回来 status里的手动添加
+                    if (issue.getDowned().compareTo(BigDecimal.ZERO)>0){
+                        status.setPmoney(status.getPmoney().add(issue.getDowned()));
+                    }else{
+                        status.setPmoney(status.getPmoney().subtract(issue.getDowned()));
+                    }
+                    statusService.update( status);
+                }
+                issueService.deleteNewestIssue(String.valueOf(issue.getId()), userDTO.getGroupId());
                 accountService.updateNewestData(sortedUserList.get(sortedUserList.size() - 1).getDown(), userDTO.getGroupId());
+                accountBot.sendMessage(sendMessage, "撤销成功");
             }
-            accountBot.sendMessage(sendMessage, "撤销成功");
         }
 
     }
 
-    public void repealEn(Message message, SendMessage sendMessage, List<Account> accounts, String replyToText, Integer replayToMessageId, UserDTO userDTO, List<Issue> issueList) {
+    public void repealEn(Message message, SendMessage sendMessage, List<Account> accounts, String replyToText, Integer replayToMessageId,
+                         UserDTO userDTO, List<Issue> issueList,Status status) {
         String text = message.getText().toLowerCase();
         if (text.equals("cancel") && replyToText != null) {
             log.info("replyToXXXTentacion:{}", replyToText);
@@ -238,7 +258,16 @@ public class RuzhangOperations {
             } else {
                 List<Account> sortedUserList = accounts.stream().sorted(Comparator.comparing(Account::getAddTime)) // 按时间倒序排序
                         .collect(Collectors.toList());
-                accountService.deleteInData(String.valueOf(sortedUserList.get(sortedUserList.size() - 1).getId()), userDTO.getGroupId());
+                Account account = sortedUserList.get(sortedUserList.size() - 1);
+                if (account.getPm()){
+                    if (account.getTotal().compareTo(BigDecimal.ZERO)>0){
+                        status.setPmoney(status.getPmoney().subtract(account.getTotal()));
+                    }else{
+                        status.setPmoney(status.getPmoney().add(account.getTotal()));
+                    }
+                    statusService.update( status);
+                }
+                accountService.deleteInData(String.valueOf(account.getId()), userDTO.getGroupId());
                 issueService.updateIssueDown(sortedUserList.get(sortedUserList.size() - 1).getDown(), userDTO.getGroupId());
                 accountBot.sendMessage(sendMessage, "撤销成功");
             }
@@ -249,10 +278,19 @@ public class RuzhangOperations {
             } else {
                 List<Issue> sortedUserList = issueList.stream().sorted(Comparator.comparing(Issue::getAddTime)) // 按时间倒序排序
                         .collect(Collectors.toList());
-                issueService.deleteNewestIssue(String.valueOf(sortedUserList.get(sortedUserList.size() - 1).getId()), userDTO.getGroupId());
+                Issue issue = sortedUserList.get(sortedUserList.size() - 1);
+                if (issue.getPm()){//是手动添加的需要撤销回来 status里的手动添加
+                    if (issue.getDowned().compareTo(BigDecimal.ZERO)>0){
+                        status.setPmoney(status.getPmoney().add(issue.getDowned()));
+                    }else{
+                        status.setPmoney(status.getPmoney().subtract(issue.getDowned()));
+                    }
+                    statusService.update( status);
+                }
+                issueService.deleteNewestIssue(String.valueOf(issue.getId()), userDTO.getGroupId());
                 accountService.updateNewestData(sortedUserList.get(sortedUserList.size() - 1).getDown(), userDTO.getGroupId());
+                accountBot.sendMessage(sendMessage, "撤销成功");
             }
-            accountBot.sendMessage(sendMessage, "撤销成功");
         }
 
     }
@@ -290,6 +328,10 @@ public class RuzhangOperations {
         // 特殊金额指令
         if (text.startsWith("+") || text.startsWith("-") || text.startsWith("p")) {
             return true;
+        }
+        if (text.equals("取消")||text.equals("cancel")||text.trim().equals("撤销入款")||text.trim().equals("撤销下发")
+                ||text.equals("cancel deposit")||text.equals("undo delivery")){
+            return false;
         }
         // 空金额显示
         if (showOperatorName.isEmptyMoney(text) ||
@@ -343,8 +385,8 @@ public class RuzhangOperations {
                 text = BaseConstant.isRuKuan(text);
             }
         }
-        if (text.charAt(0) != '+' && text.charAt(0) != '-' && !issue.getPm() && !isIssueCommand(text)
-                && !updateAccount.getPm() && status.getPmoney().compareTo(BigDecimal.ZERO) <= 0) return;
+        if (text.charAt(0) != '+' && text.charAt(0) != '-'  && !isIssueCommand(text)&& !isAccountCommand(text)
+                && !updateAccount.getPm() && !issue.getPm()) return;
         BigDecimal num = new BigDecimal(0);
         Rate rate1 = null;
         //当不是公式入账时才赋值
@@ -365,17 +407,17 @@ public class RuzhangOperations {
                 rate1.setRate(rate.getRate());
                 rate1.setAddTime(new Date());
                 rateService.insertRate(rate1);
-            } else if (updateAccount.getPm() && status.getPmoney().compareTo(BigDecimal.ZERO) != 0) {
+            } else if (updateAccount.getPm()) {
                 Pattern pattern = Pattern.compile("^p[+]?(\\d+)$");
                 Matcher matcher = pattern.matcher(text);
                 if (matcher.find()) {//手动添加  并且不是0
                     num = new BigDecimal(matcher.group(1));
                 }
-            } else if (issue.getPm() && status.getPmoney().compareTo(BigDecimal.ZERO) != 0) {
-                Pattern pattern = Pattern.compile("^p-(\\d+)$");
+            } else if (issue.getPm()) {
+                Pattern pattern = Pattern.compile("^p-(-?\\d+)$");
                 Matcher matcher = pattern.matcher(text);
                 if (matcher.find()) {//手动添加  并且不是0
-                    num = new BigDecimal(matcher.group(1));
+                    num = new BigDecimal(text.substring(1,text.length()));
                 }
             } else {
                 num = new BigDecimal(text.substring(1));
@@ -467,10 +509,10 @@ public class RuzhangOperations {
                 }
             } else if (firstChar == 'p') {
                 // 匹配 p100 或 p+100
-                Pattern addPattern = Pattern.compile("^p[+]?(\\d+)$");
+                Pattern addPattern = Pattern.compile("^p\\+?(\\d+)$");
                 Matcher addMatcher = addPattern.matcher(text);
                 // 匹配 p-100
-                Pattern subPattern = Pattern.compile("^p-(\\d+)$");
+                Pattern subPattern = Pattern.compile("^p-(-?\\d+)$");
                 Matcher subMatcher = subPattern.matcher(text);
                 if (addMatcher.find()) {
                     //表示是手动添加
@@ -529,8 +571,7 @@ public class RuzhangOperations {
             newIssueList.add(sdf.format(issue1.getAddTime()));
         }
         String sendText1 = null;
-        if (split2.length > 1 || split3.length > 1 || isMatcher || StringUtils.isNotBlank(xiFa) ||
-                (updateAccount.getPm() && status.getPmoney().compareTo(BigDecimal.ZERO) > 0)) {
+        if (split2.length > 1 || split3.length > 1 || isMatcher || StringUtils.isNotBlank(xiFa) ||updateAccount.getPm() || issue.getPm()) {
             if (!accounts.isEmpty()) {
                 updateAccount = accounts.get(accounts.size() - 1);
             }
@@ -614,7 +655,7 @@ public class RuzhangOperations {
         BigDecimal bigDecimal0 = new BigDecimal(0);//用于比较0
         if (!issuesList.isEmpty()) {
             sxfCount2 = issuesList.stream().map(Issue::getIssueHandlerMoney).reduce(BigDecimal.ZERO, BigDecimal::add);
-            BigDecimal downed = issuesList.stream().filter(Objects::nonNull).map(Issue::getDowned).reduce(BigDecimal.ZERO, BigDecimal::add);
+            BigDecimal downed = issuesList.stream().filter(Objects::nonNull).filter(i->!i.getPm()).map(Issue::getDowned).reduce(BigDecimal.ZERO, BigDecimal::add);
             iusseText = "\n已出账: <strong>" + downed + "</strong>，:共" + (issuesList.size()) + "笔:\n" + issuesStringBuilder;
         } else {
             if (updateAccount.getDown() != null) {
@@ -651,15 +692,26 @@ public class RuzhangOperations {
             if (status.getShowMoneyStatus() == 0) {
                 yxf = downing.setScale(2, RoundingMode.HALF_UP) + "";
                 yixf = downed.setScale(2, RoundingMode.HALF_UP) + "";
-                wxf = downing2.subtract(downed).subtract(downed2).setScale(2, RoundingMode.HALF_UP) + "";
+                BigDecimal subtract = downing2.subtract(downed);
+                wxf = subtract.add(downed2).setScale(2, RoundingMode.HALF_UP) + "";
             } else if (status.getShowMoneyStatus() == 1) {
                 yxf = yingxiafa + "U";// \n换行加不加
                 yixf = yixiafa + "U";
                 wxf = yingxiafa.subtract(yixiafa) + "U";
             } else {
-                yxf = downing.setScale(2, RoundingMode.HALF_UP) + "   |    " + yingxiafa + "U";
-                yixf = downed.setScale(2, RoundingMode.HALF_UP) + "   |    " + yixiafa + "U";
-                wxf = downing2.subtract(downed).subtract(downed2).setScale(2, RoundingMode.HALF_UP) + "   |    " + yingxiafa.subtract(yixiafa) + "U";
+                // 只有当 exchange > 1 时才显示双格式
+                if (rate.getExchange().compareTo(BigDecimal.ONE) > 0) {
+                    yxf = downing.setScale(2, RoundingMode.HALF_UP) + "   |    " + yingxiafa + "U";
+                    yixf = downed.setScale(2, RoundingMode.HALF_UP) + "   |    " + yixiafa + "U";
+                    BigDecimal subtract = downing2.subtract(downed);
+                    wxf = subtract.add(downed2).setScale(2, RoundingMode.HALF_UP) + "   |    " + yingxiafa.subtract(yixiafa) + "U";
+                } else {
+                    // exchange <= 1 时不显示 U 部分
+                    yxf = downing.setScale(2, RoundingMode.HALF_UP) + "";
+                    yixf = downed.setScale(2, RoundingMode.HALF_UP) + "";
+                    BigDecimal subtract = downing2.subtract(downed);
+                    wxf = subtract.add(downed2).setScale(2, RoundingMode.HALF_UP) + "";
+                }
             }
             StringBuilder stringBuilder = new StringBuilder();
             int startIndex2 = Math.max(0, accounts.size() - status.getShowFew());
@@ -752,15 +804,25 @@ public class RuzhangOperations {
             if (status.getShowMoneyStatus() == 0) {
                 yxf = downing.setScale(2, RoundingMode.HALF_UP) + "";
                 yixf = downed.setScale(2, RoundingMode.HALF_UP) + "";
-                wxf = downing2.subtract(downed).subtract(downed2).setScale(2, RoundingMode.HALF_UP) + "";
+                BigDecimal subtract = downing2.subtract(downed);
+                wxf = subtract.add(downed2).setScale(2, RoundingMode.HALF_UP).setScale(2, RoundingMode.HALF_UP) + "";
             } else if (status.getShowMoneyStatus() == 1) {
                 yxf = yingxiafa + "U";
                 yixf = yixiafa + "U";
                 wxf = yingxiafa.subtract(yixiafa) + "U";
             } else {
-                yxf = downing.setScale(2, RoundingMode.HALF_UP) + "   |    " + yingxiafa + "U";
-                yixf = downed.setScale(2, RoundingMode.HALF_UP) + "   |    " + yixiafa + "U";
-                wxf = downing2.subtract(downed).subtract(downed2).setScale(2, RoundingMode.HALF_UP) + "   |    " + yingxiafa.subtract(yixiafa) + "U";
+                if (rate.getExchange().compareTo(BigDecimal.ONE) > 0) {
+                    yxf = downing.setScale(2, RoundingMode.HALF_UP) + "   |    " + yingxiafa + "U";
+                    yixf = downed.setScale(2, RoundingMode.HALF_UP) + "   |    " + yixiafa + "U";
+                    BigDecimal subtract = downing2.subtract(downed);
+                    wxf = subtract.add(downed2).setScale(2, RoundingMode.HALF_UP).setScale(2, RoundingMode.HALF_UP) + "   |    " + yingxiafa.subtract(yixiafa) + "U";
+                } else {
+                    // exchange <= 1 时不显示 U 部分
+                    yxf = downing.setScale(2, RoundingMode.HALF_UP) + "";
+                    yixf = downed.setScale(2, RoundingMode.HALF_UP) + "";
+                    BigDecimal subtract = downing2.subtract(downed);
+                    wxf = subtract.add(downed2).setScale(2, RoundingMode.HALF_UP).setScale(2, RoundingMode.HALF_UP) + "";
+                }
             }
             StringBuilder stringBuilder = new StringBuilder();
             if (!accounts.isEmpty()) {
@@ -973,9 +1035,7 @@ public class RuzhangOperations {
                 }
                 // 构建显示文本
                 String showDetail = detailStatus == 0 ? "/ " + exchange + feeInfo + "=" + uValue + "U" : "";
-                if (isNotBlank(showDetail)) {
-                    showDetailList.add(showDetail);
-                }
+                showDetailList.add(showDetail);
             }
         }
         return showDetailList;
@@ -989,7 +1049,7 @@ public class RuzhangOperations {
             Pattern addPattern = Pattern.compile("^p[+]?(\\d+)$");
             Matcher addMatcher = addPattern.matcher(text);
             // 匹配 p-100
-            Pattern subPattern = Pattern.compile("^p-(\\d+)$");
+            Pattern subPattern = Pattern.compile("^p-(-?\\d+)$");
             Matcher subMatcher = subPattern.matcher(text);
             if (addMatcher.find()) {
                 BigDecimal value = new BigDecimal(addMatcher.group(1));
