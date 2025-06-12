@@ -34,6 +34,10 @@ public class AccountBot extends TelegramLongPollingBot {
     protected String botUserId;
     @Value("${adminUserId}")
     protected String adminUserId;
+    @Value("${toAdminUserId}")
+    protected String toAdminUserId;
+    @Value("${threeAdminUserId}")
+    protected String threeAdminUserId;
     @Autowired
     protected RateService rateService;
     @Autowired
@@ -192,7 +196,7 @@ public class AccountBot extends TelegramLongPollingBot {
             if (userNormalTempAdmin.getUserId().equals(userDTO.getUserId())){
                 UserNormal userNormal = userNormalService.selectByUserId(userOperation.getUserId(), userDTO.getGroupId());
                 if (userNormal==null || !userNormal.isAdmin() ){
-                    String format = String.format("<a href=\"tg://user?id=%d\">%s</a>", Long.parseLong(adminUserId), "管理员");
+                    String format = String.format("<a href=\"tg://user?id=%d\">%s</a>", Long.parseLong(threeAdminUserId), "管理员");
                     this.sendMessage(sendMessage,"您在本群不是管理!请联系: "+format);
                     return;
                 }else {
@@ -203,7 +207,7 @@ public class AccountBot extends TelegramLongPollingBot {
                         this.sendMessage(sendMessage,"您现在没有使用权限,请私聊机器人 @"+format+" .点击获取个人信息获取权限.");
                         return;
                     }else if (new Date().compareTo(byUserId.getValidTime())>=0){
-                        String format = String.format("<a href=\"tg://user?id=%d\">%s</a>", Long.parseLong(adminUserId), "管理员");
+                        String format = String.format("<a href=\"tg://user?id=%d\">%s</a>", Long.parseLong(threeAdminUserId), "管理员");
                         this.sendMessage(sendMessage,"您的使用期限已到期,请私聊管理员 @"+format);
                         return;
                     }
@@ -216,7 +220,7 @@ public class AccountBot extends TelegramLongPollingBot {
                     this.sendMessage(sendMessage,"本群权限人现在没有使用权限,请私聊机器人 @"+format+" .点击获取个人信息获取权限.");
                     return;
                 }else if (new Date().compareTo(userAuth.getValidTime())>=0){
-                    String format = String.format("<a href=\"tg://user?id=%d\">%s</a>", Long.parseLong(adminUserId), "管理员");
+                    String format = String.format("<a href=\"tg://user?id=%d\">%s</a>", Long.parseLong(threeAdminUserId), "管理员");
                     this.sendMessage(sendMessage,"本群权限人的使用期限已到期,请私聊管理员 @"+format);
                     return;
                 }
@@ -256,8 +260,8 @@ public class AccountBot extends TelegramLongPollingBot {
         ruzhangOperations.inHandle(split2,message.getText(),  updateAccount,  sendMessage, accountList, message,split3,
                 rate,issue,issueList,userDTO,status,groupInfoSetting);
         //删除操作人员
-        settingOperatorPerson.deleteHandle(message.getText(),sendMessage,userDTO);
-        settingOperatorPersonEnglish.deleteHandleEnglish(message.getText(),sendMessage,userDTO);
+        settingOperatorPerson.deleteHandle(message.getText(),sendMessage,userDTO,userNormalTempAdmin);
+        settingOperatorPersonEnglish.deleteHandleEnglish(message.getText(),sendMessage,userDTO,userNormalTempAdmin);
         //通知功能
         notificationService.inform(message.getText(),sendMessage);
     }
@@ -269,22 +273,7 @@ public class AccountBot extends TelegramLongPollingBot {
             ChatMemberUpdated chatMember = update.getMyChatMember();
             if (chatMember.getNewChatMember().getStatus().equals("administrator")){
                 String message="<b>感谢您把我设为贵群管理</b> ❤\uFE0F\n" +
-                        "➖➖➖➖➖➖➖➖➖➖➖\n" +
-                        "\n" +
-                        "请根据需求先对机器人进行设置；\n" +
-                        "费率：设置费率0\n" +
-                        "汇率：设置汇率7\n" +
-                        "注意：设置操作人 @*****\n" +
-                        "\n" +
-                        "<b>（本群默认开启日切北京时间中午12时）</b>\n" +
-                        "<b>（如没有日切需求发送：关闭日切）</b>\n" +
-                        "\n" +
-                        "我也可以查询TRC20地址如下：\n" +
-                        "输入: 查询TEtYFxxxxxxxxj8W9pC\n" +
-                        "命令详情 /detail"+
-                        "\n" +
-                        "➖➖➖➖➖➖➖➖➖➖➖\n" +
-                        "<b>详情使用说明请私聊我</b> @"+this.getBotUsername();
+                        "➖➖➖➖➖➖➖➖➖➖➖";
                 update.getMessage();
                 SendMessage sendMessage = new SendMessage();
                 String chatId = chatMember.getChat().getId().toString();//群组id
@@ -363,22 +352,7 @@ public class AccountBot extends TelegramLongPollingBot {
                         }
                 }
                 String message="<b>感谢权限人把我添加到贵群</b> ❤\uFE0F\n" +
-                        "➖➖➖➖➖➖➖➖➖➖➖\n" +
-                        "\n" +
-                        "请根据需求先对机器人进行设置；\n" +
-                        "费率：设置费率0\n" +
-                        "汇率：设置汇率7\n" +
-                        "注意：设置操作人 @*****\n" +
-                        "\n" +
-                        "<b>（本群默认开启日切北京时间中午12时）</b>\n" +
-                        "<b>（如没有日切需求发送：关闭日切）</b>\n" +
-                        "\n" +
-                        "我也可以查询TRC20地址如下：\n" +
-                        "输入: 查询TEtYFxxxxxxxxj8W9pC\n" +
-                        "命令详情 /detail"+
-                        "\n" +
-                        "➖➖➖➖➖➖➖➖➖➖➖\n" +
-                        "<b>详情使用说明请私聊我</b> @"+this.getBotUsername();
+                        "➖➖➖➖➖➖➖➖➖➖➖";
                 SendMessage sendMessage = new SendMessage();
                 sendMessage.setChatId(chatId);
                 this.tronAccountMessageTextHtml(sendMessage,chatId,message);

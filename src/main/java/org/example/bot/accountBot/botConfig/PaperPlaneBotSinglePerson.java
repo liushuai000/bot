@@ -8,6 +8,7 @@ import org.example.bot.accountBot.dto.TronAccountDTO;
 import org.example.bot.accountBot.dto.TronHistoryDTO;
 import org.example.bot.accountBot.dto.UserDTO;
 import org.example.bot.accountBot.mapper.GroupInfoSettingMapper;
+import org.example.bot.accountBot.mapper.UserNormalMapper;
 import org.example.bot.accountBot.pojo.*;
 import org.example.bot.accountBot.service.UserNormalService;
 import org.example.bot.accountBot.service.UserOperationService;
@@ -47,12 +48,18 @@ public class PaperPlaneBotSinglePerson {
     UserService userService;
     @Value("${adminUserId}")
     protected String adminUserId;
+    @Value("${toAdminUserId}")
+    protected String toAdminUserId;
+    @Value("${threeAdminUserId}")
+    protected String threeAdminUserId;
     @Value("${telegram.bot.username}")
     protected String username;
     @Autowired
     ButtonList buttonList;
     @Autowired
     UserNormalService userNormalService;
+    @Autowired
+    UserNormalMapper userNormalMapper;
     @Autowired
     private GroupInfoSettingMapper groupInfoSettingMapper;
     @Autowired
@@ -202,7 +209,6 @@ public class PaperPlaneBotSinglePerson {
     }
 
 
-
     //设置机器人在群组内的有效时间 默认免费使用日期6小时. 机器人底部按钮 获取个人信息 获取最新用户名 获取个人id 使用日期;
     protected void handleNonGroupMessage(Message message, SendMessage sendMessage, UserDTO userDTO) {
         String text = userDTO.getText().toLowerCase();
@@ -213,6 +219,8 @@ public class PaperPlaneBotSinglePerson {
         sendMessage.setReplyMarkup(replyKeyboardMarkup);//是否在onUpdateReceived设置
         String regex = "^授权-[a-zA-Z0-9]+-[a-zA-Z0-9]+$";
         String regexEn = "^authorization-[a-zA-Z0-9]+-[a-zA-Z0-9]+$";
+        String regexDelete = "^删除授权-[a-zA-Z0-9]+-[a-zA-Z0-9]+$";    //删除授权-123456789-30
+        String regexEnDelete = "^authorization-[a-zA-Z0-9]+-[a-zA-Z0-9]+$";
         String[] split3 = text.split("-");
         if (text.equals("获取个人信息（personal information）")){
             this.getUserInfoMessage(message,sendMessage,userDTO);
@@ -239,8 +247,8 @@ public class PaperPlaneBotSinglePerson {
             accountBot.sendMessage(sendMessage,messageResult);
             return;
         }
-        if (text.contains("授权")){
-            if (text.startsWith("授权-")&&!userDTO.getUserId().equals(adminUserId)){
+        if (text.startsWith("授权")){
+            if (text.startsWith("授权-")&&!userDTO.getUserId().equals(adminUserId) && !userDTO.getUserId().equals(threeAdminUserId) && !userDTO.getUserId().equals(toAdminUserId)){
                 accountBot.sendMessage(sendMessage,"您不是超级管理!无权限设置管理员!");
                 return;
             }
@@ -306,8 +314,8 @@ public class PaperPlaneBotSinglePerson {
             accountBot.sendMessage(sendMessage,"用户ID: "+userId+" 有效期:"+tomorrow.getYear()+"年"+tomorrow.getMonthValue()+ "月"+
                     tomorrow.getDayOfMonth()+"日"+ tomorrow.getHour()+"时"+tomorrow.getMinute()+"分" +tomorrow.getSecond()+"秒");
             return;
-        } else if (text.contains("authorization")) {
-            if (text.startsWith("authorization-")&&!userDTO.getUserId().equals(adminUserId)){
+        } else if (text.startsWith("authorization")) {
+            if (text.startsWith("authorization-")&&!userDTO.getUserId().equals(adminUserId) && !userDTO.getUserId().equals(threeAdminUserId) && !userDTO.getUserId().equals(toAdminUserId)){
                 accountBot.sendMessage(sendMessage,"您不是超级管理!无权限设置管理员!");
                 return;
             }
@@ -372,6 +380,50 @@ public class PaperPlaneBotSinglePerson {
             }
             accountBot.sendMessage(sendMessage,"用户ID: "+userId+" 有效期:"+tomorrow.getYear()+"年"+tomorrow.getMonthValue()+ "月"+
                     tomorrow.getDayOfMonth()+"日"+ tomorrow.getHour()+"时"+tomorrow.getMinute()+"分" +tomorrow.getSecond()+"秒");
+            return;
+        }else if (text.startsWith("删除授权")) {
+            if (text.startsWith("删除授权-") && !userDTO.getUserId().equals(adminUserId) &&
+                    !userDTO.getUserId().equals(threeAdminUserId) && !userDTO.getUserId().equals(toAdminUserId)) {
+                accountBot.sendMessage(sendMessage, "您不是超级管理!无权限设置管理员!");
+                return;
+            }
+            boolean matches = text.matches(regexDelete);
+            String deductDaysText = "";
+            String userId = split3[1];
+            if (matches) {
+                deductDaysText = split3[2];
+            } else {
+                accountBot.sendMessage(sendMessage, "格式不匹配!");
+                return;
+            }
+            int deductDays = Integer.parseInt(deductDaysText);
+            User user = userService.findByUserId(userId);
+            if (user == null) {
+                accountBot.sendMessage(sendMessage, "用户不存在!");
+                return;
+            }
+            // 获取用户原有的有效期时间
+            LocalDateTime originalValidTime = user.getValidTime().toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime();
+            // 从原有有效时间减去指定天数
+            LocalDateTime newValidTime = originalValidTime.minusDays(deductDays);
+            // 如果计算后的时间小于当前时间，则设置为当前时间（不允许负值）
+            if (newValidTime.isBefore(LocalDateTime.now())) {
+                newValidTime = LocalDateTime.now();
+            }
+            Date newValidDate = Date.from(newValidTime.atZone(ZoneId.systemDefault()).toInstant());
+            // 更新用户的有效期
+            user.setValidTime(newValidDate);
+            // 统一格式的日期时间字符串
+            String formattedDateTime = newValidTime.getYear() + "年" +
+                    newValidTime.getMonthValue() + "月" +
+                    newValidTime.getDayOfMonth() + "日" +
+                    newValidTime.getHour() + "时" +
+                    newValidTime.getMinute() + "分" +
+                    newValidTime.getSecond() + "秒";
+            // 只是减少有效期但仍有授权
+            userService.updateUserValidTime(user, newValidDate);
+            // 无论是否过期都使用相同的返回格式
+            accountBot.sendMessage(sendMessage, "用户ID: " + userId + " 有效期:" + formattedDateTime);
             return;
         }
         if (text.equals("/start")) {

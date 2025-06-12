@@ -121,9 +121,6 @@ public class DateOperator{
                 status.setAccountHandlerMoney(BigDecimal.ZERO);
                 status.setIssueHandlerMoney(BigDecimal.ZERO);
                 statusService.update(status);
-                rate.setExchange(BigDecimal.ONE);
-                rate.setRate(BigDecimal.ZERO);
-                rateMapper.updateById(rate);
                 accountService.deleteTodayData(status,groupId);
                 issueService.deleteTodayIssueData(status,groupId);
                 accountBot.sendMessage(sendMessage,"操作成功 ，今日账单已删除");
@@ -136,9 +133,6 @@ public class DateOperator{
                 status.setAccountHandlerMoney(BigDecimal.ZERO);
                 status.setIssueHandlerMoney(BigDecimal.ZERO);
                 statusService.update(status);
-                rate.setExchange(BigDecimal.ONE);
-                rate.setRate(BigDecimal.ZERO);
-                rateMapper.updateById(rate);
                 accountService.deleteHistoryData(groupId);
                 issueService.deleteHistoryIssueData(groupId);
                 accountBot.sendMessage(sendMessage,"操作成功 ，全部账单已删除。");
@@ -160,9 +154,6 @@ public class DateOperator{
                 status.setAccountHandlerMoney(BigDecimal.ZERO);
                 status.setIssueHandlerMoney(BigDecimal.ZERO);
                 statusService.update(status);
-                rate.setExchange(BigDecimal.ONE);
-                rate.setRate(BigDecimal.ZERO);
-                rateMapper.updateById(rate);
                 accountService.deleteTodayData(status, groupId);
                 issueService.deleteTodayIssueData(status, groupId);
                 accountBot.sendMessage(sendMessage, "操作成功 ，今日账单已删除");
@@ -232,14 +223,10 @@ public class DateOperator{
                 status.setIssueHandlerMoney(BigDecimal.ZERO);
                 // status.setSetStartTime(new Date());
                 statusService.update(status);
-                Rate rate = rateService.getInitRate(status.getGroupId());
-                rate.setExchange(BigDecimal.ONE);
-                rate.setRate(BigDecimal.ZERO);
-                rateMapper.updateById(rate);
 
                 //日切时间已更新，当前日切时间为 ：每天:11时59分59秒
-                accountBot.sendMessage(sendMessage,"日切时间已更新，当前日切时间为 ：每天:"+status.getSetTime().getHours()+"时"+
-                        status.getSetTime().getMinutes()+"分"+status.getSetTime().getSeconds()+"秒");
+//                accountBot.sendMessage(sendMessage,"日切时间已更新，当前日切时间为 ：每天:"+status.getSetTime().getHours()+"时"+
+//                        status.getSetTime().getMinutes()+"分"+status.getSetTime().getSeconds()+"秒");
             }
         }
     }

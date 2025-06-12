@@ -63,6 +63,8 @@ public class SettingOperatorPersonEnglish {
     public void setHandle(SendMessage sendMessage, String text, UserDTO userDTO, User user6, Status status, GroupInfoSetting groupInfoSetting, UserNormal userNormalTempAdmin, Update update) {
         boolean isShowAdminMessage = false;
         String lowerText = text.toLowerCase();// 统一转小写处理
+        List<String> upAdmin=new ArrayList<>();//已设置的管理
+        List<String> succeedAdmin=new ArrayList<>();//设置成功的管理
         if (lowerText.startsWith("set operator")){
             if (!user6.isSuperAdmin()){//是普通权限
                 accountBot.sendMessage(sendMessage,"您没有设置操作员权限! 只能管理设置");
@@ -72,10 +74,12 @@ public class SettingOperatorPersonEnglish {
                 UserOperation userOperation = userOperationService.selectByUserAndGroupId(userDTO.getCallBackUserId(), userDTO.getGroupId());
                 if (userOperation != null && userOperation.isOperation()) {
                     accountBot.sendMessage(sendMessage, "已设置该操作员无需重复设置");
+                    return;
                 } else if (userOperation != null && !userOperation.isOperation()) {
                     userOperation.setOperation(true);
                     userOperationService.update(userOperation);
                     accountBot.sendMessage(sendMessage, "设置成功!");
+                    return;
                 } else if (userOperation == null) {
                     userOperation = new UserOperation();
                     userOperation.setOperation(true);
@@ -85,6 +89,7 @@ public class SettingOperatorPersonEnglish {
                     userOperation.setGroupId(userDTO.getGroupId());
                     userOperationService.insertUserOperation(userOperation);
                     accountBot.sendMessage(sendMessage, "设置成功!");
+                    return;
                 }
                 return;
             }
@@ -106,6 +111,7 @@ public class SettingOperatorPersonEnglish {
                     if (user!=null && usernameTemp.equals(user.getUsername())){
                         if (userOperation1!=null && userOperation1.isOperation()){//是操作员
                             isShowAdminMessage = true;
+                            upAdmin.add(" @"+usernameTemp);
                         }else {
                             userOperation1=new UserOperation();
                             userOperation1.setOperation(true);//是操作员
@@ -113,6 +119,7 @@ public class SettingOperatorPersonEnglish {
                             userOperation1.setGroupId(userDTO.getGroupId());
                             userOperation1.setAdminUserId(userDTO.getUserId());
                             userOperationService.insertUserOperation(userOperation1);
+                            succeedAdmin.add(" @"+usernameTemp);
                         }
                     }else {
                         User user1 = new User();
@@ -126,6 +133,7 @@ public class SettingOperatorPersonEnglish {
                         user1.setUsername(usernameTemp);
                         userOperationService.insertUserOperation(userOperation);
                         userService.insertUser(user1);
+                        succeedAdmin.add(" @"+usernameTemp);
                     }
                 }
                 //回复用
@@ -137,6 +145,7 @@ public class SettingOperatorPersonEnglish {
                 if (callBackUser!=null){
                     if (userOperation!=null && userOperation.isOperation()) {
                         isShowAdminMessage = true;
+                        upAdmin.add(" @" + callBackUser.getUsername());
                     }else {
                         callBackUser.setUserId(userDTO.getCallBackUserId());
                         callBackUser.setUsername(userDTO.getCallBackName()==null?"":userDTO.getCallBackName());
@@ -150,10 +159,12 @@ public class SettingOperatorPersonEnglish {
                         userOperation.setOperation(true);
                         userOperation.setGroupId(userDTO.getGroupId());
                         userOperationService.insertUserOperation(userOperation);
+                        succeedAdmin.add(" @" + callBackUser.getUsername());
                     }
                 } else if (user2!=null) {
                     if (userOperation2!=null &&userOperation2.isOperation()) {
                         isShowAdminMessage = true;
+                        upAdmin.add(" @" + user2.getUsername());
                     }else {
                         user2.setUserId(userDTO.getCallBackUserId());
                         user2.setUsername(userDTO.getCallBackName()==null?"":userDTO.getCallBackName());
@@ -167,6 +178,7 @@ public class SettingOperatorPersonEnglish {
                         userOperation2.setUsername(userDTO.getCallBackName()==null?"":userDTO.getCallBackName());
                         userOperation2.setOperation(true);
                         userOperationService.insertUserOperation(userOperation2);
+                        succeedAdmin.add(" @" + user2.getUsername());
                     }
                 }else {
                     User user = new User();
@@ -182,12 +194,18 @@ public class SettingOperatorPersonEnglish {
                     userOperation1.setGroupId(userDTO.getGroupId());
                     userOperation1.setAdminUserId(userDTO.getUserId());
                     userOperationService.insertUserOperation(userOperation1);
+                    succeedAdmin.add(" @" + user.getUsername());
                 }
             }
             if (!isShowAdminMessage){
                 accountBot.sendMessage(sendMessage,"设置成功");
             }else {
-                accountBot.sendMessage(sendMessage,"已设置该操作员无需重复设置");
+                if (upAdmin.size()>0){
+                    accountBot.sendMessage(sendMessage, "已设置该操作员无需重复设置"+upAdmin);
+                }
+                if (succeedAdmin.size()>0){
+                    accountBot.sendMessage(sendMessage, "设置成功"+succeedAdmin);
+                }
             }
         }else if (lowerText.equals("show operator")){
             String  admin = String.format("<a href=\"tg://user?id=%d\">@%s</a>", Long.parseLong(userNormalTempAdmin.getUserId()), userNormalTempAdmin.getUsername());
@@ -391,7 +409,7 @@ public class SettingOperatorPersonEnglish {
     }
 
     //删除操作人员
-    public void deleteHandleEnglish(String text, SendMessage sendMessage, UserDTO userDTO) {
+    public void deleteHandleEnglish(String text, SendMessage sendMessage, UserDTO userDTO,UserNormal userNormal) {
         if (!isValidDeleteOperatorCommand(text)) {
             return; // 不符合格式，直接返回，不处理
         }
@@ -400,6 +418,8 @@ public class SettingOperatorPersonEnglish {
         }
         String lowerText = text.toLowerCase();
         if (lowerText.startsWith("delete operator")) {
+            List<String > upAdmin=new ArrayList<>();//未删除成功的
+            List<String > successAdmin=new ArrayList<>();//删除成功的
             List<String> usernamesToDelete = extractUsernames(text);
             if (usernamesToDelete.isEmpty()) {
                 accountBot.sendMessage(sendMessage, "未检测到要删除的操作员");
@@ -407,12 +427,22 @@ public class SettingOperatorPersonEnglish {
             }
             for (String username : usernamesToDelete) {
                 User byUsername = userService.findByUsername(username);
+                if (userNormal.getUsername().equals(username)){
+                    accountBot.sendMessage(sendMessage,"不能删除本群权限人! @"+username);
+                    continue;
+                }
                 if (byUsername != null) {
                     userOperationService.deleteByUsername(username, userDTO.getGroupId());
-                    accountBot.sendMessage(sendMessage, "✅ 删除操作员 @" + username + " 成功");
+                    successAdmin.add(" @"+username);
                 } else {
-                    accountBot.sendMessage(sendMessage, "❌ 用户 @" + username + " 不存在或未设置为操作员");
+                    upAdmin.add(" @"+username);
                 }
+            }
+            if (!upAdmin.isEmpty()){
+                accountBot.sendMessage(sendMessage,"❌未查询到此操作人!删除失败 @"+upAdmin);
+            }
+            if (!successAdmin.isEmpty()){
+                accountBot.sendMessage(sendMessage,"✅删除成功!" + successAdmin);
             }
         }
     }
