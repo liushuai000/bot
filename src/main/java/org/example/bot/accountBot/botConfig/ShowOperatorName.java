@@ -39,7 +39,8 @@ public class ShowOperatorName {
     //显示操作人名字  显示账单用
     public void  replay(SendMessage sendMessage, UserDTO userDTO, Account updateAccount, Rate rate, List<Issue> issuesList, Issue issue,
                         String text, Status status, GroupInfoSetting groupInfoSetting) {
-        if (!this.isEmptyMoney(text) && !BaseConstant.showReplay(text) && !BaseConstant.showReplayEnglish(text)&& !BaseConstant.showReplayEnglish2(text)) return;
+        if (!this.isEmptyMoney(text) && !BaseConstant.showReplay(text) && !BaseConstant.showReplayEnglish(text)&& !BaseConstant.showReplayEnglish2(text)
+        && !text.equals("撤销下发") && !text.equals("撤销入款")&& ! text.equals("undo delivery")&& !text.equals("cancel deposit")) return;
         buttonList.implList(sendMessage,userDTO.getGroupId(),userDTO.getGroupTitle(),groupInfoSetting);
         String iusseText="";
         //重新获取最新的数据 +00000

@@ -115,14 +115,31 @@ public class AccountBot extends TelegramLongPollingBot {
         }
         userDTO.setInfo(message);
         sendMessage.setChatId(String.valueOf(message.getChatId()==null?"":message.getChatId()));
-        if (update.hasMessage() && update.getMessage().hasText()){
+        if (update.hasMessage() && update.getMessage().hasText()) {
+            this.BusinessHandler(message, sendMessage, replyToText, replayToMessageId, userDTO, update);
+        }else  if (update.hasMessage() && update.getMessage().hasPhoto()){
+            String caption = update.getMessage().getCaption();
+            if (caption == null){
+                return;
+            }
+            userDTO.setText(caption);
+            this.BusinessHandler(message,sendMessage,replyToText,replayToMessageId,userDTO,update);
+        }else  if (update.hasMessage() && update.getMessage().hasVideo()){
+            String caption = update.getMessage().getCaption();
+            if (caption == null){
+                return;
+            }
+            userDTO.setText(caption);
             this.BusinessHandler(message,sendMessage,replyToText,replayToMessageId,userDTO,update);
         }else if (update.hasMessage() && update.getMessage().getChat().isGroupChat()||message.getChat().isSuperGroupChat()){
             Status status=statusService.getInitStatus(userDTO.getGroupId(),userDTO.getGroupTitle());
             // 判断是否是带有 caption 的图片或视频消息
             if ((message.hasPhoto() || message.hasVideo()) && message.getCaption() != null && !message.getCaption().isEmpty()) {
                 String caption = message.getCaption();
-                downAddress.validAddress(caption, sendMessage, status);
+                boolean b = downAddress.validAddress(userDTO.getText(), sendMessage, status);//验证地址
+                if (! b){
+                    return;
+                }
             }
         }
     }
@@ -168,24 +185,31 @@ public class AccountBot extends TelegramLongPollingBot {
             nowExchange.getNowExchange(sendMessage,userDTO,rate);
         }
         //计算器功能
-        utils.counter(message,sendMessage);
+        utils.counter(userDTO.getText(),sendMessage);
         notificationService.initNotification(userDTO);
         Status status=statusService.getInitStatus(userDTO.getGroupId(),userDTO.getGroupTitle());
-        downAddress.viewAddress(message.getText(),sendMessage,status);
-        downAddress.validAddress(message.getText(),sendMessage,status);//验证地址
-        UserNormal userNormalTempAdmin =userNormalService.selectByGroupId(userDTO.getGroupId());//超级管理
-        if (message.getText().equals("权限人") || message.getText().equals("管理员")
-                || message.getText().toLowerCase().equals("authorized person")||  message.getText().toLowerCase().equals("admin")){
-            permissionUser.getPermissionUser(sendMessage,userDTO,user1,userNormalTempAdmin,groupInfoSetting);
+        downAddress.viewAddress(userDTO.getText(),sendMessage,status);
+        if (downAddress.isTronAddress(userDTO.getText())) {
+            downAddress.validAddress(userDTO.getText(), sendMessage, status);//验证地址
+            return;
         }
-        if (message.getText().charAt(0)!='+' && message.getText().charAt(0)!='-' &&
-                (!BaseConstant.getMessageContentIsContain(message.getText())
-                        && !BaseConstant.getMessageContentIsContainEnglish2(message.getText()))) {
-            return ;
+        UserNormal userNormalTempAdmin =userNormalService.selectByGroupId(userDTO.getGroupId());//超级管理
+        if (userDTO.getText().equals("权限人") || userDTO.getText().equals("管理员")
+                || userDTO.getText().toLowerCase().equals("authorized person")||  userDTO.getText().toLowerCase().equals("admin")){
+            permissionUser.getPermissionUser(sendMessage,userDTO,user1,userNormalTempAdmin,groupInfoSetting);
         }
         UserOperation userOperation = userOperationService.selectByUserAndGroupId(userDTO.getUserId(), userDTO.getGroupId());
         if (userOperation==null){
             userOperation= userOperationService.selectByUserName(userDTO.getUsername(), userDTO.getGroupId());
+        }
+        if (userDTO.getText().charAt(0)!='+' && userDTO.getText().charAt(0)!='-' &&
+                (!BaseConstant.getMessageContentIsContain(userDTO.getText())
+                        && !BaseConstant.getMessageContentIsContainEnglish2(userDTO.getText()))) {
+            return ;
+        }
+        if ((userDTO.getText().equals("取消") && replyToText == null) ||
+                (userDTO.getText().toLowerCase().equals("cancel") && replyToText == null)){
+            return;
         }
         if (userOperation==null || !userOperation.isOperation()){
             String format = String.format("<a href=\"tg://user?id=%d\">%s</a>", Long.parseLong(userNormalTempAdmin.getUserId()), "权限人");
@@ -226,9 +250,9 @@ public class AccountBot extends TelegramLongPollingBot {
                 }
             }
         }
-        String[] split1 = message.getText().split(" ");
-        String[] split2 = message.getText().split("\\+");
-        String[] split3 = message.getText().split("-");
+        String[] split1 = userDTO.getText().split(" ");
+        String[] split2 = userDTO.getText().split("\\+");
+        String[] split3 = userDTO.getText().split("-");
         //初始化
         Rate rate=rateService.getInitRate(userDTO.getGroupId());
         Account updateAccount = new Account();
@@ -242,28 +266,28 @@ public class AccountBot extends TelegramLongPollingBot {
         List<Account> accountList=dateOperator.selectIsRiqie(sendMessage,status,userDTO.getGroupId());
         List<Issue> issueList=dateOperator.selectIsIssueRiqie(sendMessage,status,userDTO.getGroupId());
         //设置日切 如果日切时间没结束 第二次设置日切 也需要修改账单的日切时间
-        dateOperator.isOver24HourCheck(message, sendMessage, userDTO, status,accountList,issueList);
+        dateOperator.isOver24HourCheck( sendMessage, userDTO, status,accountList,issueList);
         //设置操作人员
-        settingOperatorPerson.setHandle(split1, sendMessage,message.getText(),userDTO,user1,status,groupInfoSetting,userNormalTempAdmin,update);
-        settingOperatorPersonEnglish.setHandle(sendMessage,message.getText(),userDTO,user1,status,groupInfoSetting,userNormalTempAdmin,update);
+        settingOperatorPerson.setHandle(split1, sendMessage,userDTO.getText(),userDTO,user1,status,groupInfoSetting,userNormalTempAdmin,update);
+        settingOperatorPersonEnglish.setHandle(sendMessage,userDTO.getText(),userDTO,user1,status,groupInfoSetting,userNormalTempAdmin,update);
         downAddress.downAddress(sendMessage,userDTO,status,userNormalTempAdmin,userOperation);//设置下发地址
         //设置费率/汇率
-        ruzhangOperations.setRate(message,sendMessage,rate);
+        ruzhangOperations.setRate(userDTO.getText(),sendMessage,rate);
         //撤销入款
-        ruzhangOperations.repeal(message,sendMessage,accountList,replyToText,replayToMessageId,userDTO,issueList,status);
-        ruzhangOperations.repealEn(message,sendMessage,accountList,replyToText,replayToMessageId,userDTO,issueList,status);
+        ruzhangOperations.repeal(sendMessage,accountList,replyToText,replayToMessageId,userDTO,issueList,status);
+        ruzhangOperations.repealEn(sendMessage,accountList,replyToText,replayToMessageId,userDTO,issueList,status);
         //识别P是否手动添加 是(true)
         ruzhangOperations.pHandle(userDTO, status,updateAccount,issue);
         //删除今日数据/关闭日切/
-        dateOperator.deleteTodayData(message,sendMessage,userDTO.getGroupId(),status,rate);
+        dateOperator.deleteTodayData(userDTO.getText(),sendMessage,userDTO.getGroupId(),status,rate);
         //入账操作
-        ruzhangOperations.inHandle(split2,message.getText(),  updateAccount,  sendMessage, accountList, message,split3,
+        ruzhangOperations.inHandle(split2,userDTO.getText(),  updateAccount,  sendMessage, accountList, message,split3,
                 rate,issue,issueList,userDTO,status,groupInfoSetting);
         //删除操作人员
-        settingOperatorPerson.deleteHandle(message.getText(),sendMessage,userDTO,userNormalTempAdmin);
-        settingOperatorPersonEnglish.deleteHandleEnglish(message.getText(),sendMessage,userDTO,userNormalTempAdmin);
+        settingOperatorPerson.deleteHandle(userDTO.getText(),sendMessage,userDTO,userNormalTempAdmin);
+        settingOperatorPersonEnglish.deleteHandleEnglish(userDTO.getText(),sendMessage,userDTO,userNormalTempAdmin);
         //通知功能
-        notificationService.inform(message.getText(),sendMessage);
+        notificationService.inform(userDTO.getText(),sendMessage);
     }
 
 
@@ -350,6 +374,16 @@ public class AccountBot extends TelegramLongPollingBot {
                             userOperation.setOperation(true);
                             userOperationService.update(userOperation);
                         }
+                }
+                GroupInfoSetting groupInfoSetting = groupInfoSettingMapper.selectOne(new QueryWrapper<GroupInfoSetting>().eq("group_id", chatId));
+                if (groupInfoSetting==null){
+                    groupInfoSetting = new GroupInfoSetting();
+                    groupInfoSetting.setGroupId(Long.valueOf(chatId));
+                    groupInfoSetting.setEnglish(false);
+                    groupInfoSettingMapper.insert(groupInfoSetting);
+                }else {
+                    groupInfoSetting.setEnglish(false);
+                    groupInfoSettingMapper.updateById(groupInfoSetting);
                 }
                 String message="<b>感谢权限人把我添加到贵群</b> ❤\uFE0F\n" +
                         "➖➖➖➖➖➖➖➖➖➖➖";

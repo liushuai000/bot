@@ -82,10 +82,24 @@ public class PaperPlaneBotSinglePerson {
     // 设置缓存过期时间（比如1小时）
     private static final long TRANSACTION_EXPIRE_TIME = TimeUnit.HOURS.toMillis(1);
     private final Map<String, Long> lastTransactionTimeMap = new ConcurrentHashMap<>();
+    // 全局交易+地址缓存，用于判断是否已处理完所有用户的通知（新增）
+    private final Map<String, Set<String>> processedTransactionUsersMap = new ConcurrentHashMap<>();
     private void cleanUpCache() {
         long now = System.currentTimeMillis();
+        // 清理用户级别的缓存
         lastTransactionTimeMap.entrySet().removeIf(entry -> now - entry.getValue() > TRANSACTION_EXPIRE_TIME);
+        // 清理交易级别的缓存（超过时间窗口后清除）
+        processedTransactionUsersMap.entrySet().removeIf(entry -> {
+            String transactionKey = entry.getKey();
+            for (String user : entry.getValue()) {
+                if (lastTransactionTimeMap.containsKey(transactionKey + user)) {
+                    return false; // 如果还有用户记录，不删除
+                }
+            }
+            return true;
+        });
     }
+
     @SneakyThrows
     @PostConstruct
     public void init() {
@@ -109,12 +123,14 @@ public class PaperPlaneBotSinglePerson {
             }
             String url = tranHistoryUrl+w.getAddress();
             List<TronHistoryDTO> historyTrading = restTemplateConfig.getForObjectHistoryTrading2(url, Map.class);
-            historyTrading.stream().filter(Objects::nonNull).findFirst().ifPresent(t -> { // 在这里处理第一个非空的 HistoryTrading 对象
+            historyTrading.stream().filter(Objects::nonNull).forEach(t -> { // 在这里处理第一个非空的 HistoryTrading 对象
                 long now = System.currentTimeMillis();//这个缓存有问题 我这个userId不一样但是监听的地址都一样所以只提醒了一个应该是 TODO
                 long blockTime = t.getBlock_ts(); // TRON 时间戳是毫秒级
                 // 设置一个“有效时间窗口”，例如 60 秒内才视为新交易
                 long NEW_TRANSACTION_WINDOW = TimeUnit.SECONDS.toMillis(60);
-                if (now - blockTime <= NEW_TRANSACTION_WINDOW && !lastTransactionTimeMap.containsKey(t.getTransaction_id()+w.getUserId())) {
+                String transactionKey = t.getTransaction_id() + w.getAddress();
+                String userKey = w.getUserId();
+                if (now - blockTime <= NEW_TRANSACTION_WINDOW && !lastTransactionTimeMap.containsKey(transactionKey + userKey)) {
                     String result="";
                     BigDecimal balance = new BigDecimal(t.getQuant());
                     // 计算移动小数点后的 balance
@@ -143,8 +159,10 @@ public class PaperPlaneBotSinglePerson {
                         sendMessage.setChatId(w.getUserId());
                         sendMessage.disableWebPagePreview();//禁用预览链接
                         accountBot.sendMessage(sendMessage,result);
-                        // 标记此交易已处理
-                        lastTransactionTimeMap.put(t.getTransaction_id()+w.getUserId(), now);
+                        // 标记这个用户已处理此交易
+                        lastTransactionTimeMap.put(transactionKey + userKey, now);
+                        // 记录该交易已推送给哪些用户
+                        processedTransactionUsersMap.computeIfAbsent(transactionKey, k -> ConcurrentHashMap.newKeySet()).add(userKey);
                     }catch (Exception e){
                         System.err.println(e.getMessage());
                         walletListenerService.deleteWalletListener(w);
@@ -220,7 +238,7 @@ public class PaperPlaneBotSinglePerson {
         String regex = "^授权-[a-zA-Z0-9]+-[a-zA-Z0-9]+$";
         String regexEn = "^authorization-[a-zA-Z0-9]+-[a-zA-Z0-9]+$";
         String regexDelete = "^删除授权-[a-zA-Z0-9]+-[a-zA-Z0-9]+$";    //删除授权-123456789-30
-        String regexEnDelete = "^authorization-[a-zA-Z0-9]+-[a-zA-Z0-9]+$";
+        String regexEnDelete = "^authorization-[a-zA-Z0-9]+-[a-zA-Z0-9]+$";//只支持中文就可以
         String[] split3 = text.split("-");
         if (text.equals("获取个人信息（personal information）")){
             this.getUserInfoMessage(message,sendMessage,userDTO);

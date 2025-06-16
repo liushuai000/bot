@@ -1,5 +1,6 @@
 package org.example.bot.accountBot.botConfig;
 
+import io.swagger.models.auth.In;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.example.bot.accountBot.pojo.*;
@@ -82,7 +83,7 @@ public class Utils{
     }
     //入账操作2.0，匹配公式
     public  boolean calcRecorded(String text1, String messageUserId, String userName, String groupId, Account updateAccount, BigDecimal total, BigDecimal down, Issue issue,
-                                 BigDecimal downed, BigDecimal downing, Status status) {
+                                 BigDecimal downed, BigDecimal downing, Status status, Integer messageId) {
         Rate rate = new Rate();
         rate.setGroupId(groupId);
         rateService.setInitRate(rate);
@@ -122,36 +123,36 @@ public class Utils{
         log.info(".....t:{},r:{},e:{}", t, r, e);
         //按照公式进行计算
         if (matchFound&&text1.charAt(0)=='+') {
-            return calcAdd(messageUserId,userName, updateAccount, total, down, downing, rate, t, r, e,downed,status);
+            return calcAdd(messageUserId,userName, updateAccount, total, down, downing, rate, t, r, e,downed,status,messageId);
         } else if (matchFound&&text1.charAt(0)=='-'){
             // 解析数字
             rate.setRate(r);
             rate.setExchange(e);//不应该是updateRate insert
-            return calcSubtraction(rate,messageUserId,userName, down, issue, downed, t,status);
+            return calcSubtraction(rate,messageUserId,userName, down, issue, downed, t,status,messageId);
         }else if (matchFound1&&text1.charAt(0)=='+'){
-            return calcAdd(messageUserId,userName, updateAccount, total, down, downing, rate, t, r, e,downed,status);
+            return calcAdd(messageUserId,userName, updateAccount, total, down, downing, rate, t, r, e,downed,status,messageId);
         }else if (matchFound1&&text1.charAt(0)=='-'){
             rate.setRate(r);
             rate.setExchange(e);
-            return calcSubtraction(rate,messageUserId,userName, down, issue, downed, t,status);
+            return calcSubtraction(rate,messageUserId,userName, down, issue, downed, t,status,messageId);
         }else if (matchFound2&&text1.charAt(0)=='+'){
             rate.setRate(r);//如果setExchange 默认为null  应该设置为0
-            return calcAdd2(messageUserId,userName, updateAccount,  down, downing, rate, t,downed,status);
+            return calcAdd2(messageUserId,userName, updateAccount,  down, downing, rate, t,downed,status,messageId);
         }else if (matchFound2&&text1.charAt(0)=='-'){
             rate.setRate(r);
-            return calcSubtraction(rate,messageUserId,userName, down, issue, downed, t,status);
+            return calcSubtraction(rate,messageUserId,userName, down, issue, downed, t,status,messageId);
         } else if (matchFound3&&text1.charAt(0)=='+') {
             rate.setExchange(e);
-            return calcAdd2(messageUserId,userName, updateAccount, down, downing, rate, t,downed,status);
+            return calcAdd2(messageUserId,userName, updateAccount, down, downing, rate, t,downed,status,messageId);
         }else if (matchFound3&&text1.charAt(0)=='-'){
             rate.setExchange(e);
-            return calcSubtraction(rate,messageUserId,userName, down, issue, downed, t,status);
+            return calcSubtraction(rate,messageUserId,userName, down, issue, downed, t,status,messageId);
         }
         return false;
     }
     //加法  用于matchFound 0 1
     private  boolean calcAdd(String messageUserId,String userName, Account updateAccount, BigDecimal total, BigDecimal down, BigDecimal downing,
-                             Rate rate, BigDecimal t, BigDecimal r, BigDecimal e,BigDecimal downed,Status status) {
+                             Rate rate, BigDecimal t, BigDecimal r, BigDecimal e,BigDecimal downed,Status status,Integer messageId) {
         rate.setRate(r);
         rate.setExchange(e);
         rateService.insertRate(rate);
@@ -162,6 +163,7 @@ public class Utils{
         updateAccount.setUserId(messageUserId);
         updateAccount.setDowning(downing.setScale(2, RoundingMode.HALF_UP));
         updateAccount.setDown(downing.subtract(downed));
+        updateAccount.setMessageId(messageId);
         updateAccount.setRiqie(status.isRiqie());
         log.info("应下发:{},总入账:{},account:{}", downing, total, updateAccount);
         accountService.insertAccount(updateAccount);
@@ -170,7 +172,7 @@ public class Utils{
     }
     //加法2 用于matchFound 2 3
     private  boolean calcAdd2(String messageUserId,String userName, Account updateAccount, BigDecimal down, BigDecimal downing,
-                              Rate rate, BigDecimal t,BigDecimal downed,Status status) {
+                              Rate rate, BigDecimal t,BigDecimal downed,Status status,Integer messageId) {
         rateService.insertRate(rate);
         downing =dowingAccount(t,rate,downing) ;
 //        total = total.add(t);
@@ -181,6 +183,7 @@ public class Utils{
         updateAccount.setDowning(downing.setScale(2, RoundingMode.HALF_UP));
         updateAccount.setDown(downing.subtract(downed));
         updateAccount.setRateId(rate.getId());
+        updateAccount.setMessageId(messageId);
         updateAccount.setRiqie(status.isRiqie());
         accountService.insertAccount(updateAccount);
         //应该是新增加一条 已出帐记录吧!issueService.insert();
@@ -189,7 +192,7 @@ public class Utils{
     }
     //减法
     private  boolean calcSubtraction(Rate rate,String messageUserId,String userName,BigDecimal down, Issue issue, BigDecimal downed,
-                                     BigDecimal t,Status status) {
+                                     BigDecimal t,Status status,Integer messageId) {
         rateService.insertRate(rate);
         issue.setRateId(rate.getId());
         issue.setUserId(messageUserId);
@@ -197,6 +200,7 @@ public class Utils{
         downed=dowingAccount(t,rate,downed);
         issue.setDown(down.subtract(downed));
         issue.setDowned(downed);
+        issue.setMessageId(messageId);
         issue.setRiqie(status.isRiqie());
 //        issue.setSetTime(status.getSetTime());
         User byUserId = userService.findByUserId(messageUserId);
@@ -240,9 +244,9 @@ public class Utils{
     }
 
     //计算器功能
-    public void counter(Message message, SendMessage sendMessage) {
+    public void counter(String text, SendMessage sendMessage) {
         try {
-            String calculate = calculate(message.getText());
+            String calculate = calculate(text);
             if (StringUtils.isEmpty(calculate)) return;
             accountBot.sendMessage(sendMessage,calculate);
         }catch (Exception e){

@@ -33,7 +33,7 @@ public class Status {
     @TableField("show_money_status")
     private int showMoneyStatus=2;    //0显示余额：1表示显示USDT||显示usdt， 2表示显示全部
     @TableField("show_few")
-    private int showFew=3;    //显示1条 3条  5条：默认3条
+    private int showFew=5;    //显示1条 3条  5条：默认3条
     @TableField("display_sort")
     private int displaySort=1;    //显示分类 1不显示 0表示显示
     @TableField("account_handler_money")

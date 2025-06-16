@@ -139,26 +139,25 @@ public class DownAddress {
      * 用户发送任意内容，只要其中包含波场地址，就自动提取并校验是否与已设置的下发地址匹配
      * @param text 用户发送的消息内容（可为任意文本）
      * @param sendMessage 用于回复消息
-     * @param status 当前群状态对象
+     * @param status 当前群状态对象  false不继续 true继续
      */
-    public void validAddress(String text, SendMessage sendMessage, Status status) {
+    public boolean validAddress(String text, SendMessage sendMessage, Status status) {
         // 检查是否设置了下发地址
         if (status.getDAddress() == null || status.getDAddress().isEmpty()) {
-            return;
+//            accountBot.sendMessage(sendMessage,"❌本群没有设置下发地址!");
+            return false;
         }
         String targetAddress = status.getDAddress();
         // 使用正则表达式提取所有可能的 TRON 地址
         List<String> candidates = extractTronAddresses(text);
-        if (!this.isTronAddress(text)) {
-            return; // 没有发现任何 TRON 地址
-        }
         for (String candidate : candidates) {
             if (candidate.equals(targetAddress)) {
                 sendSuccessMessage(sendMessage, status);
-                return;
+                return true;
             }
         }
         sendMismatchMessage(sendMessage, status);
+        return false;
     }
 
 
@@ -190,7 +189,7 @@ public class DownAddress {
      * @param address
      * @return boolean
      */
-    private boolean isTronAddress(String address) {
+    public boolean isTronAddress(String address) {
         if (address == null || address.length() != 34) {
             return false;
         }
@@ -235,6 +234,7 @@ public class DownAddress {
                 "\n" +
                 "设置人 " + format;
         accountBot.sendMessage(sendMessage, err);
+        return ;
     }
 
 

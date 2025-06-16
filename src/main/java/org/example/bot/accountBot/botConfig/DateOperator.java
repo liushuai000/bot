@@ -46,7 +46,7 @@ public class DateOperator{
     RateMapper rateMapper;
     Map<String, String> constantMap = ConstantMap.COMMAND_MAP_ENGLISH;
     //判断是否过期 groupId text  查询是否过期
-    public void isOver24HourCheck(Message message, SendMessage sendMessage, UserDTO userDTO, Status status,List<Account> accountList,List<Issue> issueList) {
+    public void isOver24HourCheck( SendMessage sendMessage, UserDTO userDTO, Status status,List<Account> accountList,List<Issue> issueList) {
         String lowerCase = userDTO.getText().toLowerCase();
         if ((userDTO.getText().length()>=4&&userDTO.getText().substring(0,4).equals("设置日切")
                 ||userDTO.getText().length()>=4&&userDTO.getText().substring(0,4).equals("开启日切"))
@@ -99,8 +99,8 @@ public class DateOperator{
 
 
     // 操作人跟最高权限人都可以删除。 删除今日数据/关闭日切 到时间后账单数据自动保存为历史数据，软件界面内数据全部自动清空，操作员权限保留。
-    public void deleteTodayData(Message message, SendMessage sendMessage, String groupId, Status status, Rate rate) {
-        String text = message.getText().toLowerCase();
+    public void deleteTodayData(String text1, SendMessage sendMessage, String groupId, Status status, Rate rate) {
+        String text = text1.toLowerCase();
         if (text.length()>=4){
             //删除今日账单关键词： 清理今天数据 删除今天数据 清理今天账单 删除今天账单 是否判断操作员权限？
             if ((text.equals("清理今天数据")||text.equals("删除今天数据")||text.equals("清理今天账单")

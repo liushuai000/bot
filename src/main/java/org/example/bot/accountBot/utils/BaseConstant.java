@@ -101,45 +101,42 @@ public class BaseConstant {
             constantMap.get("显示手续费"),
             constantMap.get("隐藏手续费")
     };
-    //SettingOperatorPerson也需要加 同步的
+    //这个是equals
     public final static String[] array={
-            "通知","设置日切","开启日切","关闭日切","设置费率","通知所有人",
-            "设置汇率","设置入款单笔手续费","取消",
-            "删除操作员", "删除操作人","设置操作员", "设置操作人",
-            "设置入款单笔手续费","设置入款手续费","设置下发手续费", "设置下发单笔手续费",
-            "设置单笔下发手续费","设置单笔入款手续费","设置下发费率","设置下发汇率",
-            "切换英文", "切换中文","设置下发地址","修改下发地址","查看下发地址",
-    };
-    //这个是需要显示账单的第一行都是contains 其余行都是equals 因为第一行有  下发-30.equals(下发)
-    public final static String[] showArray={
-            "设置手续费","下发",
-            "显示明细",  "隐藏明细",  "显示操作人名称","将操作员显示","显示操作人名字","隐藏操作人名称","隐藏操作人名字","显示操作人", "显示操作员",
+            "通知","开启日切","关闭日切","通知所有人", "取消",
+            "切换英文", "切换中文","查看下发地址","显示明细","隐藏明细",
+            "显示操作人名称","将操作员显示","显示操作人名字","隐藏操作人名称","隐藏操作人名字","显示操作人", "显示操作员",
             "隐藏名字","隐藏名称","关闭显示","将回复人显示","显示回复人名称","显示余额","显示金额","显示USDT","显示usdt","显示全部",
-            "显示1条","显示3条","显示5条", "+0","-0","+0u","-0u","+0U","-0U","显示分类","隐藏分类","取消","账单","显示账单",
+            "显示1条","显示3条","显示5条", "+0","-0","+0u","-0u","+0U","-0U","显示分类","隐藏分类","账单","显示账单",
             "清理今天数据", "删除今天数据","清理今天账单","清理今日账单","删除今日账单","清理今天帐单","删除今天账单",
             "删除账单", "删除今天帐单","删除帐单","清除账单","清除帐单", "删除全部账单","删除全部帐单", "删除全部账单","清除全部账单",
-            "撤销下发","撤销入款","显示手续费","隐藏手续费","关闭回复人显示","隐藏回复人显示","隐藏回复人名称","D","T","issue","P"
+            "撤销下发","撤销入款","显示手续费","隐藏手续费","关闭回复人显示","隐藏回复人显示","隐藏回复人名称",
     };
+    //这个是包含的
+    public final static String[] showArray={
+            "设置日切","设置费率","设置汇率","设置入款单笔手续费","删除操作员","删除操作人","设置操作员", "设置操作人",
+            "设置入款单笔手续费","设置入款手续费","设置下发手续费", "设置下发单笔手续费",
+            "设置单笔下发手续费","设置单笔入款手续费","设置下发费率","设置下发汇率","设置下发地址","修改下发地址",
+            "设置手续费", "下发","D","T","issue","P"
+    };
+    //这个是需要显示账单的第一行都是contains 其余行都是equals 因为第一行有  下发-30.equals(下发)
     public final static String[] arrayEnglish2 = {
-            "notify", "Set daily cut-off", "Enable Daily Switch", "Disable Daily Switch", "Set Rate", "Notify All",
-            "Set Exchange Rate", "Set Single Deposit Fee", "Cancel",
-            "Delete Operator", "Delete Operator", "Set Operator", "Set Operator Person",
-            "Set Single Deposit Fee","Set Deposit Fee","Set Withdrawal Fee","Set Single Withdrawal Fee",
-            "Set Single Withdrawal Fee","Set Single Deposit Fee","Set the exchange rate", "Set the delivery rate",
-            "Switch to Chinese","Switch to English", "Set the delivery address","Modify the delivery address","View the sending address","Sending address",
+            "notify", "Enable Daily Switch", "Disable Daily Switch", "Notify All", "Cancel",
+            "Switch to English", "Switch to Chinese", "View the sending address", "Show Details", "Hide Details",
+            "Show Operator Name", "Show Operator", "Show Operator Person", "Hide Operator Name", "Hide Operator Person", "Display Operator", "Display Operator Person",
+            "Hide Name", "Hide Title", "Turn Off Display", "Show Replyer", "Show Replyer Name", "Show Balance", "Display Amount", "Show USDT", "Show All",
+            "Show 1 item", "Show 3 item", "Show 5 item", "+0", "-0", "+0u", "-0u", "+0U", "-0U", "Show Categories", "Hide Categories",
+            "Clear Today Data", "Delete Today Data", "Clear Today Bill", "Clear Today Bills", "Delete Today Bills", "Clear Today Account", "Delete Today Account",
+            "Delete Bill", "Delete Today Account", "Delete Account", "Clear Bill", "Clear Account", "Delete All Bills", "Delete All Accounts", "Delete All Bills Again", "Clear All Bills",
+            "Undo delivery", "Cancel deposit", "Show Handling Fee", "Hidden fees", "Hide reply name"
     };
 
     public final static String[] showArrayEnglish2 = {
-            "Setup fee", "Withdraw",
-            "Show Details", "Hide Details", "Show Operator Name", "Show Operator Names", "Show Operator", "Hide Operator Name",
-            "Hide Name","Hide Name", "Hide Titles","Hide Display","Show Replyer","Show Replyer Name",
-            "Hide All", "Show Replier", "Show Replier Name", "Show Balance", "Display amount", "Show USDT", "Show All",
-            "Show 1 item", "Show 3 item", "Show 5 item", "+0", "-0", "+0u", "-0u", "+0U", "-0U", "Show categories", "Hide categories","Cancel","Bill","Show Bill","View Bill",
-            "Clear Today Data","Delete Today Data","Clear Today Bill","Delete Today Bill",
-            "Delete Bill","Clear Bill","Delete All Bills","Clear All Bills","Undo delivery","Cancel deposit",
-            "Show handling fee","Hidden fees","Bill","View Bill","Show Bill","Hide Replyer Display", "Hide Replyer Info","Hide reply name",
-            "D","T","issue","P"
+            "Set daily cut-off", "Set Rate", "Set Exchange Rate", "Set Single Deposit Fee", "Delete Operator", "Delete Operator Person", "Set Operator", "Set Operator Person",
+            "Set Deposit Fee", "Set Withdrawal Fee", "Set Single Withdrawal Fee", "Set the exchange rate", "Set the delivery rate",
+            "Set the delivery address", "Modify the delivery address", "Setup fee", "Withdraw", "Deposit","D", "T", "issue", "P"
     };
+
 
     /**
      * 判断群组内消息是否包含机器人识别的消息在回复
@@ -205,50 +202,42 @@ public class BaseConstant {
     }
     public static boolean equalsAny(String[] array, String input) {
         for (String str : array) {
-            if (input.contains(str.toLowerCase())) {
+            if (input.equals(str.toLowerCase())) {
                 return true; // 如果input包含array中的某个元素，则返回true
             }
         }
         return false; // 如果没有任何元素匹配，返回false
     }
     public static boolean startsWithAny(String[] array, String input) {
+        if (input == null || input.isEmpty()) {
+            return false;
+        }
+        input = input.trim().toLowerCase();
+        // 四个特殊关键字
+        String[] specialCommands = {"d", "t", "issue", "p"};
         for (String str : array) {
-            str=str.toLowerCase();
-            if (array[0]==null){
-                System.err.println(input+"-"+array[0]+" - "+array[1]);
-            }
-            if (input.startsWith("设置下发费率")||input.startsWith("设置下发汇率")
-                    ||input.toLowerCase().contains("set the exchange rate")||input.toLowerCase().contains("set the delivery rate")){
-                return false;
-            }
-//            if (input.startsWith("t-")||input.startsWith("d-")||input.startsWith("issue")){
-//                return true;
-//            }
-            if(input.startsWith(str)){
-                return true;
-            }
-            if (input.equals(str)) {
-                return true; // 如果input包含array中的某个元素，则返回true
+            if (str == null) continue;
+            String lowerStr = str.toLowerCase();
+            // 检查是否是特殊命令
+            boolean isSpecial = Arrays.asList(specialCommands).contains(lowerStr);
+            if (isSpecial) {
+                // 特殊命令：检查是否符合 D100 / T+100 / issue300 / P-50u 格式
+                Pattern pattern = Pattern.compile("^" + Pattern.quote(lowerStr) + "([+\\-]?(?:\\d+\\.?\\d*))[uU]?$", Pattern.CASE_INSENSITIVE);
+                Matcher matcher = pattern.matcher(input);
+                if (matcher.find()) {
+                    return true;
+                }
+            } else {
+                // 普通命令：精确 startsWith 或 equals
+                if (input.startsWith(lowerStr) || input.equals(lowerStr)) {
+                    return true;
+                }
             }
         }
-        return false; // 如果没有任何元素匹配，返回false
+        return false;
     }
-//    public static String isXiFa(String text) {
-//        if (text == null || text.isEmpty()) return text;
-//        // 判断是否包含 “下发” 或 “withdraw”
-//        if (text.toLowerCase().contains("下发") || text.toLowerCase().contains("withdraw")) {
-//            // 提取数字和单位
-//            Pattern pattern = Pattern.compile("([+\\-]?\\d+)(u)?", Pattern.CASE_INSENSITIVE);
-//            Matcher matcher = pattern.matcher(text);
-//            if (matcher.find()) {
-//                String number = matcher.group(1);
-//                String unit = matcher.group(2);
-//                return "-" + number + (unit != null ? unit : "");
-//            }
-//        }
-//        return text; // 不匹配则原样返回
-//    }
-public static void main(String[] args) {
+
+    public static void main(String[] args) {
     System.out.println(isXiFa("下发1789.92"));
 }
     public static String isXiFa(String text) {
