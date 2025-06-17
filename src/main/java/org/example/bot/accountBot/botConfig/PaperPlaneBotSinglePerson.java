@@ -75,30 +75,11 @@ public class PaperPlaneBotSinglePerson {
 
     // 定时任务调度器
     private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(16);
-    private final ExecutorService asyncExecutor = Executors.newFixedThreadPool(4);
     @Qualifier("userOperationService")
     @Autowired
     private UserOperationService userOperationService;
-    // 设置缓存过期时间（比如1小时）
-    private static final long TRANSACTION_EXPIRE_TIME = TimeUnit.HOURS.toMillis(1);
-    private final Map<String, Long> lastTransactionTimeMap = new ConcurrentHashMap<>();
-    // 全局交易+地址缓存，用于判断是否已处理完所有用户的通知（新增）
-    private final Map<String, Set<String>> processedTransactionUsersMap = new ConcurrentHashMap<>();
-    private void cleanUpCache() {
-        long now = System.currentTimeMillis();
-        // 清理用户级别的缓存
-        lastTransactionTimeMap.entrySet().removeIf(entry -> now - entry.getValue() > TRANSACTION_EXPIRE_TIME);
-        // 清理交易级别的缓存（超过时间窗口后清除）
-        processedTransactionUsersMap.entrySet().removeIf(entry -> {
-            String transactionKey = entry.getKey();
-            for (String user : entry.getValue()) {
-                if (lastTransactionTimeMap.containsKey(transactionKey + user)) {
-                    return false; // 如果还有用户记录，不删除
-                }
-            }
-            return true;
-        });
-    }
+    // 记录已处理过的交易 ID + 地址组合
+    private final Set<String> processedTransactions = Collections.newSetFromMap(new ConcurrentHashMap<>());
 
     @SneakyThrows
     @PostConstruct
@@ -107,70 +88,82 @@ public class PaperPlaneBotSinglePerson {
         scheduler.scheduleAtFixedRate(this::fetchAndCacheData, 0, 30, TimeUnit.SECONDS);
         scheduler.scheduleAtFixedRate(this::cleanUpCache, 0, 1, TimeUnit.HOURS);
     }
+    private void cleanUpCache() {
+        processedTransactions.clear(); // 清理缓存，释放内存
+    }
     @PreDestroy
     public void destroy() {
         scheduler.shutdownNow();
-        asyncExecutor.shutdownNow();
     }
     private void fetchAndCacheData() {
-        List<WalletListener> walletListeners = walletListenerService.queryAll();//每秒最多调用5次查询
-        walletListeners.parallelStream().filter(Objects::nonNull).forEach(w ->  CompletableFuture.runAsync(() ->{
-            try {
-                // 每次请求前等待一段时间，控制频率
-                Thread.sleep( 200); // 200ms 间隔
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-            }
-            String url = tranHistoryUrl+w.getAddress();
-            List<TronHistoryDTO> historyTrading = restTemplateConfig.getForObjectHistoryTrading2(url, Map.class);
-            historyTrading.stream().filter(Objects::nonNull).forEach(t -> { // 在这里处理第一个非空的 HistoryTrading 对象
-                long now = System.currentTimeMillis();//这个缓存有问题 我这个userId不一样但是监听的地址都一样所以只提醒了一个应该是 TODO
-                long blockTime = t.getBlock_ts(); // TRON 时间戳是毫秒级
-                // 设置一个“有效时间窗口”，例如 60 秒内才视为新交易
-                long NEW_TRANSACTION_WINDOW = TimeUnit.SECONDS.toMillis(60);
-                String transactionKey = t.getTransaction_id() + w.getAddress();
-                String userKey = w.getUserId();
-                if (now - blockTime <= NEW_TRANSACTION_WINDOW && !lastTransactionTimeMap.containsKey(transactionKey + userKey)) {
-                    String result="";
-                    BigDecimal balance = new BigDecimal(t.getQuant());
-                    // 计算移动小数点后的 balance
-                    BigDecimal bigDecimal = balance.divide(BigDecimal.TEN.pow(t.getTokenInfo().getTokenDecimal()));
-                    String type=t.getTo_address().equals(w.getAddress())==true?"入账":"出账";
-                    if (t.getTo_address().equals(w.getAddress())==true){
-                        result="交易金额： "+bigDecimal+t.getTokenInfo().getTokenAbbr()+" 已确认 #"+type+"\n" +
-                                "交易币种： ❇\uFE0F #"+t.getTokenInfo().getTokenAbbr()+"\n" +
-                                "收款地址： <code>"+t.getTo_address()+"</code>\n" +
-                                "支付地址： <code>"+t.getFrom_address()+"</code>\n" +
-                                "交易哈希： "+t.getTransaction_id()+" (https://tronscan.org/#/transaction/"+t.getTransaction_id()+")\n" +
-                                "转账时间："+sdf.format(new Date(t.getBlock_ts()))+"\n" +
-                                "\uD83D\uDCE3 监控地址 ("+w.getAddress()+")" ;
-                    }else {
-                        result="交易金额： "+bigDecimal+t.getTokenInfo().getTokenAbbr()+" 已确认 #"+type+"\n" +
-                                "交易币种： ❇\uFE0F #"+t.getTokenInfo().getTokenAbbr()+"\n" +
-                                "收款地址： <code>"+t.getTo_address()+"</code>\n" +
-                                "支付地址： <code>"+t.getFrom_address()+"</code>\n" +
-                                "交易哈希： "+t.getTransaction_id()+" (https://tronscan.org/#/transaction/"+t.getTransaction_id()+")\n" +
-                                "转账时间："+sdf.format(new Date(t.getBlock_ts()))+"\n" +
-                                "\uD83D\uDCE3 监控地址 ("+w.getAddress()+")";
-                    }
-                    System.err.println("当前用户id是:"+w.getUserId()+"昵称是:"+w.getNickname());
-                    try {
-                        SendMessage sendMessage = new SendMessage();
-                        sendMessage.setChatId(w.getUserId());
-                        sendMessage.disableWebPagePreview();//禁用预览链接
-                        accountBot.sendMessage(sendMessage,result);
-                        // 标记这个用户已处理此交易
-                        lastTransactionTimeMap.put(transactionKey + userKey, now);
-                        // 记录该交易已推送给哪些用户
-                        processedTransactionUsersMap.computeIfAbsent(transactionKey, k -> ConcurrentHashMap.newKeySet()).add(userKey);
-                    }catch (Exception e){
-                        System.err.println(e.getMessage());
-                        walletListenerService.deleteWalletListener(w);
-                    }
+        List<WalletListener> walletListeners = walletListenerService.queryAll(); // 获取所有监听地址
+        // 按地址分组：String 是地址，List<WalletListener> 是所有监听该地址的用户
+        Map<String, List<WalletListener>> addressToListeners = walletListeners.stream()
+                .filter(Objects::nonNull)
+                .collect(Collectors.groupingBy(WalletListener::getAddress));
+        // 并行处理每个地址
+        addressToListeners.forEach((address, listeners) -> {
+            CompletableFuture.runAsync(() -> {
+                try {
+                    // 控制请求频率
+                    Thread.sleep(200);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
                 }
-            });
-        }));
+                String url = tranHistoryUrl + address;
+                List<TronHistoryDTO> historyTrading = restTemplateConfig.getForObjectHistoryTrading2(url, Map.class);
+                if (historyTrading == null || historyTrading.isEmpty()) {
+                    return;
+                }
+                long now = System.currentTimeMillis();
+                // 处理每笔交易
+                historyTrading.stream()
+                        .filter(Objects::nonNull)
+                        .forEach(t -> {
+                            long blockTime = t.getBlock_ts();
+                            String transactionKey = t.getTransaction_id() + address;
+                            // 判断是否是最近60秒内的新交易，并且未被处理过
+                            if (now - blockTime <= TimeUnit.SECONDS.toMillis(60) && !processedTransactions.contains(transactionKey)) {
+                                processedTransactions.add(transactionKey); // 标记为已处理
+                                // 构建消息内容
+                                String result = buildTransactionMessage(t, address);
+                                // 给所有监听这个地址的用户发送消息
+                                listeners.forEach(listener -> {
+                                    try {
+                                        SendMessage sendMessage = new SendMessage();
+                                        sendMessage.setChatId(listener.getUserId());
+                                        sendMessage.disableWebPagePreview();
+                                        accountBot.sendMessage(sendMessage, result);
+                                    } catch (Exception e) {
+                                        log.error("发送消息失败给用户 {}: {}", listener.getUserId(), e.getMessage());
+                                        // 可选：删除异常用户监听器
+                                        // walletListenerService.deleteWalletListener(listener);
+                                    }
+                                });
+                            }
+                        });
+            }, scheduler); // 使用线程池执行
+        });
     }
+
+    private String buildTransactionMessage(TronHistoryDTO t, String address) {
+        BigDecimal balance = new BigDecimal(t.getQuant());
+        BigDecimal bigDecimal = balance.divide(BigDecimal.TEN.pow(t.getTokenInfo().getTokenDecimal()));
+        String type = t.getTo_address().equals(address) ? "入账" : "出账";
+
+        StringBuilder sb = new StringBuilder();
+        sb.append("交易金额： ").append(bigDecimal).append(t.getTokenInfo().getTokenAbbr()).append(" 已确认 #").append(type).append("\n")
+                .append("交易币种： ❇\uFE0F #").append(t.getTokenInfo().getTokenAbbr()).append("\n")
+                .append("收款地址： <code>").append(t.getTo_address()).append("</code>\n")
+                .append("支付地址： <code>").append(t.getFrom_address()).append("</code>\n")
+                .append("交易哈希： ").append(t.getTransaction_id())
+                .append(" (https://tronscan.org/#/transaction/").append(t.getTransaction_id()).append(")\n")
+                .append("转账时间：").append(sdf.format(new Date(t.getBlock_ts()))).append("\n")
+                .append("\uD83D\uDCE3 监控地址 (").append(address).append(")");
+
+        return sb.toString();
+    }
+
     //获取个人账户信息
     protected void handleTronAccountMessage(SendMessage sendMessage, Update update,UserDTO userDTO){
         String text = userDTO.getText();
@@ -448,7 +441,7 @@ public class PaperPlaneBotSinglePerson {
             accountBot.tronAccountMessageTextHtml(sendMessage,userDTO.getUserId(),"你好！<b>欢迎使用本机器人：\n" +
                     "\n" +
                     "点击下方底部按钮：获取个人信息\n" +
-                    "（将我拉入群组可免费使用8小时）\n" +
+                    "（将我拉入群组可免费使用48小时）\n" +
                     "\n" +
                     "将TRC20地址发送给我，即可设置入款通知；\n" +
                     "群友在群中发送U地址即可查询该地址当前余额； \n" +
@@ -578,7 +571,7 @@ public class PaperPlaneBotSinglePerson {
             userService.insertUser(user);
 
         }else if (!user.isValidFree()) {//还没有体验过免费6小时
-            LocalDateTime tomorrow = LocalDateTime.now().plusHours(8);
+            LocalDateTime tomorrow = LocalDateTime.now().plusHours(48);
             Date validTime = Date.from(tomorrow.atZone(ZoneId.systemDefault()).toInstant());
             user.setValidTime(validTime);
             user.setSuperAdmin(true);//默认操作权限管理员

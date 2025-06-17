@@ -4,7 +4,7 @@ spring:
       enabled: false
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://43.128.113.117:3306/bot?useUnicode=true&characterEncoding=UTF-8&autoReconnect=true&useSSL=false&zeroDateTimeBehavior=convertToNull&useTimezone=true&serverTimezone=GMT%2B8&allowMultiQueries=true
+    url: jdbc:mysql://localhost:3306/bot?useUnicode=true&characterEncoding=UTF-8&autoReconnect=true&useSSL=false&zeroDateTimeBehavior=convertToNull&useTimezone=true&serverTimezone=GMT%2B8&allowMultiQueries=true
     username: root
     password: root@Liu332331
   jackson:
@@ -21,19 +21,27 @@ logging:
   pattern:
     console: '%d{YYYY-MM-dd HH:mm:ss.SSS} %clr(%-5level) --- [%-15thread]%cyan(%-50logger{50}):%msg%n'
 #这个是超级管理员 可以私聊别人设置管理员权限
-adminUserId: 7693085709 #耀科账号
-toAdminUserId: 7855233620 #HQpay葫芦娃
-threeAdminUserId: 7045880082 #TTpayxz66
-botUserId: 6764218833
+#adminUserId: 7693085709 #耀科账号
+#toAdminUserId: 7855233620 #HQpay葫芦娃
+#threeAdminUserId: 7045880082 #TTpayxz66
+#botUserId: 6764218833
+
+
+
 #http://43.128.113.117:8081
-Origin: http://www.yaoke.cc
-Origin1: http://www.yaoke.cc
-Origin2: http://www.yaoke.cc:8081
-vueUrl: http://www.yaoke.cc/
-#adminUserId: 6721175591 #昊天
-#botUserId: 6749246766
-#vueUrl: http://www.bot2025.cc/
-#Origin: http://43.134.137.221:8081
+#Origin: http://www.yaoke.cc
+#Origin1: http://www.yaoke.cc
+#Origin2: http://www.yaoke.cc:8081
+#vueUrl: http://www.yaoke.cc/
+
+adminUserId: 7693085709 #耀科账号
+toAdminUserId: 75577788 #yaoke
+threeAdminUserId: 7693085709 #耀科账号
+botUserId: 6542803611
+vueUrl: http://www.bot2025.cc/
+Origin: http://43.134.137.221:8081
+Origin1: http://43.134.137.221
+Origin2: http://43.134.137.221:8081
 
 apiKey: 2967e678-556e-497a-a892-a1dcee897ba5
 apiKey1: a7089da7-e17b-4d28-a3d3-29f799983cae
@@ -44,12 +52,9 @@ tranHistoryUrl: https://apilist.tronscanapi.com/api/filter/trc20/transfers?limit
 telegram:
   bot:
     #正式环境
-#    token: 7823327297:AAFyk7Dmh4feR-X_MXfvq755WiMFl88eqR8
-#    username: vip1111111bot #117
-      token: 6764218833:AAGzUzy2LEzAK3iLz3fViDoGAkqitZU_s0U
-      username: HQpayvipbot #117
-
-#    token: 6749246766:AAGzDFvqbaQMBugLcdlSVli_UtocxsLSMxU
-#    username: Yvipbot #221服务  第二个打卡机器人
+    token: 6542803611:AAEkB8_D4iR2dV2-amXcXE6JWddSjS3q2iQ
+    username: IIIvipBot #221
+#      token: 6764218833:AAGzUzy2LEzAK3iLz3fViDoGAkqitZU_s0U
+#      username: HQpayvipbot #117
 
 
