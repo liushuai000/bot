@@ -381,6 +381,7 @@ public class SettingOperatorPerson{
             status.setCallBackStatus(0);
             statusService.updateStatus("handle_status"     ,1, userDTO.getGroupId());
             statusService.updateStatus("call_back_status" , 0, userDTO.getGroupId());
+            accountBot.sendMessage(sendMessage,"操作成功");
         }else if (split1[0].equals("关闭回复人显示")||split1[0].equals("隐藏回复人显示")||split1[0].equals("隐藏回复人名称") ||
                 split1.equals(constantMap.get("关闭回复人显示"))|| split1.equals(constantMap.get("隐藏回复人显示"))){
             status.setCallBackStatus(1);

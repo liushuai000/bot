@@ -1,13 +1,12 @@
 package org.example.bot.accountBot.botConfig;
 
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.example.bot.accountBot.dto.UserDTO;
+import org.example.bot.accountBot.mapper.GroupInfoSettingMapper;
 import org.example.bot.accountBot.mapper.RateMapper;
-import org.example.bot.accountBot.pojo.Account;
-import org.example.bot.accountBot.pojo.Issue;
-import org.example.bot.accountBot.pojo.Rate;
-import org.example.bot.accountBot.pojo.Status;
+import org.example.bot.accountBot.pojo.*;
 import org.example.bot.accountBot.service.AccountService;
 import org.example.bot.accountBot.service.IssueService;
 import org.example.bot.accountBot.service.RateService;
@@ -42,6 +41,8 @@ public class DateOperator{
     AccountBot accountBot;
     @Autowired
     StatusService statusService;
+    @Autowired
+    GroupInfoSettingMapper groupInfoSettingMapper;
     @Autowired
     RateMapper rateMapper;
     Map<String, String> constantMap = ConstantMap.COMMAND_MAP_ENGLISH;
@@ -89,17 +90,21 @@ public class DateOperator{
         long hours = differenceInMillis / (1000 * 60 * 60);
         long minutes = (differenceInMillis % (1000 * 60 * 60)) / (1000 * 60);
         long seconds = (differenceInMillis % (1000 * 60)) / 1000;
-        //机器人进群  首次进群 如果有账单就查所有 没有就默认
-//            accountList.stream().filter(Objects::nonNull).forEach(a->accountService.updateSetTime(a.getId()+"",OverDue));
-//        issueList.stream().filter(Objects::nonNull).forEach(a->issueService.updateLastUpdateRiqie(a.getId(),OverDue));
-        accountBot.sendMessage(sendMessage,"设置成功 日切时间为每天:"+ tomorrow.getHour()+"时"+tomorrow.getMinute()+"分" +tomorrow.getSecond()+"秒!\n" +
-                "距离日切时间结束还有:"+ hours+"小时"+minutes+"分钟"+seconds+"秒");
+        GroupInfoSetting groupInfoSetting = groupInfoSettingMapper.selectOne(new QueryWrapper<GroupInfoSetting>().eq("group_id", sendMessage.getChatId()));
+        if (groupInfoSetting.getEnglish()){
+            accountBot.sendMessage(sendMessage,"设置成功 日切时间为每天:"+ tomorrow.getHour()+"时"+tomorrow.getMinute()+"分" +tomorrow.getSecond()+"秒!\n" +
+                    "距离日切时间结束还有:"+ hours+"小时"+minutes+"分钟"+seconds+"秒");
+        }else {
+            accountBot.sendMessage(sendMessage,"Successfully set daily cut-off time to:"+ tomorrow.getHour()+"hour"+tomorrow.getMinute()+"minute" +tomorrow.getSecond()+"second!\n" +
+                    "Time remaining until daily cut-off:"+ hours+"hour"+minutes+"minute"+seconds+"second");
+        }
+
     }
 
 
 
     // 操作人跟最高权限人都可以删除。 删除今日数据/关闭日切 到时间后账单数据自动保存为历史数据，软件界面内数据全部自动清空，操作员权限保留。
-    public void deleteTodayData(String text1, SendMessage sendMessage, String groupId, Status status, Rate rate) {
+    public void deleteTodayData(String text1, SendMessage sendMessage, String groupId, Status status, Rate rate,GroupInfoSetting groupInfoSetting) {
         String text = text1.toLowerCase();
         if (text.length()>=4){
             //删除今日账单关键词： 清理今天数据 删除今天数据 清理今天账单 删除今天账单 是否判断操作员权限？
@@ -124,7 +129,6 @@ public class DateOperator{
                 accountService.deleteTodayData(status,groupId);
                 issueService.deleteTodayIssueData(status,groupId);
                 accountBot.sendMessage(sendMessage,"操作成功 ，今日账单已删除");
-
             }else if (text.equals("删除全部账单")||text.equals("清除全部账单")||text.equals(constantMap.get("删除全部账单")) || text.equals(constantMap.get("清除全部账单"))
             ||text.equals("delete all bills")||text.equals("delete all records")|| text.equals("clear all bills")){
                 status.setPmoney(BigDecimal.ZERO);
@@ -135,13 +139,21 @@ public class DateOperator{
                 statusService.update(status);
                 accountService.deleteHistoryData(groupId);
                 issueService.deleteHistoryIssueData(groupId);
-                accountBot.sendMessage(sendMessage,"操作成功 ，全部账单已删除。");
+                if (groupInfoSetting.getEnglish()){
+                    accountBot.sendMessage(sendMessage,"操作成功 ，全部账单已删除。");
+                }else {
+                    accountBot.sendMessage(sendMessage,"Successfully deleted all bills.");
+                }
             }else if (text.equals("关闭日切")||text.equals(constantMap.get("关闭日切"))|| text.equals("disable daily switch")){
                 status.setRiqie(false);//是否开启日切 是
                 Date date = new Date();
                 status.setSetTime(date);//设置日切时间
                 statusService.update(status);
-                accountBot.sendMessage(sendMessage,"操作成功,关闭日切");
+                if (groupInfoSetting.getEnglish()){
+                    accountBot.sendMessage(sendMessage,"操作成功,关闭日切");
+                }else{
+                    accountBot.sendMessage(sendMessage,"Operation successful, disable daily switch");
+                }
             }else if (text.equals("clear today data") || text.equals("delete today data")||text.equals("clear bill")||
             text.equals("clear today bill")|| text.equals("delete today bill") || text.equals("delete bill")) {
                 //如果有日切才能使用
@@ -156,7 +168,11 @@ public class DateOperator{
                 statusService.update(status);
                 accountService.deleteTodayData(status, groupId);
                 issueService.deleteTodayIssueData(status, groupId);
-                accountBot.sendMessage(sendMessage, "操作成功 ，今日账单已删除");
+                if (groupInfoSetting.getEnglish()){
+                    accountBot.sendMessage(sendMessage, "操作成功 ，今日账单已删除");
+                }else {
+                    accountBot.sendMessage(sendMessage, "Successfully deleted today's bills.");
+                }
             }
         }
     }
@@ -171,8 +187,7 @@ public class DateOperator{
         Date setTime = status.getSetTime();
         return issueList.stream().filter(Objects::nonNull).filter(account -> {
             Date addTime = account.getAddTime();
-            return addTime != null &&
-                    !addTime.before(setStartTime) && !addTime.after(setTime);
+            return addTime != null &&  !addTime.before(setStartTime) && !addTime.after(setTime);
         }).collect(Collectors.toList());
     }
     public List<Account> selectIsRiqie(SendMessage sendMessage, Status status, String groupId) {
@@ -188,8 +203,7 @@ public class DateOperator{
         // 筛选在 [setStartTime, setTime] 时间段内的账单
         return accountList.stream().filter(Objects::nonNull).filter(account -> {
                     Date addTime = account.getAddTime();
-                    return addTime != null &&
-                            !addTime.before(setStartTime) && !addTime.after(setTime);
+                    return addTime != null && !addTime.before(setStartTime) && !addTime.after(setTime);
                 }).collect(Collectors.toList());
     }
 

@@ -72,7 +72,6 @@ public class AccountBot extends TelegramLongPollingBot {
     private GroupInfoSettingBotMessage groupInfoSettingBotMessage;//注意处理进群记录用户信息或者是 切换中英文
     @Autowired
     private PermissionUser permissionUser;//查询本群权限人
-
     @Override
     public String getBotUsername() {
         return username;
@@ -138,18 +137,24 @@ public class AccountBot extends TelegramLongPollingBot {
                 String caption = message.getCaption();
                 boolean b = downAddress.validAddress(userDTO.getText(), sendMessage, status);//验证地址
                 if (! b){
-                    return;
                 }
             }
         }
     }
     public void BusinessHandler(Message message,SendMessage sendMessage, String replyToText,Integer replayToMessageId, UserDTO userDTO,Update update) {
-        GroupInfoSetting groupInfoSetting = groupInfoSettingMapper.selectOne(new QueryWrapper<GroupInfoSetting>().eq("group_id", userDTO.getGroupId()));
-        //切换中英文初始化 或更新
-        if (message.getChat().isGroupChat()||message.getChat().isSuperGroupChat()){
-            groupInfoSetting=groupInfoSettingBotMessage.getGroupOrCreate(userDTO.getText(), Long.valueOf(userDTO.getGroupId()));
-        } else if (message.getChat().isUserChat()) {
-            groupInfoSetting= groupInfoSettingBotMessage.getGroupOrCreate(userDTO.getText(), Long.valueOf(userDTO.getUserId()));
+        GroupInfoSetting groupInfoSetting = null;
+        if (userDTO.getGroupId()!=null){
+            groupInfoSetting = groupInfoSettingMapper.selectOne(new QueryWrapper<GroupInfoSetting>().eq("group_id", userDTO.getGroupId()));
+            if (groupInfoSetting==null){
+                groupInfoSetting=new GroupInfoSetting();
+                groupInfoSetting.setGroupId(Long.valueOf(userDTO.getGroupId()));
+                groupInfoSettingMapper.insert(groupInfoSetting);
+            }
+            if (userDTO.getText().equals("切换中文") || userDTO.getText().equals("切换英文")
+                    ||  userDTO.getText().toLowerCase().equals("switch to chinese")||  userDTO.getText().toLowerCase().equals("switch to english")){
+                groupInfoSettingBotMessage.switchEn(userDTO.getText().toLowerCase(), Long.valueOf(userDTO.getGroupId()),groupInfoSetting);
+                return;
+            }
         }
         if (userDTO.getText().equals("/detail"+"@"+username)||userDTO.getText().equals("/detail")){
             SendMessage sendMessageDetail = new SendMessage();
@@ -167,13 +172,13 @@ public class AccountBot extends TelegramLongPollingBot {
             paperPlaneBotSinglePerson.handleNonGroupMessage(message,sendMessage,userDTO);
             return;
         }
-        if(userDTO.getText().startsWith("查询") || userDTO.getText().startsWith("CX") || userDTO.getText().startsWith("Query")){
-            nowExchange.Query(sendMessage,update);
+        if(userDTO.getText().startsWith("查询") || userDTO.getText().startsWith("Query")){
+            nowExchange.Query(sendMessage,update,groupInfoSetting);
         }
         User userTemp = userService.findByUserId(userDTO.getUserId());
         User userTemp2 = userService.findByUsername(userDTO.getUsername());
         //改成sql查询username 和userId 不要全查了 并且isNormal是false
-        this.setIsAdminUser(sendMessage,userDTO,userTemp,userTemp2);
+        this.setIsAdminUser(sendMessage,userDTO,userTemp,userTemp2,groupInfoSetting);
         User user1 = null;
         if (userTemp!=null){
             user1=userTemp;
@@ -182,7 +187,7 @@ public class AccountBot extends TelegramLongPollingBot {
         }
         if (userDTO.getText().equals("z0")||userDTO.getText().equals("Z0")){
             Rate rate=rateService.getInitRate(userDTO.getGroupId());
-            nowExchange.getNowExchange(sendMessage,userDTO,rate);
+            nowExchange.getNowExchange(sendMessage,userDTO,rate, groupInfoSetting);
         }
         //计算器功能
         utils.counter(userDTO.getText(),sendMessage);
@@ -212,27 +217,42 @@ public class AccountBot extends TelegramLongPollingBot {
             return;
         }
         if (userOperation==null || !userOperation.isOperation()){
-            String format = String.format("<a href=\"tg://user?id=%d\">%s</a>", Long.parseLong(userNormalTempAdmin.getUserId()), "权限人");
-            this.sendMessage(sendMessage,"没有使用权限，请联系本群权限人 "+format);
+//            String format = String.format("<a href=\"tg://user?id=%d\">%s</a>", Long.parseLong(userNormalTempAdmin.getUserId()), "权限人");
+//            this.sendMessage(sendMessage,"没有使用权限，请联系本群权限人 "+format);
             return;
         }else if(userOperation.isOperation()){
             //如果是本群权限人
             if (userNormalTempAdmin.getUserId().equals(userDTO.getUserId())){
                 UserNormal userNormal = userNormalService.selectByUserId(userOperation.getUserId(), userDTO.getGroupId());
                 if (userNormal==null || !userNormal.isAdmin() ){
-                    String format = String.format("<a href=\"tg://user?id=%d\">%s</a>", Long.parseLong(threeAdminUserId), "管理员");
-                    this.sendMessage(sendMessage,"您在本群不是管理!请联系: "+format);
+                    if (groupInfoSetting.getEnglish()){
+                        String format = String.format("<a href=\"tg://user?id=%d\">%s</a>", Long.parseLong(threeAdminUserId), "管理员");
+                        this.sendMessage(sendMessage,"您在本群不是管理!请联系: "+format);
+                    }else {
+                        String format = String.format("<a href=\"tg://user?id=%d\">%s</a>", Long.parseLong(threeAdminUserId), "admin");
+                        this.sendMessage(sendMessage,"You are not an administrator in this group! Please contact: "+format);
+                    }
                     return;
                 }else {
                     User byUserId = userService.findByUserId(userDTO.getUserId());
                     //如果有效期没过期
                     if (byUserId.getValidTime()==null){
-                        String format = String.format("<a href=\"tg://user?id=%d\">%s</a>", Long.parseLong(botUserId), "记账机器人");
-                        this.sendMessage(sendMessage,"您现在没有使用权限,请私聊机器人 @"+format+" .点击获取个人信息获取权限.");
+                        if (groupInfoSetting.getEnglish()){
+                            String format = String.format("<a href=\"tg://user?id=%d\">%s</a>", Long.parseLong(botUserId), "记账机器人");
+                            this.sendMessage(sendMessage,"您现在没有使用权限,请私聊机器人 @"+format+" .点击获取个人信息获取权限.");
+                        }else{
+                            String format = String.format("<a href=\"tg://user?id=%d\">%s</a>", Long.parseLong(botUserId), "Accounting Robot");
+                            this.sendMessage(sendMessage,"You do not have permission to use it now, please chat with the robot privately @"+format+" .Click to obtain personal information access permission.");
+                        }
                         return;
                     }else if (new Date().compareTo(byUserId.getValidTime())>=0){
-                        String format = String.format("<a href=\"tg://user?id=%d\">%s</a>", Long.parseLong(threeAdminUserId), "管理员");
-                        this.sendMessage(sendMessage,"您的使用期限已到期,请私聊管理员 @"+format);
+                        if (groupInfoSetting.getEnglish()){
+                            String format = String.format("<a href=\"tg://user?id=%d\">%s</a>", Long.parseLong(threeAdminUserId), "管理员");
+                            this.sendMessage(sendMessage,"您的使用期限已到期,请私聊管理员 @"+format);
+                        }else{
+                            String format = String.format("<a href=\"tg://user?id=%d\">%s</a>", Long.parseLong(threeAdminUserId), "admin");
+                            this.sendMessage(sendMessage,"Your usage period has expired, please chat with the administrator @"+format);
+                        }
                         return;
                     }
                 }
@@ -240,12 +260,22 @@ public class AccountBot extends TelegramLongPollingBot {
                 User userAuth = userService.findByUserId(userOperation.getAdminUserId());
                 //如果有效期没过期
                 if (userAuth.getValidTime()==null){
-                    String format = String.format("<a href=\"tg://user?id=%d\">%s</a>", Long.parseLong(botUserId), "记账机器人");
-                    this.sendMessage(sendMessage,"本群权限人现在没有使用权限,请私聊机器人 @"+format+" .点击获取个人信息获取权限.");
+                    if (groupInfoSetting.getEnglish()){
+                        String format = String.format("<a href=\"tg://user?id=%d\">%s</a>", Long.parseLong(botUserId), "记账机器人");
+                        this.sendMessage(sendMessage,"本群权限人现在没有使用权限,请私聊机器人 @"+format+" .点击获取个人信息获取权限.");
+                    }else{
+                        String format = String.format("<a href=\"tg://user?id=%d\">%s</a>", Long.parseLong(botUserId), "Accounting Robot");
+                        this.sendMessage(sendMessage,"The authorized person in this group does not have permission to use it now. Please privately chat with the robot @"+format+" .Click to obtain personal information access permission.");
+                    }
                     return;
                 }else if (new Date().compareTo(userAuth.getValidTime())>=0){
-                    String format = String.format("<a href=\"tg://user?id=%d\">%s</a>", Long.parseLong(threeAdminUserId), "管理员");
-                    this.sendMessage(sendMessage,"本群权限人的使用期限已到期,请私聊管理员 @"+format);
+                    if (groupInfoSetting.getEnglish()){
+                        String format = String.format("<a href=\"tg://user?id=%d\">%s</a>", Long.parseLong(threeAdminUserId), "管理员");
+                        this.sendMessage(sendMessage,"本群权限人的使用期限已到期,请私聊管理员 @"+format);
+                    }else{
+                        String format = String.format("<a href=\"tg://user?id=%d\">%s</a>", Long.parseLong(threeAdminUserId), "admin");
+                        this.sendMessage(sendMessage,"The period of use for this group has expired. Please privately chat with the administrator. @"+format);
+                    }
                     return;
                 }
             }
@@ -270,7 +300,7 @@ public class AccountBot extends TelegramLongPollingBot {
         //设置操作人员
         settingOperatorPerson.setHandle(split1, sendMessage,userDTO.getText(),userDTO,user1,status,groupInfoSetting,userNormalTempAdmin,update);
         settingOperatorPersonEnglish.setHandle(sendMessage,userDTO.getText(),userDTO,user1,status,groupInfoSetting,userNormalTempAdmin,update);
-        downAddress.downAddress(sendMessage,userDTO,status,userNormalTempAdmin,userOperation);//设置下发地址
+        downAddress.downAddress(sendMessage,userDTO,status,userNormalTempAdmin,userOperation,groupInfoSetting);//设置下发地址
         //设置费率/汇率
         ruzhangOperations.setRate(userDTO.getText(),sendMessage,rate);
         //撤销入款
@@ -279,7 +309,7 @@ public class AccountBot extends TelegramLongPollingBot {
         //识别P是否手动添加 是(true)
         ruzhangOperations.pHandle(userDTO, status,updateAccount,issue);
         //删除今日数据/关闭日切/
-        dateOperator.deleteTodayData(userDTO.getText(),sendMessage,userDTO.getGroupId(),status,rate);
+        dateOperator.deleteTodayData(userDTO.getText(),sendMessage,userDTO.getGroupId(),status,rate,groupInfoSetting);
         //入账操作
         ruzhangOperations.inHandle(split2,userDTO.getText(),  updateAccount,  sendMessage, accountList, message,split3,
                 rate,issue,issueList,userDTO,status,groupInfoSetting);
@@ -296,12 +326,23 @@ public class AccountBot extends TelegramLongPollingBot {
         if (update.hasMyChatMember()) { //获取个人信息和授权的时候才是admin
             ChatMemberUpdated chatMember = update.getMyChatMember();
             if (chatMember.getNewChatMember().getStatus().equals("administrator")){
-                String message="<b>感谢您把我设为贵群管理</b> ❤\uFE0F\n" +
-                        "➖➖➖➖➖➖➖➖➖➖➖";
-                update.getMessage();
                 SendMessage sendMessage = new SendMessage();
                 String chatId = chatMember.getChat().getId().toString();//群组id
                 sendMessage.setChatId(chatId);
+                GroupInfoSetting groupInfoSetting=groupInfoSettingMapper.selectOne(new QueryWrapper<GroupInfoSetting>().eq("group_id", chatId));
+                if (groupInfoSetting==null){
+                    groupInfoSetting=new GroupInfoSetting();
+                    groupInfoSetting.setGroupId(Long.valueOf(chatId));
+                    groupInfoSettingMapper.insert(groupInfoSetting);
+                }
+                String message;
+                if (groupInfoSetting.getEnglish()){
+                    message="<b>感谢您把我设为贵群管理</b> ❤\uFE0F\n" +
+                            "➖➖➖➖➖➖➖➖➖➖➖";
+                }else{
+                    message="<b>Thank you for setting me as your group administrator</b> ❤\uFE0F\n" +
+                            "➖➖➖➖➖➖➖➖➖➖➖";
+                }
                 this.tronAccountMessageTextHtml(sendMessage,chatId,message);
             }else if (chatMember.getNewChatMember().getStatus().equals("member") || chatMember.getNewChatMember().getStatus().equals("left")) {
                 String chatId = chatMember.getChat().getId().toString();//群组id
@@ -379,14 +420,22 @@ public class AccountBot extends TelegramLongPollingBot {
                 if (groupInfoSetting==null){
                     groupInfoSetting = new GroupInfoSetting();
                     groupInfoSetting.setGroupId(Long.valueOf(chatId));
-                    groupInfoSetting.setEnglish(false);
+                    groupInfoSetting.setEnglish(true);
+//                    groupInfoSetting.setEnglish(false);//切换中文要修改111
                     groupInfoSettingMapper.insert(groupInfoSetting);
                 }else {
-                    groupInfoSetting.setEnglish(false);
+                    groupInfoSetting.setEnglish(true);
+//                    groupInfoSetting.setEnglish(false);
                     groupInfoSettingMapper.updateById(groupInfoSetting);
                 }
-                String message="<b>感谢权限人把我添加到贵群</b> ❤\uFE0F\n" +
-                        "➖➖➖➖➖➖➖➖➖➖➖";
+                String message;
+                if (groupInfoSetting.getEnglish()){
+                    message="<b>感谢权限人把我添加到贵群</b> ❤\uFE0F\n" +
+                            "➖➖➖➖➖➖➖➖➖➖➖";
+                }else{
+                    message="<b>Thanks to the authority for adding me to your group</b> ❤\uFE0F\n" +
+                            "➖➖➖➖➖➖➖➖➖➖➖";
+                }
                 SendMessage sendMessage = new SendMessage();
                 sendMessage.setChatId(chatId);
                 this.tronAccountMessageTextHtml(sendMessage,chatId,message);
@@ -430,7 +479,7 @@ public class AccountBot extends TelegramLongPollingBot {
                 " 6\uFE0F⃣账单（bill）\n" +
                 "删除账单（删除今日账单）\n" +
                 "Delete bill (delete today's bill)\n" +
-                "删除全部帐单（删除历史账单谨慎使用）\n" +
+                "删除全部账单（删除历史账单谨慎使用）\n" +
                 "Delete all bills (be careful when deleting historical bills)\n" +
                 "\n" +
                 " 7\uFE0F⃣计算器 （calculator）\n" +
@@ -473,7 +522,7 @@ public class AccountBot extends TelegramLongPollingBot {
 
 
     //判断消息是否是普通用户发送的消息 如果是就保存
-    public void setIsAdminUser(SendMessage sendMessage,UserDTO userDTO,User user,User byUsername){
+    public void setIsAdminUser(SendMessage sendMessage,UserDTO userDTO,User user,User byUsername,GroupInfoSetting groupInfoSetting){
         if (userDTO.getCallBackUserId()!=null){
             //这个是回复人id  为了判断机器人消息
             User byUserId = userService.findByUserId(userDTO.getCallBackUserId());
@@ -498,18 +547,34 @@ public class AccountBot extends TelegramLongPollingBot {
                 String nameDTO=firstNameDTO+lastNameDTO;
                 String username=userDTO.getUsername()==null?"": userDTO.getUsername();
                 if (!user.getUsername().equals(username)){
-                    String message="⚠\uFE0F用户名变更通知⚠\uFE0F\n"
-                            +"用户:"+user.getUsername()+"\n"
-                            +"⬇\uFE0F\n"
-                            +userDTO.getUsername();
+                    String message;
+                    if (groupInfoSetting.getEnglish()){
+                        message="⚠\uFE0F用户名变更通知⚠\uFE0F\n"
+                                +"用户:"+user.getUsername()+"\n"
+                                +"⬇\uFE0F\n"
+                                +userDTO.getUsername();
+                    }else{
+                        message="⚠\uFE0FUsername change notification⚠\uFE0F\n"
+                                +"用户:"+user.getUsername()+"\n"
+                                +"⬇\uFE0F\n"
+                                +userDTO.getUsername();
+                    }
                     user.setUsername(username);
                     sendMessage(sendMessage,message);
                 }
                 if (!name.equals(nameDTO)){
-                    String message="⚠\uFE0F用户昵称变更通知⚠\uFE0F\n"
-                            +"用户:"+name+"\n"
-                            +"⬇\uFE0F\n"
-                            +nameDTO;
+                    String message;
+                    if (groupInfoSetting.getEnglish()){
+                        message="⚠\uFE0F用户昵称变更通知⚠\uFE0F\n"
+                                +"用户:"+name+"\n"
+                                +"⬇\uFE0F\n"
+                                +nameDTO;
+                    }else{
+                        message="⚠\uFE0FUser nickname change notification⚠\uFE0F\n"
+                                +"用户:"+name+"\n"
+                                +"⬇\uFE0F\n"
+                                +nameDTO;
+                    }
                     user.setLastName(lastNameDTO);
                     user.setFirstName(firstNameDTO);
                     sendMessage(sendMessage,message);
@@ -537,8 +602,6 @@ public class AccountBot extends TelegramLongPollingBot {
     }
     protected void tronAccountMessageText(SendMessage sendMessage,String chatId, String text) {
         sendMessage.setChatId(chatId);
-//        sendMessage.setMessageId(messageId);
-        text = groupInfoSettingBotMessage.handler(chatId,text);
         sendMessage.setText(text);
         sendMessage.setParseMode("Markdown");
 //        sendMessage.enableHtml(true);
@@ -552,8 +615,6 @@ public class AccountBot extends TelegramLongPollingBot {
     }
     protected void tronAccountMessageTextHtml(SendMessage sendMessage,String chatId, String text) {
         sendMessage.setChatId(chatId);
-//        sendMessage.setMessageId(messageId);
-        text = groupInfoSettingBotMessage.handler(chatId,text);
         sendMessage.setText(text);
         sendMessage.setParseMode("HTML");
         sendMessage.enableHtml(true);
@@ -568,7 +629,6 @@ public class AccountBot extends TelegramLongPollingBot {
     protected void editMessageText(EditMessageText editMessage,long chatId, int messageId, String text) {
         editMessage.setChatId(chatId);
         editMessage.setMessageId(messageId);
-        text = groupInfoSettingBotMessage.handler(String.valueOf(chatId),text);
         editMessage.setText(text);
         editMessage.setParseMode("HTML");
         editMessage.enableHtml(true);
@@ -580,7 +640,6 @@ public class AccountBot extends TelegramLongPollingBot {
         }
     }
     public Integer sendMessage(SendMessage sendMessage,String text) {
-        text = groupInfoSettingBotMessage.handler(sendMessage.getChatId(),text);
         sendMessage.setText(text);
         sendMessage.enableHtml(true);
         sendMessage.setParseMode("HTML");

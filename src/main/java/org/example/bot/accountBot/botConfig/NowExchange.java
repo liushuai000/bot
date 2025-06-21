@@ -69,7 +69,7 @@ public class NowExchange {
 //    private SettingOperatorPerson settingOperatorPerson;
 
 
-    public void Query(SendMessage sendMessage,Update update){
+    public void Query(SendMessage sendMessage,Update update,GroupInfoSetting groupInfoSetting){
         String text = update.getMessage().getText();
         String substring;
         if (text.startsWith("Query")){
@@ -83,8 +83,15 @@ public class NowExchange {
         }
         String url = tranAccountUrl+substring;
         TronAccountDTO tronAccount = restTemplateConfig.getForObjectTronAccount(url);
-        String htmlText = "[USDT余额](https://tronscan.org/#/address/"+ substring + "/transfers)";
-        String trxText = "[TRX余额](https://tronscan.org/#/address/"+ substring + "/transfers)";
+        String htmlText ;
+        String trxText;
+        if (groupInfoSetting.getEnglish()){
+            htmlText = "[USDT余额](https://tronscan.org/#/address/"+ text + "/transfers)";
+            trxText = "[TRX余额](https://tronscan.org/#/address/"+ text + "/transfers)";
+        }else{
+            htmlText = "[USDT Balance](https://tronscan.org/#/address/"+ text + "/transfers)";
+            trxText = "[TRX Balance](https://tronscan.org/#/address/"+ text + "/transfers)";
+        }
         AtomicReference<BigDecimal> bigDecimal= new AtomicReference<>();
         AtomicReference<String> trxBigDecimal= new AtomicReference<>();
         tronAccount.getWithPriceTokens().stream().filter(Objects::nonNull).forEach(t -> {
@@ -108,25 +115,44 @@ public class NowExchange {
         }else {
             trx ="\uD83D\uDCB0 "+trxText+": 0 TRX\n";
         }
-        String result="✅✅✅✅\n" +
-                substring+"\n" +
-                "——————————\n" +
-                usdt+ trx+"——————————\n" +
-                "交易次数：" +tronAccount.getTransactions()+"\n"+
-                "   -出："+tronAccount.getTransactions_out()+"\n"+
-                "   -入："+tronAccount.getTransactions_in()+"\n"+
-                "地址创建时间："+sdf.format(new Date(tronAccount.getDate_created()))+"\n"+
-                "最新交易时间："+sdf.format(new Date(tronAccount.getLatest_operation_time()))+"\n";
+        String result;
+        if (groupInfoSetting.getEnglish()){
+            result="✅✅✅✅\n" +
+                    substring+"\n" +
+                    "——————————\n" + usdt+ trx+
+                    "——————————\n" +
+                    "交易次数：" +tronAccount.getTransactions()+"\n"+
+                    "   -出："+tronAccount.getTransactions_out()+"\n"+
+                    "   -入："+tronAccount.getTransactions_in()+"\n"+
+                    "地址创建时间："+sdf.format(new Date(tronAccount.getDate_created()))+"\n"+
+                    "最新交易时间："+sdf.format(new Date(tronAccount.getLatest_operation_time()))+"\n";
+        }else{
+            result="✅✅✅✅\n" +
+                    substring+"\n" +
+                    "——————————\n" + usdt+ trx+
+                    "——————————\n" +
+                    "Number of transactions：" +tronAccount.getTransactions()+"\n"+
+                    "   -out："+tronAccount.getTransactions_out()+"\n"+
+                    "   -enter："+tronAccount.getTransactions_in()+"\n"+
+                    "Address creation time："+sdf.format(new Date(tronAccount.getDate_created()))+"\n"+
+                    "Latest trading hours："+sdf.format(new Date(tronAccount.getLatest_operation_time()))+"\n";
+        }
         accountBot.tronAccountMessageText(sendMessage,groupId+"",result);
     }
 
     //查询交易记录
-    private void queryHistoryTrading(Message message,SendMessage sendMessage) {
+    private void queryHistoryTrading(Message message,SendMessage sendMessage,GroupInfoSetting groupInfoSetting) {
         String text = message.getText();
         String substring = text.substring(4, text.indexOf("——————————")).trim();
         String url = tranHistoryUrl+substring;
-        String result = "|    时间    |类型|   金额  |地址   \n" +
-                "|-----------|----|--------|---- \n";
+        String result;
+        if (groupInfoSetting.getEnglish()){
+            result = "|    时间    |类型|   金额  |地址   \n" +
+                    "|-----------|----|--------|---- \n";
+        }else {
+            result = "|    time    |type|   Amount  |address   \n" +
+                    "|-----------|----|--------|---- \n";
+        }
         List<TronHistoryDTO> tradingList=restTemplateConfig.getForObjectHistoryTrading(url,TronHistoryDTO.class);
         StringBuilder stringBuilder = new StringBuilder();
         stringBuilder.append(result);
@@ -134,18 +160,27 @@ public class NowExchange {
             BigDecimal balance = new BigDecimal(tradingList.get(i).getQuant());
             // 计算移动小数点后的 balance
             BigDecimal bigDecimal = balance.divide(BigDecimal.TEN.pow(tradingList.get(i).getTokenInfo().getTokenDecimal()));
-            String type=tradingList.get(i).getTo_address().equals(substring)==true?"入账":"出账";
+            String type;
+            if (groupInfoSetting.getEnglish()){
+                type=tradingList.get(i).getTo_address().equals(substring)==true?"入账":"出账";
+            }else {
+                type=tradingList.get(i).getTo_address().equals(substring)==true?"Entry" : "Out";
+            }
             stringBuilder.append("|"+sdf.format(new Date(tradingList.get(i).getBlock_ts()))+"|"+type+"|"+bigDecimal+"|"+tradingList.get(i).getTokenInfo().getTokenAbbr()+"|"+"\n");
         }
         accountBot.sendMessage(sendMessage,stringBuilder.toString());
     }
-    private void walletListenerAddress(Message message, SendMessage sendMessage) {
+    private void walletListenerAddress(Message message, SendMessage sendMessage,GroupInfoSetting groupInfoSetting) {
         Long id = message.getChat().getId();
         String text = message.getText();
         String address = text.substring(4, text.indexOf("——————————")).trim();
         WalletListener temp=walletListenerService.findByAddress(address,id);
         if (temp!=null){
-            accountBot.sendMessage(sendMessage,address+"已设置入款!无需重复设置");
+            if (groupInfoSetting.getEnglish()){
+                accountBot.sendMessage(sendMessage,address+"已设置入款!无需重复设置");
+            }else {
+                accountBot.sendMessage(sendMessage,address+" <b>Deposit has been set up! No need to set it up again</b>");
+            }
         }else {
             WalletListener walletListener = new WalletListener();
             List<WalletListener> walletListeners=walletListenerService.queryAll(id+"");
@@ -154,7 +189,12 @@ public class NowExchange {
             walletListener.setUserId(id+"");
             walletListener.setNickname(walletListeners.size()+1+"");
             walletListenerService.createWalletListener(walletListener);
-            accountBot.sendMessage(sendMessage,"✔\uFE0F设置监听成功");
+            if (groupInfoSetting.getEnglish()){
+                accountBot.sendMessage(sendMessage,"✔\uFE0F设置监听成功");
+            }else {
+                accountBot.sendMessage(sendMessage,"✔\uFE0F Set up listening successfully");
+            }
+
         }
     }
     public void CallbackQuery(Message message, SendMessage sendMessage,  Rate rate, Update update) {
@@ -169,14 +209,15 @@ public class NowExchange {
                     WalletListener::getNickname, WalletListener::getAddress));
             List<String> nicknameList = walletListeners.stream().filter(Objects::nonNull).map(WalletListener::getNickname).collect(Collectors.toList());
             sendMessage.setChatId(String.valueOf(chatId));
+            GroupInfoSetting groupInfoSetting = groupInfoSettingMapper.selectOne(new QueryWrapper<GroupInfoSetting>().eq("group_id", chatId));
             if ("查询交易记录".equals(callbackData)){
-                this.queryHistoryTrading(update.getCallbackQuery().getMessage(),sendMessage);
+                this.queryHistoryTrading(update.getCallbackQuery().getMessage(),sendMessage,groupInfoSetting);
                 return;
             }else if ("监听该地址".equals(callbackData)){
-                this.walletListenerAddress(update.getCallbackQuery().getMessage(),sendMessage);
+                this.walletListenerAddress(update.getCallbackQuery().getMessage(),sendMessage,groupInfoSetting);
                 return;
             } else if (nicknameToAddressMap.values().contains(callbackData)) {
-                this.getWallerListener(update.getCallbackQuery().getMessage(),sendMessage,callbackData,nicknameToAddressMap);
+                this.getWallerListener(update.getCallbackQuery().getMessage(),sendMessage,callbackData,nicknameToAddressMap,groupInfoSetting);
                 return;
             } else if (callbackData.equals("取消通知")) {
                 // 找到第一个左括号和右括号的位置
@@ -187,7 +228,11 @@ public class NowExchange {
                 List<WalletListener> collect = walletListeners.stream().filter(Objects::nonNull).filter(
                         n -> n.getAddress().equals(address) && n.getUserId().equals(chatId + "")).collect(Collectors.toList());
                 collect.stream().filter(Objects::nonNull).forEach(wallet->walletListenerService.deleteWalletListener(wallet));
-                accountBot.sendMessage(sendMessage,"❗\uFE0F 取消地址通知成功。");
+                if (groupInfoSetting.getEnglish()){
+                    accountBot.sendMessage(sendMessage,"❗\uFE0F 取消地址通知成功。");
+                }else {
+                    accountBot.sendMessage(sendMessage,"❗\uFE0F Cancel address notification successful.");
+                }
                 return;
             }else if (callbackData.equals("设置名称")) {
                 // 找到第一个左括号和右括号的位置
@@ -195,15 +240,28 @@ public class NowExchange {
                 int end = text.indexOf(')', start + 1);
                 // 提取括号内的内容
                 String address = text.substring(start + 1, end).trim();
-                String result="⁉\uFE0F 为您的每一个钱包设置单独的名字，方便您进行多钱包监听并识别\n" +
-                        "\n" +
-                        "\uD83D\uDCB3|"+address+"\n" +
-                        "                \n" +
-                        "接下来 复制您的钱包地址 回复 如下消息 即可修改您的钱包地址备注\n" +
-                        "## 后面的就是您钱包地址的新备注\n" +
-                        "\n" +
-                        "                    \n" +
-                        "如："+address+"##钱多多";
+                String result;
+                if (groupInfoSetting.getEnglish()){
+                    result="⁉\uFE0F 为您的每一个钱包设置单独的名字，方便您进行多钱包监听并识别\n" +
+                            "\n" +
+                            "\uD83D\uDCB3|"+address+"\n" +
+                            "                \n" +
+                            "接下来 复制您的钱包地址 回复 如下消息 即可修改您的钱包地址备注\n" +
+                            "## 后面的就是您钱包地址的新备注\n" +
+                            "\n" +
+                            "                    \n" +
+                            "如："+address+"##钱多多";
+                }else {
+                    result="⁉\uFE0F Set a separate name for each of your wallets to facilitate multi-wallet monitoring and identification\n" +
+                            "\n" +
+                            "\uD83D\uDCB3|"+address+"\n" +
+                            "                \n" +
+                            "Next, copy your wallet address and reply to the following message to modify your wallet address note\n" +
+                            "## The following is the new note of your wallet address\n" +
+                            "\n" +
+                            "                    \n" +
+                            "example："+address+"##Lots of money";
+                }
                 accountBot.sendMessage(sendMessage,result);
                 return;
             }else if (callbackData.equals("查询余额")) {
@@ -229,17 +287,31 @@ public class NowExchange {
                 String usdt;
                 String trx;
                 if (bigDecimal.get()!=null){
-                    usdt="\uD83D\uDCB0 余额: "+bigDecimal+" U\n";
+                    if (groupInfoSetting.getEnglish()){
+                        usdt="\uD83D\uDCB0 余额: "+bigDecimal+" U\n";
+                    }else {
+                        usdt="\uD83D\uDCB0 Balance: "+bigDecimal+" U\n";
+                    }
                 }else {
-                    usdt="\uD83D\uDCB0 余额: 0 U\n";
+                    if (groupInfoSetting.getEnglish()){
+                        usdt="\uD83D\uDCB0 余额: 0 U\n";
+                    }else {
+                        usdt="\uD83D\uDCB0 Balance: 0 U\n";
+                    }
                 }
                 if (trxBigDecimal.get()!=null){
                     trx="\uD83D\uDCB0 "+trxBigDecimal+" TRX\n";
                 }else {
                     trx ="\uD83D\uDCB0 : 0 TRX\n";
                 }
+                String t1;
+                if (groupInfoSetting.getEnglish()){
+                    t1="地址";
+                }else {
+                    t1="Address";
+                }
                 String result="➖➖➖➖➖➖➖➖➖➖➖\n" +
-                        "✉\uFE0F 地址： "+tronAccount.getAddress()+"\n" +
+                        "✉\uFE0F "+t1+"： "+tronAccount.getAddress()+"\n" +
                         usdt+trx+
                         "➖➖➖➖➖➖➖➖➖➖➖";
                 accountBot.sendMessage(sendMessage,result);
@@ -255,23 +327,35 @@ public class NowExchange {
                 payMethod="支付宝";
             }
             String string = this.fetchRealTimeUSDTPriceFromOKX("");
-            // 使用缓存的数据
-            String result = "欧易网商家实时交易汇率top10\n" +
-                    string + "\n" +
-                    "本群费率：" + rate.getRate() + "%\n" +
-                    "本群汇率：" + rate.getExchange();
+            String result;
+            if (groupInfoSetting.getEnglish()){
+                result = "欧易网商家实时交易汇率top10\n" +
+                        string + "\n" +
+                        "本群费率：" + rate.getRate() + "%\n" +
+                        "本群汇率：" + rate.getExchange();
+            }else{
+                result = "Real-time exchange rate for merchants on OUYI top10\n" +
+                        string + "\n" +
+                        "This group rate：" + rate.getRate() + "%\n" +
+                        "Exchange rate of this group：" + rate.getExchange();
+            }
+
             ButtonList buttonList = new ButtonList();
             EditMessageText editMessage = new EditMessageText();
-            GroupInfoSetting groupInfoSetting = groupInfoSettingMapper.selectOne(new QueryWrapper<GroupInfoSetting>().eq("group_id", chatId));
             buttonList.editText(editMessage,chatId+"",payMethod,groupInfoSetting);
             // 更新消息文本
             accountBot.editMessageText(editMessage,chatId, messageId, result);
         }
     }
-    private void getWallerListener(Message message, SendMessage sendMessage, String callbackData,Map<String, String> map1) {
+    private void getWallerListener(Message message, SendMessage sendMessage, String callbackData,Map<String, String> map1,GroupInfoSetting groupInfoSetting) {
         String urls = tranHistoryUrl+callbackData;//callbackData这里的key昵称
         List<TronHistoryDTO> tradingList=restTemplateConfig.getForObjectHistoryTrading(urls,TronHistoryDTO.class);
-        String result="\uD83D\uDD30 ("+callbackData+")共:("+tradingList.size()+")笔交易\n";
+        String result;
+        if (groupInfoSetting.getEnglish()){
+            result="\uD83D\uDD30 ("+callbackData+")共:("+tradingList.size()+")笔交易\n";
+        }else {
+            result="\uD83D\uDD30 ("+callbackData+")count:("+tradingList.size()+")Transactions\n";
+        }
         StringBuilder stringBuilder = new StringBuilder();
         stringBuilder.append(result);
         for (int i = 0; i < tradingList.size(); i++) {
@@ -280,35 +364,61 @@ public class NowExchange {
             BigDecimal balance = new BigDecimal(tradingList.get(i).getQuant());
             // 计算移动小数点后的 balance
             BigDecimal bigDecimal = balance.divide(BigDecimal.TEN.pow(tradingList.get(i).getTokenInfo().getTokenDecimal()));
-            String type=tradingList.get(i).getTo_address().equals(callbackData)==true?"入账":"出账";
-            stringBuilder.append("TXID :"+tradingList.get(i).getTransaction_id()+"\n");
-            stringBuilder.append("收款人 :\uD83E\uDD16 \n监控钱包：("+tradingList.get(i).getTo_address()+")\n");
-            stringBuilder.append("付款人 :"+tradingList.get(i).getFrom_address()+"\n");
-            stringBuilder.append("类型 :"+type+"\n");
-            stringBuilder.append("币种 :"+tradingList.get(i).getTokenInfo().getTokenAbbr()+"\n");
-            stringBuilder.append("金额 :"+bigDecimal+"\n");
-            stringBuilder.append("时间 :"+sdf.format(new Date(tradingList.get(i).getBlock_ts()))+"\n");
-            stringBuilder.append("\n" +
-                    " ");
+            if (groupInfoSetting.getEnglish()){
+                String type=tradingList.get(i).getTo_address().equals(callbackData)==true?"入账":"出账";
+                stringBuilder.append("TXID :"+tradingList.get(i).getTransaction_id()+"\n");
+                stringBuilder.append("收款人 :\uD83E\uDD16 \n监控钱包：("+tradingList.get(i).getTo_address()+")\n");
+                stringBuilder.append("付款人 :"+tradingList.get(i).getFrom_address()+"\n");
+                stringBuilder.append("类型 :"+type+"\n");
+                stringBuilder.append("币种 :"+tradingList.get(i).getTokenInfo().getTokenAbbr()+"\n");
+                stringBuilder.append("金额 :"+bigDecimal+"\n");
+                stringBuilder.append("时间 :"+sdf.format(new Date(tradingList.get(i).getBlock_ts()))+"\n");
+                stringBuilder.append("\n" +
+                        " ");
+            }else {
+                String type=tradingList.get(i).getTo_address().equals(callbackData)==true?"Entry" : "Out";
+                stringBuilder.append("TXID :"+tradingList.get(i).getTransaction_id()+"\n");
+                stringBuilder.append("Payee :\uD83E\uDD16 \nMonitoring Wallet：("+tradingList.get(i).getTo_address()+")\n");
+                stringBuilder.append("Payer :"+tradingList.get(i).getFrom_address()+"\n");
+                stringBuilder.append("Type :"+type+"\n");
+                stringBuilder.append("Currency :"+tradingList.get(i).getTokenInfo().getTokenAbbr()+"\n");
+                stringBuilder.append("Amount :"+bigDecimal+"\n");
+                stringBuilder.append("Time :"+sdf.format(new Date(tradingList.get(i).getBlock_ts()))+"\n");
+                stringBuilder.append("\n" +
+                        " ");
+            }
         }
         ButtonList buttonList=new ButtonList();
         Map<String, String> map = new HashMap<>();
-        GroupInfoSetting groupInfoSetting = groupInfoSettingMapper.selectOne(new QueryWrapper<GroupInfoSetting>().eq("group_id", message.getChatId().toString()));
-        map.put("设置名称","设置名称");
-        map.put("取消通知","取消通知");
-        map.put("查询余额","查询余额");
-        buttonList.sendButton(sendMessage,message.getChatId().toString(),map,groupInfoSetting);
+        if (groupInfoSetting.getEnglish()){
+            map.put("设置名称","设置名称");
+            map.put("取消通知","取消通知");
+            map.put("查询余额","查询余额");
+        }else  {
+            map.put("Set Name","设置名称");
+            map.put("Cancel Notice","取消通知");
+            map.put("Check balance","查询余额");
+        }
+        buttonList.sendButton(sendMessage,message.getChatId().toString(),map);
         accountBot.sendMessage(sendMessage,stringBuilder.toString());
     }
 
 
-    public void getNowExchange(SendMessage sendMessage, UserDTO userDTO, Rate rate) {
+    public void getNowExchange(SendMessage sendMessage, UserDTO userDTO, Rate rate,GroupInfoSetting groupInfoSetting) {
         String string = this.fetchRealTimeUSDTPriceFromOKX("");
-        GroupInfoSetting groupInfoSetting = groupInfoSettingMapper.selectOne(new QueryWrapper<GroupInfoSetting>().eq("group_id", userDTO.getGroupId()));
-        String result= "欧易商家实时交易汇率top10\n" +
-                string+ "\n" +
-                "本群费率："+rate.getRate()+"%\n" +
-                "本群汇率："+rate.getExchange();
+        String result;
+        if (groupInfoSetting.getEnglish()){
+            result= "欧易商家实时交易汇率top10\n" +
+                    string+ "\n" +
+                    "本群费率："+rate.getRate()+"%\n" +
+                    "本群汇率："+rate.getExchange();
+
+        }else{
+            result = "Real-time exchange rate for merchants on OUYI top10\n" +
+                    string + "\n" +
+                    "This group rate：" + rate.getRate() + "%\n" +
+                    "Exchange rate of this group：" + rate.getExchange();
+        }
         ButtonList buttonList = new ButtonList();
         buttonList.exchangeList(sendMessage,userDTO.getGroupId(),groupInfoSetting);
         accountBot.sendMessage(sendMessage,result);

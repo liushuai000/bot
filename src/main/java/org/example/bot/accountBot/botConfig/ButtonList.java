@@ -1,18 +1,12 @@
 package org.example.bot.accountBot.botConfig;
 
 
-import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import lombok.extern.slf4j.Slf4j;
-import org.example.bot.accountBot.mapper.GroupInfoSettingMapper;
 import org.example.bot.accountBot.pojo.GroupInfoSetting;
-import org.example.bot.accountBot.utils.TranslationExample;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Component;
 import org.springframework.stereotype.Service;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageText;
-import org.telegram.telegrambots.meta.api.objects.Message;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
 
@@ -31,7 +25,7 @@ public class ButtonList {
 
 //    protected String url="http://192.168.0.2:8080/";
     //map key:buttonText value:callbackData
-    public void sendButton(SendMessage sendMessage, String groupId, Map<String,String> buttonText,GroupInfoSetting groupInfoSetting) {
+    public void sendButton(SendMessage sendMessage, String groupId, Map<String,String> buttonText) {
         InlineKeyboardMarkup markup = new InlineKeyboardMarkup();
         List<List<InlineKeyboardButton>> rowsInline = new ArrayList<>();
         List<InlineKeyboardButton> rowInline = new ArrayList<>();
@@ -39,11 +33,7 @@ public class ButtonList {
             String buttonTextName = entry.getKey();
             String callbackData = entry.getValue();
             InlineKeyboardButton button = new InlineKeyboardButton();
-            if (groupInfoSetting.getEnglish()){
-                button.setText(buttonTextName);
-            }else {
-                button.setText(TranslationExample.translateText(buttonTextName,groupInfoSetting.getEnglish()));
-            }
+            button.setText(buttonTextName);
             button.setCallbackData(callbackData);
             rowInline.add(button);
         }

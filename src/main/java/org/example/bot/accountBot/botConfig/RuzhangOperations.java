@@ -103,13 +103,13 @@ public class RuzhangOperations {
             rates.setAddTime(new Date());
             log.info("rates:{}", rates);
             rateService.insertRate(rates);
-            accountBot.sendMessage(sendMessage, "设置成功,当前费率为：" + rate);
+            accountBot.sendMessage(sendMessage, "The setting is successful, the current rate is：" + rate);
         } else if (text.toLowerCase().startsWith("set exchange rate")) {
             if (text.substring("set exchange rate".length()).trim().startsWith("-")) {
                 rates.setAddTime(new Date());
                 rates.setExchange(new BigDecimal(1));
                 rateService.insertRate(rates);
-                accountBot.sendMessage(sendMessage, "当前汇率已设置为默认汇率：1");
+                accountBot.sendMessage(sendMessage, "The current exchange rate is set as the default exchange rate：1");
             } else {
                 //如果设置汇率为0 就设置成1
                 if (text.substring("set exchange rate".length()).trim().equals("0")) {
@@ -119,7 +119,7 @@ public class RuzhangOperations {
                 }
                 rates.setAddTime(new Date());
                 rateService.insertRate(rates);
-                accountBot.sendMessage(sendMessage, "设置成功,当前汇率为：" + text.substring("set exchange rate".length()));
+                accountBot.sendMessage(sendMessage, "The setting is successful, the current exchange rate is：" + text.substring("set exchange rate".length()));
             }
         }
     }
@@ -249,11 +249,11 @@ public class RuzhangOperations {
             } else {
                 return;
             }
-            accountBot.sendMessage(sendMessage, "取消成功");
+            accountBot.sendMessage(sendMessage, "Cancel Success");
         }
         if (text.equals("cancel deposit")) {
             if (accounts.isEmpty()) {
-                accountBot.sendMessage(sendMessage, "撤销未成功! 账单为空");
+                accountBot.sendMessage(sendMessage, "Cancellation failed! The bill is empty");
             } else {
                 List<Account> sortedUserList = accounts.stream().sorted(Comparator.comparing(Account::getAddTime)) // 按时间倒序排序
                         .collect(Collectors.toList());
@@ -268,12 +268,11 @@ public class RuzhangOperations {
                 }
                 accountService.deleteInData(String.valueOf(account.getId()), userDTO.getGroupId());
                 issueService.updateIssueDown(sortedUserList.get(sortedUserList.size() - 1).getDown(), userDTO.getGroupId());
-                accountBot.sendMessage(sendMessage, "撤销成功");
+                accountBot.sendMessage(sendMessage, "Cancellation successful");
             }
         } else if (text.equals("undo delivery")) {
             if (issueList.isEmpty()) {
-                accountBot.sendMessage(sendMessage, "撤销未成功! 账单为空");
-                return;
+                accountBot.sendMessage(sendMessage, "Cancellation failed! The bill is empty");
             } else {
                 List<Issue> sortedUserList = issueList.stream().sorted(Comparator.comparing(Issue::getAddTime)) // 按时间倒序排序
                         .collect(Collectors.toList());
@@ -288,7 +287,7 @@ public class RuzhangOperations {
                 }
                 issueService.deleteNewestIssue(String.valueOf(issue.getId()), userDTO.getGroupId());
                 accountService.updateNewestData(sortedUserList.get(sortedUserList.size() - 1).getDown(), userDTO.getGroupId());
-                accountBot.sendMessage(sendMessage, "撤销成功");
+                accountBot.sendMessage(sendMessage, "Cancellation successful");
             }
         }
 
@@ -577,7 +576,7 @@ public class RuzhangOperations {
                 updateAccount = accounts.get(accounts.size() - 1);
             }
             //发送要显示的消息
-            sendText1 = getSendText(updateAccount, accounts, rate, num, newAccountList, newIssueList, issues, issue, status);
+            sendText1 = getSendText(updateAccount, accounts, rate, num, newAccountList, newIssueList, issues, issue, status,groupInfoSetting);
             sendMessage.setText(sendText1);
             buttonList.implList(sendMessage, userDTO.getGroupId(), userDTO.getGroupTitle(), groupInfoSetting);
         }
@@ -587,7 +586,7 @@ public class RuzhangOperations {
 
     //入账时发送的消息  显示操作人也用这个
     public String getSendText(Account updateAccount, List<Account> accounts, Rate rate, BigDecimal num, List<String> newList, List<String> newIssueList,
-                              List<Issue> issuesList, Issue issue, Status status) {
+                              List<Issue> issuesList, Issue issue, Status status,GroupInfoSetting groupInfoSetting) {
         String iusseText;
         int issueHandleStatus = 0;
         int issueCallBackStatus = 0;
@@ -626,7 +625,11 @@ public class RuzhangOperations {
         if (status.getDisplaySort() == 0) {
             List<Issue> collect = issuesList.stream().filter(Objects::nonNull).filter(issue1 -> isNotBlank(issue1.getCallBackUserId())).collect(Collectors.toList());
             Map<String, List<Issue>> assembleIssueMap = collect.stream().collect(Collectors.groupingBy(Issue::getCallBackUserId, Collectors.toList()));
-            issuesStringBuilder.append("出账分类：\n");
+            if(groupInfoSetting.getEnglish()){
+                issuesStringBuilder.append("出账分类：\n");
+            }else {
+                issuesStringBuilder.append("Outgoing payment category：\n");
+            }
             assembleIssueMap.forEach((userId, issueList) -> {
                 BigDecimal tot = new BigDecimal(0);
                 BigDecimal down = new BigDecimal(0);
@@ -657,7 +660,12 @@ public class RuzhangOperations {
         if (!issuesList.isEmpty()) {
             sxfCount2 = issuesList.stream().map(Issue::getIssueHandlerMoney).reduce(BigDecimal.ZERO, BigDecimal::add);
             BigDecimal downed = issuesList.stream().filter(Objects::nonNull).filter(i->!i.getPm()).map(Issue::getDowned).reduce(BigDecimal.ZERO, BigDecimal::add);
-            iusseText = "\n共" + (issuesList.size()) + "笔:\n" + issuesStringBuilder;
+            if (groupInfoSetting.getEnglish()){
+//                iusseText = "\n共" + (issuesList.size()) + "笔:\n" + issuesStringBuilder;
+                iusseText = "\n今日下发：（" + (issuesList.size()) + "笔）\n" + issuesStringBuilder;
+            }else {
+                iusseText = "\nIssued  ：" + (issuesList.size()) + " \n" + issuesStringBuilder;
+            }
 //            iusseText = "\n已出账: <strong>" + downed + "</strong>，:共" + (issuesList.size()) + "笔:\n" + issuesStringBuilder; 暂时不显示已入账出账
         } else {
             if (updateAccount.getDown() != null) {
@@ -665,7 +673,11 @@ public class RuzhangOperations {
             }
             issue.setDown(BigDecimal.ZERO);
             issue.setDowned(BigDecimal.ZERO);
-            iusseText = "\n\n" + "已出账\n" + "无记录";
+            if (groupInfoSetting.getEnglish()){
+                iusseText = "\n\n" + "今日下发：（0笔）\n" + "无记录";
+            }else{
+                iusseText = "\n\n" + "Issued  ：\n" + "No records";
+            }
         }
         int accountHandleStatus = 0;
         int accountCallBackStatus = 0;
@@ -740,7 +752,11 @@ public class RuzhangOperations {
             //显示分类
             if (status.getDisplaySort() == 0) {
                 List<Account> collect = accounts.stream().filter(Objects::nonNull).filter(account -> isNotBlank(account.getCallBackUserId())).collect(Collectors.toList());
-                stringBuilder.append("入款分类：" + "\n");
+                if (groupInfoSetting.getEnglish()){
+                    stringBuilder.append("入款分类：" + "\n");
+                }else{
+                    stringBuilder.append("Deposit Category：" + "\n");
+                }
                 Map<String, List<Account>> assembleAccountMap = collect.stream().collect(Collectors.groupingBy(Account::getCallBackUserId, Collectors.toList()));
                 assembleAccountMap.forEach((userId, accountList) -> {
                     BigDecimal tot = new BigDecimal(0);
@@ -769,28 +785,73 @@ public class RuzhangOperations {
             }
             String sxf = "";
             BigDecimal sxfCount = accounts.stream().map(Account::getAccountHandlerMoney).reduce(BigDecimal.ZERO, BigDecimal::add);
-            String rukuan = status.getAccountHandlerMoney().compareTo(bigDecimal0) == 0 ? "" : "\n单笔入款手续费：<strong>" + status.getAccountHandlerMoney().stripTrailingZeros().toPlainString()+"</strong>";
-            String xiafa = status.getIssueHandlerMoney().compareTo(bigDecimal0) == 0 ? "" : "\n单笔下发手续费：<strong>" + status.getIssueHandlerMoney().stripTrailingZeros().toPlainString()+"</strong>";
-            String count = sxfCount.add(sxfCount2).compareTo(bigDecimal0) == 0 ? "" : "\n手续费总：<strong>" + sxfCount.add(sxfCount2).setScale(0, RoundingMode.HALF_UP).stripTrailingZeros().toPlainString()+"</strong>";
+            String dbr1;
+            String dbx1;
+            String sxfz1;
+            String xfhl1;
+            String xffl1;
+            String sdtj1;
+            String zrz1;
+            String hl1;
+            String fl1;
+            String yxf1;//应下发
+            String yxf2;//已下发
+            String wxf1;
+            String jrrk1;
+            String b1;
+            if (groupInfoSetting.getEnglish()){
+                dbr1="单笔入款手续费";
+                dbx1="单笔下发手续费";
+                sxfz1="手续费总";
+                xfhl1="下发汇率";
+                xffl1="下发费率";
+                sdtj1="手动添加";
+                zrz1="总入账";
+                hl1="汇率";
+                fl1="费率";
+                yxf1="应下发";
+                yxf2="已下发";
+                wxf1="未下发";
+                jrrk1="今日入款：（";
+                b1="笔）";
+            }else{
+                dbr1="Single deposit fee";
+                dbx1="Single transaction fee";
+                sxfz1="Fee total";
+                xfhl1="Sending exchange rate";
+                xffl1="Sending rate";
+                sdtj1="Manually add";
+                zrz1="Total Account";
+                hl1="exchange rate";
+                fl1="Rate";
+                yxf1="Should be issued";
+                yxf2="Issued";
+                wxf1="Unissued";
+                jrrk1="Deposit  ：";
+                b1="";
+            }
+            String rukuan = status.getAccountHandlerMoney().compareTo(bigDecimal0) == 0 ? "" : "\n"+dbr1+"：<strong>" + status.getAccountHandlerMoney().stripTrailingZeros().toPlainString()+"</strong>";
+            String xiafa = status.getIssueHandlerMoney().compareTo(bigDecimal0) == 0 ? "" : "\n"+dbx1+"：<strong>" + status.getIssueHandlerMoney().stripTrailingZeros().toPlainString()+"</strong>";
+            String count = sxfCount.add(sxfCount2).compareTo(bigDecimal0) == 0 ? "" : "\n"+sxfz1+"：<strong>" + sxfCount.add(sxfCount2).setScale(0, RoundingMode.HALF_UP).stripTrailingZeros().toPlainString()+"</strong>";
             sxf = rukuan + xiafa + count;//sxf2 是下发手续费
-            String downExchangeText = status.getDownExchange().compareTo(bigDecimal0) == 0 ? "" : "\n下发汇率：<strong>" + status.getDownExchange().stripTrailingZeros().toPlainString()+"</strong>";
-            String downRate = status.getDownRate().compareTo(bigDecimal0) == 0 ? "" : "\n下发费率：<strong>" + status.getDownRate().stripTrailingZeros().toPlainString()+"</strong>";
+            String downExchangeText = status.getDownExchange().compareTo(bigDecimal0) == 0 ? "" : "\n"+xfhl1+"：<strong>" + status.getDownExchange().stripTrailingZeros().toPlainString()+"</strong>";
+            String downRate = status.getDownRate().compareTo(bigDecimal0) == 0 ? "" : "\n"+xffl1+"：<strong>" + status.getDownRate().stripTrailingZeros().toPlainString()+"</strong>";
             String pAmountText = status.getPmoney().compareTo(BigDecimal.ZERO) != 0
-                    ? "\n手动添加 ： <strong>" + status.getPmoney().setScale(2, RoundingMode.HALF_UP).stripTrailingZeros().toPlainString()+"</strong>"
+                    ? "\n"+sdtj1+" ： <strong>" + status.getPmoney().setScale(2, RoundingMode.HALF_UP).stripTrailingZeros().toPlainString()+"</strong>"
                     : "";
             //            入款分类：
-            return "\n共" + (accounts.size()) + "笔:\n" +
+            return "\n"+jrrk1+ (accounts.size()) + b1+"\n" +
 //                    "\n已入账：<strong>" + total + "</strong>，:共" + (accounts.size()) + "笔:\n" +  暂时不用显示 已入账
                     stringBuilder + iusseText + "\n" +
-                    "\n\n总入账：<strong>" + total.setScale(2, RoundingMode.HALF_UP).stripTrailingZeros().toPlainString() +"</strong>"+
-                    (rate.getExchange().compareTo(BigDecimal.ONE) > 0 ? "\n汇率 ： <strong>" + rate.getExchange().setScale(2, RoundingMode.HALF_UP).stripTrailingZeros().toPlainString() +"</strong>": "") +
-                    (rate.getRate().compareTo(BigDecimal.ZERO) > 0 ? "\n费率：<strong>" + rate.getRate().setScale(2, RoundingMode.HALF_UP).stripTrailingZeros().toPlainString() +"</strong>": "") +
+                    "\n\n"+zrz1+"：<strong>" + total.setScale(2, RoundingMode.HALF_UP).stripTrailingZeros().toPlainString() +"</strong>"+
+                    (rate.getExchange().compareTo(BigDecimal.ONE) > 0 ? "\n"+hl1+" ： <strong>" + rate.getExchange().setScale(2, RoundingMode.HALF_UP).stripTrailingZeros().toPlainString() +"</strong>": "") +
+                    (rate.getRate().compareTo(BigDecimal.ZERO) > 0 ? "\n"+fl1+"：<strong>" + rate.getRate().setScale(2, RoundingMode.HALF_UP).stripTrailingZeros().toPlainString() +"</strong>": "") +
                     downExchangeText +
                     downRate +
-                    "\n应下发 ： <strong>" + yxf +"</strong>"+
-                    "\n已下发 ： <strong>" + yixf +"</strong>"+
+                    "\n"+yxf1+" ： <strong>" + yxf +"</strong>"+
+                    "\n"+yxf2+" ： <strong>" + yixf +"</strong>"+
                     pAmountText +
-                    "\n未下发 ： <strong>" + wxf +"</strong>"+
+                    "\n"+wxf1+" ： <strong>" + wxf +"</strong>"+
                     (status.getShowHandlerMoneyStatus() == 0 ? sxf : "");
         } else {
             //已下发
@@ -838,28 +899,76 @@ public class RuzhangOperations {
                 }
             }
             String sxf = "";
+            String dbr1;
+            String dbx1;
+            String sxfz1;
+            String xfhl1;
+            String xffl1;
+            String sdtj1;
+            String zrz1;
+            String hl1;
+            String fl1;
+            String yxf1;//应下发
+            String yxf2;//已下发
+            String wxf1;
+            String none1;//无记录
+            String jrrk1;
+            String b1;
+            if (groupInfoSetting.getEnglish()){
+                dbr1="单笔入款手续费";
+                dbx1="单笔下发手续费";
+                sxfz1="手续费总";
+                xfhl1="下发汇率";
+                xffl1="下发费率";
+                sdtj1="手动添加";
+                zrz1="总入账";
+                hl1="汇率";
+                fl1="费率";
+                yxf1="应下发";
+                yxf2="已下发";
+                wxf1="未下发";
+                none1="无记录";
+                jrrk1="今日入款：（";
+                b1="笔）";
+            }else{
+                dbr1="Single deposit fee";
+                dbx1="Single transaction fee";
+                sxfz1="Fee total";
+                xfhl1="Sending exchange rate";
+                xffl1="Sending rate";
+                sdtj1="Manually add";
+                zrz1="Total Account";
+                hl1="exchange rate";
+                fl1="Rate";
+                yxf1="Should be issued";
+                yxf2="Issued";
+                wxf1="Unissued";
+                none1="No record";
+                jrrk1="Deposit  ：";
+                b1="";
+            }
             BigDecimal sxfCount = accounts.stream().map(Account::getAccountHandlerMoney).reduce(BigDecimal.ZERO, BigDecimal::add);
-            String rukuan = status.getAccountHandlerMoney().compareTo(bigDecimal0) == 0 ? "" : "\n单笔入款手续费：<strong>" + status.getAccountHandlerMoney()+"</strong>";
-            String xiafa = status.getIssueHandlerMoney().compareTo(bigDecimal0) == 0 ? "" : "\n单笔下发手续费：<strong>" + status.getIssueHandlerMoney()+"</strong>";
-            String count = sxfCount.add(sxfCount2).compareTo(bigDecimal0) == 0 ? "" : "\n手续费总：<strong>" + sxfCount.add(sxfCount2).setScale(0, RoundingMode.HALF_UP)+"</strong>";
+            String rukuan = status.getAccountHandlerMoney().compareTo(bigDecimal0) == 0 ? "" : "\n"+dbr1+"：<strong>" + status.getAccountHandlerMoney()+"</strong>";
+            String xiafa = status.getIssueHandlerMoney().compareTo(bigDecimal0) == 0 ? "" : "\n"+dbx1+"：<strong>" + status.getIssueHandlerMoney()+"</strong>";
+            String count = sxfCount.add(sxfCount2).compareTo(bigDecimal0) == 0 ? "" : "\n"+sxfz1+"：<strong>" + sxfCount.add(sxfCount2).setScale(0, RoundingMode.HALF_UP)+"</strong>";
             sxf = rukuan + xiafa + count;//sxf2 是下发手续费
-            String downExchangeText = status.getDownExchange().compareTo(bigDecimal0) == 0 ? "" : "\n下发汇率：<strong>" + status.getDownExchange()+"</strong>";
-            String downRate = status.getDownRate().compareTo(bigDecimal0) == 0 ? "" : "\n下发费率：<strong>" + status.getDownRate()+"</strong>";
+            String downExchangeText = status.getDownExchange().compareTo(bigDecimal0) == 0 ? "" : "\n"+xfhl1+"：<strong>" + status.getDownExchange()+"</strong>";
+            String downRate = status.getDownRate().compareTo(bigDecimal0) == 0 ? "" : "\n"+xffl1+"：<strong>" + status.getDownRate()+"</strong>";
             String pAmountText = status.getPmoney().compareTo(BigDecimal.ZERO) != 0
-                    ? "\n手动添加 ： <strong>" + status.getPmoney().setScale(2, RoundingMode.HALF_UP).stripTrailingZeros().toPlainString()+"</strong>"
+                    ? "\n"+sdtj1+" ： <strong>" + status.getPmoney().setScale(2, RoundingMode.HALF_UP).stripTrailingZeros().toPlainString()+"</strong>"
                     : "";
-            return "\n共" + (accounts.size()) + "笔:\n" +
+            return "\n"+jrrk1+ (accounts.size()) + b1+"\n" +
 //                    "\n已入账：<strong>" + total + "</strong>，:共" + (accounts.size()) + "笔:\n" + 暂时不用显示已入账
-                    " " + "无记录" + iusseText +
-                    "\n\n总入账：<strong>" + 0 +"</strong>"+
-                    (rate.getExchange().compareTo(BigDecimal.ONE) > 0 ? "\n汇率 ： <strong>" + rate.getExchange().setScale(2, RoundingMode.HALF_UP).stripTrailingZeros().toPlainString()+"</strong>" : "") +
-                    (rate.getRate().compareTo(BigDecimal.ZERO) > 0 ? "\n费率：<strong>" + rate.getRate().setScale(2, RoundingMode.HALF_UP).stripTrailingZeros().toPlainString()+"</strong>" : "") +
+                    " " + ""+none1+"" + iusseText +
+                    "\n\n"+zrz1+"：<strong>" + 0 +"</strong>"+
+                    (rate.getExchange().compareTo(BigDecimal.ONE) > 0 ? "\n"+hl1+" ： <strong>" + rate.getExchange().setScale(2, RoundingMode.HALF_UP).stripTrailingZeros().toPlainString()+"</strong>" : "") +
+                    (rate.getRate().compareTo(BigDecimal.ZERO) > 0 ? "\n"+fl1+"：<strong>" + rate.getRate().setScale(2, RoundingMode.HALF_UP).stripTrailingZeros().toPlainString()+"</strong>" : "") +
                     downExchangeText +
                     downRate +
-                    "\n应下发 ： <strong>" + yxf +"</strong>"+
-                    "\n已下发 ： <strong>" + yixf +"</strong>"+
+                    "\n"+yxf1+" ： <strong>" + yxf +"</strong>"+
+                    "\n"+yxf2+" ： <strong>" + yixf +"</strong>"+
                     pAmountText +
-                    "\n未下发 ： <strong>" + wxf +"</strong>"+
+                    "\n"+wxf1+" ： <strong>" + wxf +"</strong>"+
                     (status.getShowHandlerMoneyStatus() == 0 ? sxf : "");
         }
 

@@ -55,11 +55,7 @@ public class PaperPlaneBotSinglePerson {
     @Value("${telegram.bot.username}")
     protected String username;
     @Autowired
-    ButtonList buttonList;
-    @Autowired
     UserNormalService userNormalService;
-    @Autowired
-    UserNormalMapper userNormalMapper;
     @Autowired
     private GroupInfoSettingMapper groupInfoSettingMapper;
     @Autowired
@@ -72,7 +68,6 @@ public class PaperPlaneBotSinglePerson {
     RestTemplateConfig restTemplateConfig;
     // 创建 SimpleDateFormat 对象，指定日期格式
     SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-
     // 定时任务调度器
     private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(16);
     @Qualifier("userOperationService")
@@ -127,13 +122,19 @@ public class PaperPlaneBotSinglePerson {
                                 processedTransactions.add(transactionKey); // 标记为已处理
                                 // 构建消息内容
                                 String result = buildTransactionMessage(t, address);
+                                String resultEnglish = buildTransactionMessageEnglish(t, address);
                                 // 给所有监听这个地址的用户发送消息
                                 listeners.forEach(listener -> {
                                     try {
                                         SendMessage sendMessage = new SendMessage();
                                         sendMessage.setChatId(listener.getUserId());
                                         sendMessage.disableWebPagePreview();
-                                        accountBot.sendMessage(sendMessage, result);
+                                        GroupInfoSetting groupInfoSetting = groupInfoSettingMapper.selectOne(new QueryWrapper<GroupInfoSetting>().eq("group_id", listener.getUserId()));
+                                        if (groupInfoSetting.getEnglish()){
+                                            accountBot.sendMessage(sendMessage, result);
+                                        }else{
+                                            accountBot.sendMessage(sendMessage, resultEnglish);
+                                        }
                                     } catch (Exception e) {
                                         log.error("发送消息失败给用户 {}: {}", listener.getUserId(), e.getMessage());
                                         // 可选：删除异常用户监听器
@@ -163,10 +164,52 @@ public class PaperPlaneBotSinglePerson {
 
         return sb.toString();
     }
+    private String buildTransactionMessageEnglish(TronHistoryDTO t, String address) {
+        BigDecimal balance = new BigDecimal(t.getQuant());
+        BigDecimal bigDecimal = balance.divide(BigDecimal.TEN.pow(t.getTokenInfo().getTokenDecimal()));
+        String type = t.getTo_address().equals(address) ? "Entry" : "Out";
+        StringBuilder sb = new StringBuilder();
+        sb.append("Transaction amount： ").append(bigDecimal).append(t.getTokenInfo().getTokenAbbr()).append(" Confirmed #").append(type).append("\n")
+                .append("Trading Currency： ❇\uFE0F #").append(t.getTokenInfo().getTokenAbbr()).append("\n")
+                .append("Collection address： <code>").append(t.getTo_address()).append("</code>\n")
+                .append("Payment address: <code>").append(t.getFrom_address()).append("</code>\n")
+                .append("Transaction hash： ").append(t.getTransaction_id())
+                .append(" (https://tronscan.org/#/transaction/").append(t.getTransaction_id()).append(")\n")
+                .append("Transfer time：").append(sdf.format(new Date(t.getBlock_ts()))).append("\n")
+                .append("\uD83D\uDCE3 monitoring address (").append(address).append(")");
 
+        return sb.toString();
+    }
+    public void switchEn(String text,Long chatId,GroupInfoSetting groupInfoSetting){
+        if (text.equals("切换中文") || text.equals("切换英文") ||  text.equals("switch to chinese")||  text.equals("switch to english")){
+            if (text.equals("切换中文") || text.equals("switch to chinese")){
+                groupInfoSetting.setEnglish(true);
+            } else if (text.equals("切换英文") || text.equals("switch to english")) {
+                groupInfoSetting.setEnglish(false);
+            }else {
+                groupInfoSetting.setEnglish(true);
+            }
+            groupInfoSettingMapper.updateById(groupInfoSetting);
+            SendMessage sendMessage = new SendMessage();
+            sendMessage.setChatId(chatId);
+            sendMessage.setText("切换成功"+("Switching successful"));
+            accountBot.sendMessage(sendMessage);
+        }
+    }
     //获取个人账户信息
     protected void handleTronAccountMessage(SendMessage sendMessage, Update update,UserDTO userDTO){
         String text = userDTO.getText();
+        GroupInfoSetting groupInfoSetting = groupInfoSettingMapper.selectOne(new QueryWrapper<GroupInfoSetting>().eq("group_id", userDTO.getUserId()));
+        if (groupInfoSetting==null){
+            groupInfoSetting=new GroupInfoSetting();
+            groupInfoSetting.setGroupId(Long.valueOf(userDTO.getUserId()));
+            groupInfoSettingMapper.insert(groupInfoSetting);
+        }
+        if (userDTO.getText().equals("切换中文") || userDTO.getText().equals("切换英文")
+                ||  userDTO.getText().toLowerCase().equals("switch to chinese")||  userDTO.getText().toLowerCase().equals("switch to english")){
+            this.switchEn(userDTO.getText().toLowerCase(), Long.valueOf(userDTO.getUserId()),groupInfoSetting);
+            return;
+        }
         // 检查是否符合标准
         if (text.length() != 34) {
             return;
@@ -174,8 +217,15 @@ public class PaperPlaneBotSinglePerson {
         String userId = userDTO.getUserId();
         String url = tranAccountUrl+text;
         TronAccountDTO tronAccount = restTemplateConfig.getForObjectTronAccount(url);
-        String htmlText = "[USDT余额](https://tronscan.org/#/address/"+ text + "/transfers)";
-        String trxText = "[TRX余额](https://tronscan.org/#/address/"+ text + "/transfers)";
+        String htmlText ;
+        String trxText;
+        if (groupInfoSetting.getEnglish()){
+            htmlText = "[USDT余额](https://tronscan.org/#/address/"+ text + "/transfers)";
+            trxText = "[TRX余额](https://tronscan.org/#/address/"+ text + "/transfers)";
+        }else{
+            htmlText = "[USDT Balance](https://tronscan.org/#/address/"+ text + "/transfers)";
+            trxText = "[TRX Balance](https://tronscan.org/#/address/"+ text + "/transfers)";
+        }
         AtomicReference<BigDecimal> bigDecimal= new AtomicReference<>();
         AtomicReference<String> trxBigDecimal= new AtomicReference<>();
         if (tronAccount.getWithPriceTokens()!=null)
@@ -200,22 +250,38 @@ public class PaperPlaneBotSinglePerson {
         }else {
             trx ="\uD83D\uDCB0 "+trxText+": 0 TRX\n";
         }
-        String result="✅✅✅✅\n" +
-                text+"\n" +
-                "——————————\n" + usdt+ trx+
-                "——————————\n" +
-                "交易次数：" +tronAccount.getTransactions()+"\n"+
-                "   -出："+tronAccount.getTransactions_out()+"\n"+
-                "   -入："+tronAccount.getTransactions_in()+"\n"+
-                "地址创建时间："+sdf.format(new Date(tronAccount.getDate_created()))+"\n"+
-                "最新交易时间："+sdf.format(new Date(tronAccount.getLatest_operation_time()))+"\n";
+        String result;
+        if (groupInfoSetting.getEnglish()){
+            result="✅✅✅✅\n" +
+                    text+"\n" +
+                    "——————————\n" + usdt+ trx+
+                    "——————————\n" +
+                    "交易次数：" +tronAccount.getTransactions()+"\n"+
+                    "   -出："+tronAccount.getTransactions_out()+"\n"+
+                    "   -入："+tronAccount.getTransactions_in()+"\n"+
+                    "地址创建时间："+sdf.format(new Date(tronAccount.getDate_created()))+"\n"+
+                    "最新交易时间："+sdf.format(new Date(tronAccount.getLatest_operation_time()))+"\n";
+        }else{
+            result="✅✅✅✅\n" +
+                    text+"\n" +
+                    "——————————\n" + usdt+ trx+
+                    "——————————\n" +
+                    "Number of transactions：" +tronAccount.getTransactions()+"\n"+
+                    "   -Out："+tronAccount.getTransactions_out()+"\n"+
+                    "   -Enter："+tronAccount.getTransactions_in()+"\n"+
+                    "Address creation time："+sdf.format(new Date(tronAccount.getDate_created()))+"\n"+
+                    "Latest trading hours："+sdf.format(new Date(tronAccount.getLatest_operation_time()))+"\n";
+        }
         ButtonList buttonList = new ButtonList();
         Map<String,String> buttonTextMap=new HashMap<>();
-        buttonTextMap.put("监听该地址","监听该地址");
-        buttonTextMap.put("查询交易记录","查询交易记录");
-        //这里是私聊的查询 所以用user_id
-        GroupInfoSetting groupInfoSetting = groupInfoSettingMapper.selectOne(new QueryWrapper<GroupInfoSetting>().eq("group_id", userDTO.getUserId()));
-        buttonList.sendButton(sendMessage, String.valueOf(userId),buttonTextMap,groupInfoSetting);
+        if (groupInfoSetting.getEnglish()){
+            buttonTextMap.put("监听该地址","监听该地址");
+            buttonTextMap.put("查询交易记录","查询交易记录");
+        }else{
+            buttonTextMap.put("Listen to this address","监听该地址");
+            buttonTextMap.put("Query transaction records","查询交易记录");
+        }
+        buttonList.sendButton(sendMessage, String.valueOf(userId),buttonTextMap);
         accountBot.tronAccountMessageText(sendMessage,userId,result);
     }
 
@@ -251,9 +317,18 @@ public class PaperPlaneBotSinglePerson {
                 String nickName = parts[1];
                 //只有长度大于37才进行修改
                 walletListenerService.updateWalletListener(userDTO.getUserId() + "", address, nickName);
-                messageResult="修改成功";
+                if (groupInfoSetting.getEnglish()){
+                    messageResult="修改成功";
+                }else{
+                    messageResult="Modification successful";
+                }
             } else {
-                messageResult="字符串格式不正确，没有找到 ## 或者 ## 数量不对";
+                if (groupInfoSetting.getEnglish()){
+                    messageResult="字符串格式不正确，没有找到 ## 或者 ## 数量不对";
+                }else{
+                    messageResult="The string format is incorrect, no ## is found or the number of ## is incorrect";
+                }
+
             }
             accountBot.sendMessage(sendMessage,messageResult);
             return;
@@ -327,7 +402,7 @@ public class PaperPlaneBotSinglePerson {
             return;
         } else if (text.startsWith("authorization")) {
             if (text.startsWith("authorization-")&&!userDTO.getUserId().equals(adminUserId) && !userDTO.getUserId().equals(threeAdminUserId) && !userDTO.getUserId().equals(toAdminUserId)){
-                accountBot.sendMessage(sendMessage,"您不是超级管理!无权限设置管理员!");
+                accountBot.sendMessage(sendMessage,"You are not a super administrator! You do not have the authority to set up an administrator!");
                 return;
             }
             boolean matches = text.matches(regexEn);
@@ -337,7 +412,7 @@ public class PaperPlaneBotSinglePerson {
             if (matches) {
                 validTimeText=split3[2];
             }else {
-                accountBot.sendMessage(sendMessage,"格式不匹配!");
+                accountBot.sendMessage(sendMessage,"Format does not match!");
                 return;
             }
             LocalDateTime tomorrow= LocalDateTime.now().plusDays(Long.parseLong(validTimeText));
@@ -389,8 +464,8 @@ public class PaperPlaneBotSinglePerson {
                 userOperation.setCreateTime(new Date());
                 userOperationService.insertUserOperation(userOperation);
             }
-            accountBot.sendMessage(sendMessage,"用户ID: "+userId+" 有效期:"+tomorrow.getYear()+"年"+tomorrow.getMonthValue()+ "月"+
-                    tomorrow.getDayOfMonth()+"日"+ tomorrow.getHour()+"时"+tomorrow.getMinute()+"分" +tomorrow.getSecond()+"秒");
+            accountBot.sendMessage(sendMessage,"User ID: "+userId+" Validity:"+tomorrow.getYear()+"Year"+tomorrow.getMonthValue()+ "month"+
+                    tomorrow.getDayOfMonth()+"day"+ tomorrow.getHour()+"hour"+tomorrow.getMinute()+"minute" +tomorrow.getSecond()+"second");
             return;
         }else if (text.startsWith("删除授权")) {
             if (text.startsWith("删除授权-") && !userDTO.getUserId().equals(adminUserId) &&
@@ -438,19 +513,35 @@ public class PaperPlaneBotSinglePerson {
             return;
         }
         if (text.equals("/start")) {
-            accountBot.tronAccountMessageTextHtml(sendMessage,userDTO.getUserId(),"你好！<b>欢迎使用本机器人：\n" +
-                    "\n" +
-                    "点击下方底部按钮：获取个人信息\n" +
-                    "（将我拉入群组可免费使用48小时）\n" +
-                    "\n" +
-                    "将TRC20地址发送给我，即可设置入款通知；\n" +
-                    "群友在群中发送U地址即可查询该地址当前余额； \n" +
-                    "\n" +
-                    "➖➖➖➖➖➖➖➖➖➖➖\n" +
-                    "本机器人用户名 ： </b><code>@"+username+"</code>\n" +
-                    "\n" +
-                    "<b>联系客服：</b>@vipkefu\n" +
-                    "<b>双向客服：</b>@yaokevipBot");
+            if (groupInfoSetting.getEnglish()){
+                accountBot.tronAccountMessageTextHtml(sendMessage,userDTO.getUserId(),"<b>你好！欢迎使用本机器人：\n" +
+                        "\n" +
+                        "点击下方底部按钮：获取个人信息\n" +
+                        "（将我拉入群组可免费使用48小时）\n" +
+                        "\n" +
+                        "将TRC20地址发送给我，即可设置入款通知；\n" +
+                        "群友在群中发送U地址即可查询该地址当前余额； \n" +
+                        "\n" +
+                        "➖➖➖➖➖➖➖➖➖➖➖\n" +
+                        "本机器人用户名 ： </b><code>@"+username+"</code>\n" +
+                        "\n" +
+                        "<b>联系客服：</b>@vipkefu\n" +
+                        "<b>双向客服：</b>@yaokevipBot");
+            }else{
+                accountBot.tronAccountMessageTextHtml(sendMessage,userDTO.getUserId(),"<b>Hello! Welcome to this robot: \n" +
+                        "\n" +
+                        "Click the bottom button below: Get personal information\n" +
+                        "(Add me to the group for free use for 48 hours)\n" +
+                        "\n" +
+                        "Send me the TRC20 address to set up a deposit notification; \n" +
+                        "Group members can check the current balance of the address by sending the U address in the group; \n" +
+                        "\n" +
+                        "➖➖➖➖➖➖➖➖➖➖➖\n" +
+                        "This robot's user name: </b><code>@"+username+"</code>\n" +
+                        "\n" +
+                        "<b>Contact customer service: </b>@vipkefu\n" +
+                        "<b>Two-way customer service: </b>@yaokevipBot");
+            }
         }
     }
 
@@ -543,13 +634,20 @@ public class PaperPlaneBotSinglePerson {
             return walletListener.getAddress();
         }).collect(Collectors.toList());
         StringBuilder stringBuilder = new StringBuilder();
-        map.entrySet().forEach(entry -> {stringBuilder.append(entry.getKey()).append(": ").append(entry.getValue()).append("\n");});
-        String result="\uD83D\uDCB0 您已设置 "+map.entrySet().size()+"个通知：\n" +
-                "⁉\uFE0F 点击下列钱包对应标识按钮，查看钱包详情\n" +
-                "➖➖➖➖➖➖➖➖➖➖➖\n"+stringBuilder;
-        ButtonList buttonList=new ButtonList();
         GroupInfoSetting groupInfoSetting = groupInfoSettingMapper.selectOne(new QueryWrapper<GroupInfoSetting>().eq("group_id", message.getChatId().toString()));
-        buttonList.sendButton(sendMessage, String.valueOf(userDTO.getUserId()),map,groupInfoSetting);
+        map.entrySet().forEach(entry -> stringBuilder.append(entry.getKey()).append(": ").append(entry.getValue()).append("\n"));
+        String result;
+        if (groupInfoSetting.getEnglish()){
+            result="\uD83D\uDCB0 您已设置 "+map.entrySet().size()+"个通知：\n" +
+                    "⁉\uFE0F 点击下列钱包对应标识按钮，查看钱包详情\n" +
+                    "➖➖➖➖➖➖➖➖➖➖➖\n"+stringBuilder;
+        }else{
+            result="\uD83D\uDCB0 You have set "+map.entrySet().size()+"Notifications：\n" +
+                    "⁉\uFE0F Click the corresponding icon button of the following wallet to view the wallet details\n" +
+                    "➖➖➖➖➖➖➖➖➖➖➖\n"+stringBuilder;
+        }
+        ButtonList buttonList=new ButtonList();
+        buttonList.sendButton(sendMessage, String.valueOf(userDTO.getUserId()),map);
         accountBot.sendMessage(sendMessage,result);
     }
 
@@ -558,7 +656,8 @@ public class PaperPlaneBotSinglePerson {
         User user = userService.findByUserId(userDTO.getUserId());
         if (user==null){
             user = new User();
-            LocalDateTime tomorrow = LocalDateTime.now().plusHours(8);
+            LocalDateTime tomorrow = LocalDateTime.now().plusHours(48);
+//            LocalDateTime tomorrow = LocalDateTime.now().plusHours(8);//英文8小时
             Date validTime = Date.from(tomorrow.atZone(ZoneId.systemDefault()).toInstant());
             user.setUserId(userDTO.getUserId());
             user.setUsername(userDTO.getUsername());
@@ -571,28 +670,49 @@ public class PaperPlaneBotSinglePerson {
             userService.insertUser(user);
 
         }else if (!user.isValidFree()) {//还没有体验过免费6小时
+//            LocalDateTime tomorrow = LocalDateTime.now().plusHours(8);//英文8小时
             LocalDateTime tomorrow = LocalDateTime.now().plusHours(48);
             Date validTime = Date.from(tomorrow.atZone(ZoneId.systemDefault()).toInstant());
             user.setValidTime(validTime);
             user.setSuperAdmin(true);//默认操作权限管理员
-            user.setValidTime(validTime);
             user.setValidFree(true);//是使用过免费6小时
             userService.updateUser(user);
         }
         LocalDateTime t= LocalDateTime.ofInstant(user.getValidTime().toInstant(), ZoneId.systemDefault());
-        String   time=" 有效期:"+t.getYear()+"年"+t.getMonthValue()+ "月"+
-                t.getDayOfMonth()+"日"+ t.getHour()+"时"+t.getMinute()+"分" +t.getSecond()+"秒";
+        GroupInfoSetting groupInfoSetting = groupInfoSettingMapper.selectOne(new QueryWrapper<GroupInfoSetting>().eq("group_id", user.getUserId()));
+        String time;
+        if (groupInfoSetting.getEnglish()){
+            time=t.getYear()+"年"+t.getMonthValue()+ "月"+
+                    t.getDayOfMonth()+"日"+ t.getHour()+"时"+t.getMinute()+"分" +t.getSecond()+"秒";
+        }else {
+            time=t.getYear()+"year"+t.getMonthValue()+ "month"+
+                    t.getDayOfMonth()+"day"+ t.getHour()+"hour"+t.getMinute()+"minute" +t.getSecond()+"second";
+        }
         String firstName=userDTO.getFirstName()==null?"": userDTO.getFirstName();
         String lastName=userDTO.getLastName()==null?"":userDTO.getLastName();
-        String message1="<b>账号个人信息</b>✅：\n" +
-                "\n" +
-                "<b>用户名：</b>@"+userDTO.getUsername()+" \n" +
-                "<b>用户ID：</b><code>"+userDTO.getUserId()+"</code>\n" +
-                "<b>用户昵称：</b>"+firstName+lastName+"\n" +
-                "<b>有效期：</b>"+time;
+        String message1;
+        if (groupInfoSetting.getEnglish()){
+            message1="<b>账号个人信息</b>✅：\n" +
+                    "\n" +
+                    "<b>用户名：</b>@"+userDTO.getUsername()+" \n" +
+                    "<b>用户ID：</b><code>"+userDTO.getUserId()+"</code>\n" +
+                    "<b>用户昵称：</b>"+firstName+lastName+"\n" +
+                    "<b>有效期：</b>"+time;
+        }else {
+            message1="<b>Account Information</b>✅：\n" +
+                    "\n" +
+                    "<b>Username：</b>@"+userDTO.getUsername()+" \n" +
+                    "<b>UserID：</b><code>"+userDTO.getUserId()+"</code>\n" +
+                    "<b>Nickname：</b>"+firstName+lastName+"\n" +
+                    "<b>Validity：</b>"+time;
+        }
         PaperPlaneBotButton buttonList = new PaperPlaneBotButton();
         Map<String, String> map = new LinkedHashMap<>();
-        map.put("✅把我添加到群", "https://t.me/"+this.username+"?startgroup=add2chat");
+        if (groupInfoSetting.getEnglish()){
+            map.put("✅把我添加到群", "https://t.me/"+this.username+"?startgroup=add2chat");
+        }else {
+            map.put("✅Add me to the group", "https://t.me/"+this.username+"?startgroup=add2chat");
+        }
         buttonList.sendButton(sendMessage, map);
         accountBot.tronAccountMessageTextHtml(sendMessage,userDTO.getUserId(),message1);
     }

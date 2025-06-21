@@ -62,7 +62,7 @@ public class NotificationService {
             queryWrapper.lt("add_time",new Date());
             List<Notification> notifications = mapper.selectList(queryWrapper);
             StringBuilder sb = new StringBuilder();
-            sb.append("48 小时内在群组发言过的所有人: ");
+            sb.append("Everyone who has spoken in the group within the last 48 hours: ");
             for (int i = 0; i < notifications.size(); i++) {
                 String firstName=notifications.get(i).getFirstName()==null?"":notifications.get(i).getFirstName();
                 String lastName=notifications.get(i).getLastName()==null?"":notifications.get(i).getLastName();

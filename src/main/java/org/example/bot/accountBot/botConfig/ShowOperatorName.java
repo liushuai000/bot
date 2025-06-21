@@ -71,7 +71,7 @@ public class ShowOperatorName {
             issue=issues.get(issues.size()-1);;
         }
         //显示操作人
-        iusseText = ruzhangOperations.getSendText(updateAccount, accounts, rate, num, newList, newIssueList, issues, issue,status);
+        iusseText = ruzhangOperations.getSendText(updateAccount, accounts, rate, num, newList, newIssueList, issues, issue,status,groupInfoSetting);
         accountBot.sendMessage(sendMessage,iusseText);
     }
     //true 是0 显示账单

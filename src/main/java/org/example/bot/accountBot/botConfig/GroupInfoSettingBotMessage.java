@@ -4,7 +4,6 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import lombok.NonNull;
 import org.example.bot.accountBot.mapper.GroupInfoSettingMapper;
 import org.example.bot.accountBot.pojo.GroupInfoSetting;
-import org.example.bot.accountBot.utils.TranslationExample;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
@@ -47,6 +46,23 @@ public class GroupInfoSettingBotMessage {
         }
         return groupInfoSetting;
     }
+
+    public void switchEn(String text,Long chatId,GroupInfoSetting groupInfoSetting){
+        if (text.equals("切换中文") || text.equals("切换英文") ||  text.equals("switch to chinese")||  text.equals("switch to english")){
+            if (text.equals("切换中文") || text.equals("switch to chinese")){
+                groupInfoSetting.setEnglish(true);
+            } else if (text.equals("切换英文") || text.equals("switch to english")) {
+                groupInfoSetting.setEnglish(false);
+            }else {
+                groupInfoSetting.setEnglish(true);
+            }
+            groupInfoSettingMapper.updateById(groupInfoSetting);
+            SendMessage sendMessage = new SendMessage();
+            sendMessage.setChatId(chatId);
+            sendMessage.setText("切换成功"+("Switching successful"));
+            accountBot.sendMessage(sendMessage);
+        }
+    }
     //处理中英文切换
     public String handler(@NonNull String chatId, String text) {
         //false 表示中文 true中文
@@ -55,8 +71,8 @@ public class GroupInfoSettingBotMessage {
             if (groupInfoSetting == null){
                 groupInfoSetting = this.getGroupOrCreate(text,Long.valueOf(chatId));
             }
-            String string = TranslationExample.translateText(text, groupInfoSetting.getEnglish());
-            return string;
+//            String string = TranslationExample.translateText(text, groupInfoSetting.getEnglish());
+            return text;
         }catch (Exception e){
             return e.getMessage();
         }

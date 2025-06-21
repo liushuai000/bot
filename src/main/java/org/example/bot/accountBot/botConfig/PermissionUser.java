@@ -31,8 +31,18 @@ public class PermissionUser {
     private ButtonList buttonList;
     public void getPermissionUser(SendMessage sendMessage, UserDTO userDTO, User user1, UserNormal userNormalTempAdmin, GroupInfoSetting groupInfoSetting) {
         String  admin = String.format("<a href=\"tg://user?id=%d\">@%s</a>", Long.parseLong(userNormalTempAdmin.getUserId()), userNormalTempAdmin.getUsername());
-        StringBuilder sb = new StringBuilder("本群机器人最高权限管理员为："+admin+"\n");
-        sb.append("其他操作员为: ");
+        String abc;
+        if (groupInfoSetting.getEnglish()){
+            abc="本群机器人最高权限管理员为：";
+        }else {
+            abc="The highest authority administrator of this group of robots is：";
+        }
+        StringBuilder sb = new StringBuilder(abc+admin+"\n");
+        if (groupInfoSetting.getEnglish()){
+            sb.append("其他操作员为: ");
+        }else {
+            sb.append("Other operators are: ");
+        }
         List<UserOperation> userAuthorities=userOperationService.selectByUserOperator(userDTO.getGroupId(),true);
         List<User> users = new ArrayList<>();
         for (UserOperation ua:userAuthorities){
