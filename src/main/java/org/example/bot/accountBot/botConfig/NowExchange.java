@@ -410,13 +410,13 @@ public class NowExchange {
         if (groupInfoSetting.getEnglish()){
             result= "欧易商家实时交易汇率top10\n" +
                     string+ "\n" +
-                    "本群费率："+rate.getRate().stripTrailingZeros().toPlainString()+"%\n" +
+                    "本群费率："+rate.getRate().stripTrailingZeros().toPlainString()+"\n" +
                     "本群汇率："+rate.getExchange().stripTrailingZeros().toPlainString();
 
         }else{
             result = "Real-time exchange rate for merchants on OUYI top10\n" +
                     string + "\n" +
-                    "This group rate：" + rate.getRate().stripTrailingZeros().toPlainString() + "%\n" +
+                    "This group rate：" + rate.getRate().stripTrailingZeros().toPlainString() + "\n" +
                     "Exchange rate of this group：" + rate.getExchange().stripTrailingZeros().toPlainString();
         }
         ButtonList buttonList = new ButtonList();

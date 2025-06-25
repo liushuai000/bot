@@ -674,9 +674,9 @@ public class RuzhangOperations {
             issue.setDown(BigDecimal.ZERO);
             issue.setDowned(BigDecimal.ZERO);
             if (groupInfoSetting.getEnglish()){
-                iusseText = "\n\n" + "今日下发：（0笔）\n" + "无记录";
+                iusseText = "\n" + "今日下发：（0笔）\n" + "无记录\n";
             }else{
-                iusseText = "\n\n" + "Issued  ：\n" + "No records";
+                iusseText = "\n" + "Issued  ：\n" + "No records\n";
             }
         }
         int accountHandleStatus = 0;
@@ -842,8 +842,8 @@ public class RuzhangOperations {
             //            入款分类：
             return "\n"+jrrk1+ (accounts.size()) + b1+"\n" +
 //                    "\n已入账：<strong>" + total + "</strong>，:共" + (accounts.size()) + "笔:\n" +  暂时不用显示 已入账
-                    stringBuilder + iusseText + "\n" +
-                    "\n\n"+zrz1+"：<strong>" + total.setScale(2, RoundingMode.HALF_UP).stripTrailingZeros().toPlainString() +"</strong>"+
+                    stringBuilder + iusseText +"\n"+
+                    zrz1+"：<strong>" + total.setScale(2, RoundingMode.HALF_UP).stripTrailingZeros().toPlainString() +"</strong>"+
                     (rate.getExchange().compareTo(BigDecimal.ONE) > 0 ? "\n"+hl1+" ： <strong>" + rate.getExchange().setScale(2, RoundingMode.HALF_UP).stripTrailingZeros().toPlainString() +"</strong>": "") +
                     (rate.getRate().compareTo(BigDecimal.ZERO) > 0 ? "\n"+fl1+" ： <strong>" + rate.getRate().setScale(2, RoundingMode.HALF_UP).stripTrailingZeros().toPlainString() +"</strong>": "") +
                     "\n"+
@@ -960,8 +960,8 @@ public class RuzhangOperations {
                     : "";
             return "\n"+jrrk1+ (accounts.size()) + b1+"\n" +
 //                    "\n已入账：<strong>" + total + "</strong>，:共" + (accounts.size()) + "笔:\n" + 暂时不用显示已入账
-                    " " + ""+none1+"" + iusseText +
-                    "\n\n"+zrz1+"：<strong>" + 0 +"</strong>"+
+                    " " +none1+"\n" + iusseText +"\n" +
+                    zrz1+"：<strong>" + 0 +"</strong>"+
                     (rate.getExchange().compareTo(BigDecimal.ONE) > 0 ? "\n"+hl1+" ： <strong>" + rate.getExchange().setScale(2, RoundingMode.HALF_UP).stripTrailingZeros().toPlainString()+"</strong>" : "") +
                     (rate.getRate().compareTo(BigDecimal.ZERO) > 0 ? "\n"+fl1+" ： <strong>" + rate.getRate().setScale(2, RoundingMode.HALF_UP).stripTrailingZeros().toPlainString()+"</strong>" : "") +
                     "\n"+
