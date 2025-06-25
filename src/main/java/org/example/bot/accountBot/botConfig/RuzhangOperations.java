@@ -845,7 +845,8 @@ public class RuzhangOperations {
                     stringBuilder + iusseText + "\n" +
                     "\n\n"+zrz1+"：<strong>" + total.setScale(2, RoundingMode.HALF_UP).stripTrailingZeros().toPlainString() +"</strong>"+
                     (rate.getExchange().compareTo(BigDecimal.ONE) > 0 ? "\n"+hl1+" ： <strong>" + rate.getExchange().setScale(2, RoundingMode.HALF_UP).stripTrailingZeros().toPlainString() +"</strong>": "") +
-                    (rate.getRate().compareTo(BigDecimal.ZERO) > 0 ? "\n"+fl1+"：<strong>" + rate.getRate().setScale(2, RoundingMode.HALF_UP).stripTrailingZeros().toPlainString() +"</strong>": "") +
+                    (rate.getRate().compareTo(BigDecimal.ZERO) > 0 ? "\n"+fl1+" ：<strong>" + rate.getRate().setScale(2, RoundingMode.HALF_UP).stripTrailingZeros().toPlainString() +"</strong>": "") +
+                    "\n"+
                     downExchangeText +
                     downRate +
                     "\n"+yxf1+" ： <strong>" + yxf +"</strong>"+
@@ -962,7 +963,8 @@ public class RuzhangOperations {
                     " " + ""+none1+"" + iusseText +
                     "\n\n"+zrz1+"：<strong>" + 0 +"</strong>"+
                     (rate.getExchange().compareTo(BigDecimal.ONE) > 0 ? "\n"+hl1+" ： <strong>" + rate.getExchange().setScale(2, RoundingMode.HALF_UP).stripTrailingZeros().toPlainString()+"</strong>" : "") +
-                    (rate.getRate().compareTo(BigDecimal.ZERO) > 0 ? "\n"+fl1+"：<strong>" + rate.getRate().setScale(2, RoundingMode.HALF_UP).stripTrailingZeros().toPlainString()+"</strong>" : "") +
+                    (rate.getRate().compareTo(BigDecimal.ZERO) > 0 ? "\n"+fl1+" ：<strong>" + rate.getRate().setScale(2, RoundingMode.HALF_UP).stripTrailingZeros().toPlainString()+"</strong>" : "") +
+                    "\n"+
                     downExchangeText +
                     downRate +
                     "\n"+yxf1+" ： <strong>" + yxf +"</strong>"+
