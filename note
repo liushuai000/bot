@@ -1,3 +1,6 @@
- groupInfoSettting 和 .plusHours(48)设置8小时  切换中文要修改111 直接搜索改就行 还有定时查询钱包地址(getForObjectHistoryTrading2和 getForObjectHistoryTrading)
+ GroupInfoSetting实体类
+  AccountBor类的   切换中文要修改111
+  getUserInfoMessage方法里的   .plusHours(48)设置8小时   直接搜索改就行
+  RestTemplate 定时查询钱包地址(getForObjectHistoryTrading2和 getForObjectHistoryTrading) 需要修改key1  是为了负载均衡 不然1个ip会限流TRON
 
- 中英文切换需要改以上的
+ 中英文切换需要改以上的  找不到就直接两下shift键就可搜索
