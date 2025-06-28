@@ -131,36 +131,36 @@ public class RuzhangOperations {
         if (text.equals("取消") || text.equals(constantMap.get("取消")) && replyToText != null) {
             log.info("replyToXXXTentacion:{}", replyToText);
             if (replyToText.charAt(0) == '+') {
-                Account account = accountMapper.selectOne(new QueryWrapper<Account>().eq("message_id", replayToMessageId));
-                accountMapper.delete(new QueryWrapper<Account>().eq("message_id", replayToMessageId));
+                Account account = accountMapper.selectOne(new QueryWrapper<Account>().eq("group_id", userDTO.getGroupId()).eq("message_id", replayToMessageId));
+                accountMapper.delete(new QueryWrapper<Account>().eq("group_id", userDTO.getGroupId()).eq("message_id", replayToMessageId));
                 issueService.updateIssueDown(account.getDown(), userDTO.getGroupId());
             } else if (replyToText.charAt(0) == '-') {
-                Issue issue = issueMapper.selectOne(new QueryWrapper<Issue>().eq("message_id", replayToMessageId));
-                issueMapper.delete(new QueryWrapper<Issue>().eq("message_id", replayToMessageId));
+                Issue issue = issueMapper.selectOne(new QueryWrapper<Issue>().eq("group_id", userDTO.getGroupId()).eq("message_id", replayToMessageId));
+                issueMapper.delete(new QueryWrapper<Issue>().eq("group_id", userDTO.getGroupId()).eq("message_id", replayToMessageId));
                 accountService.updateNewestData(issue.getDown(), userDTO.getGroupId());
             } else if (replyToText.startsWith("下发")) {
-                Issue issue = issueMapper.selectOne(new QueryWrapper<Issue>().eq("message_id", replayToMessageId));
-                issueMapper.delete(new QueryWrapper<Issue>().eq("message_id", replayToMessageId));
+                Issue issue = issueMapper.selectOne(new QueryWrapper<Issue>().eq("group_id", userDTO.getGroupId()).eq("message_id", replayToMessageId));
+                issueMapper.delete(new QueryWrapper<Issue>().eq("group_id", userDTO.getGroupId()).eq("message_id", replayToMessageId));
                 accountService.updateNewestData(issue.getDown(), userDTO.getGroupId());
             } else if (replyToText.startsWith("入款")) {
-                Account account = accountMapper.selectOne(new QueryWrapper<Account>().eq("message_id", replayToMessageId));
-                accountMapper.delete(new QueryWrapper<Account>().eq("message_id", replayToMessageId));
+                Account account = accountMapper.selectOne(new QueryWrapper<Account>().eq("group_id", userDTO.getGroupId()).eq("message_id", replayToMessageId));
+                accountMapper.delete(new QueryWrapper<Account>().eq("group_id", userDTO.getGroupId()).eq("message_id", replayToMessageId));
                 issueService.updateIssueDown(account.getDown(), userDTO.getGroupId());
             } else if (replyToText.toLowerCase().startsWith("issue")) {
-                Issue issue = issueMapper.selectOne(new QueryWrapper<Issue>().eq("message_id", replayToMessageId));
-                issueMapper.delete(new QueryWrapper<Issue>().eq("message_id", replayToMessageId));
+                Issue issue = issueMapper.selectOne(new QueryWrapper<Issue>().eq("group_id", userDTO.getGroupId()).eq("message_id", replayToMessageId));
+                issueMapper.delete(new QueryWrapper<Issue>().eq("group_id", userDTO.getGroupId()).eq("message_id", replayToMessageId));
                 accountService.updateNewestData(issue.getDown(), userDTO.getGroupId());
             } else if (replyToText.toLowerCase().startsWith("t")) {
-                Account account = accountMapper.selectOne(new QueryWrapper<Account>().eq("message_id", replayToMessageId));
-                accountMapper.delete(new QueryWrapper<Account>().eq("message_id", replayToMessageId));
+                Account account = accountMapper.selectOne(new QueryWrapper<Account>().eq("group_id", userDTO.getGroupId()).eq("message_id", replayToMessageId));
+                accountMapper.delete(new QueryWrapper<Account>().eq("group_id", userDTO.getGroupId()).eq("message_id", replayToMessageId));
                 issueService.updateIssueDown(account.getDown(), userDTO.getGroupId());
             } else if (replyToText.toLowerCase().startsWith("d")) {
-                Account account = accountMapper.selectOne(new QueryWrapper<Account>().eq("message_id", replayToMessageId));
-                accountMapper.delete(new QueryWrapper<Account>().eq("message_id", replayToMessageId));
+                Account account = accountMapper.selectOne(new QueryWrapper<Account>().eq("group_id", userDTO.getGroupId()).eq("message_id", replayToMessageId));
+                accountMapper.delete(new QueryWrapper<Account>().eq("group_id", userDTO.getGroupId()).eq("message_id", replayToMessageId));
                 issueService.updateIssueDown(account.getDown(), userDTO.getGroupId());
             } else if (replyToText.toLowerCase().startsWith("p")) {
-                Account account = accountMapper.selectOne(new QueryWrapper<Account>().eq("message_id", replayToMessageId));
-                accountMapper.delete(new QueryWrapper<Account>().eq("message_id", replayToMessageId));
+                Account account = accountMapper.selectOne(new QueryWrapper<Account>().eq("group_id", userDTO.getGroupId()).eq("message_id", replayToMessageId));
+                accountMapper.delete(new QueryWrapper<Account>().eq("group_id", userDTO.getGroupId()).eq("message_id", replayToMessageId));
                 issueService.updateIssueDown(account.getDown(), userDTO.getGroupId());
             } else {
                 return;
@@ -215,36 +215,36 @@ public class RuzhangOperations {
         if (text.equals("cancel") && replyToText != null) {
             log.info("replyToXXXTentacion:{}", replyToText);
             if (replyToText.charAt(0) == '+') {
-                Account account = accountMapper.selectOne(new QueryWrapper<Account>().eq("message_id", replayToMessageId));
-                accountMapper.delete(new QueryWrapper<Account>().eq("message_id", replayToMessageId));
+                Account account = accountMapper.selectOne(new QueryWrapper<Account>().eq("group_id", userDTO.getGroupId()).eq("message_id", replayToMessageId));
+                accountMapper.delete(new QueryWrapper<Account>().eq("group_id", userDTO.getGroupId()).eq("message_id", replayToMessageId));
                 issueService.updateIssueDown(account.getDown(), userDTO.getGroupId());
             } else if (replyToText.charAt(0) == '-') {
-                Issue issue = issueMapper.selectOne(new QueryWrapper<Issue>().eq("message_id", replayToMessageId));
-                issueMapper.delete(new QueryWrapper<Issue>().eq("message_id", replayToMessageId));
+                Issue issue = issueMapper.selectOne(new QueryWrapper<Issue>().eq("group_id", userDTO.getGroupId()).eq("message_id", replayToMessageId));
+                issueMapper.delete(new QueryWrapper<Issue>().eq("group_id", userDTO.getGroupId()).eq("message_id", replayToMessageId));
                 accountService.updateNewestData(issue.getDown(), userDTO.getGroupId());
             } else if (replyToText.startsWith("withdraw")) {
-                Issue issue = issueMapper.selectOne(new QueryWrapper<Issue>().eq("message_id", replayToMessageId));
-                issueMapper.delete(new QueryWrapper<Issue>().eq("message_id", replayToMessageId));
+                Issue issue = issueMapper.selectOne(new QueryWrapper<Issue>().eq("group_id", userDTO.getGroupId()).eq("message_id", replayToMessageId));
+                issueMapper.delete(new QueryWrapper<Issue>().eq("group_id", userDTO.getGroupId()).eq("message_id", replayToMessageId));
                 accountService.updateNewestData(issue.getDown(), userDTO.getGroupId());
             } else if (replyToText.startsWith("deposit")) {
-                Account account = accountMapper.selectOne(new QueryWrapper<Account>().eq("message_id", replayToMessageId));
-                accountMapper.delete(new QueryWrapper<Account>().eq("message_id", replayToMessageId));
+                Account account = accountMapper.selectOne(new QueryWrapper<Account>().eq("group_id", userDTO.getGroupId()).eq("message_id", replayToMessageId));
+                accountMapper.delete(new QueryWrapper<Account>().eq("group_id", userDTO.getGroupId()).eq("message_id", replayToMessageId));
                 issueService.updateIssueDown(account.getDown(), userDTO.getGroupId());
             } else if (replyToText.toLowerCase().startsWith("issue")) {
-                Issue issue = issueMapper.selectOne(new QueryWrapper<Issue>().eq("message_id", replayToMessageId));
-                issueMapper.delete(new QueryWrapper<Issue>().eq("message_id", replayToMessageId));
+                Issue issue = issueMapper.selectOne(new QueryWrapper<Issue>().eq("group_id", userDTO.getGroupId()).eq("message_id", replayToMessageId));
+                issueMapper.delete(new QueryWrapper<Issue>().eq("group_id", userDTO.getGroupId()).eq("message_id", replayToMessageId));
                 accountService.updateNewestData(issue.getDown(), userDTO.getGroupId());
             } else if (replyToText.toLowerCase().startsWith("t")) {
-                Account account = accountMapper.selectOne(new QueryWrapper<Account>().eq("message_id", replayToMessageId));
-                accountMapper.delete(new QueryWrapper<Account>().eq("message_id", replayToMessageId));
+                Account account = accountMapper.selectOne(new QueryWrapper<Account>().eq("group_id", userDTO.getGroupId()).eq("message_id", replayToMessageId));
+                accountMapper.delete(new QueryWrapper<Account>().eq("group_id", userDTO.getGroupId()).eq("message_id", replayToMessageId));
                 issueService.updateIssueDown(account.getDown(), userDTO.getGroupId());
             } else if (replyToText.toLowerCase().startsWith("d")) {
-                Account account = accountMapper.selectOne(new QueryWrapper<Account>().eq("message_id", replayToMessageId));
-                accountMapper.delete(new QueryWrapper<Account>().eq("message_id", replayToMessageId));
+                Account account = accountMapper.selectOne(new QueryWrapper<Account>().eq("group_id", userDTO.getGroupId()).eq("message_id", replayToMessageId));
+                accountMapper.delete(new QueryWrapper<Account>().eq("group_id", userDTO.getGroupId()).eq("message_id", replayToMessageId));
                 issueService.updateIssueDown(account.getDown(), userDTO.getGroupId());
             } else if (replyToText.toLowerCase().startsWith("p")) {
-                Account account = accountMapper.selectOne(new QueryWrapper<Account>().eq("message_id", replayToMessageId));
-                accountMapper.delete(new QueryWrapper<Account>().eq("message_id", replayToMessageId));
+                Account account = accountMapper.selectOne(new QueryWrapper<Account>().eq("group_id", userDTO.getGroupId()).eq("message_id", replayToMessageId));
+                accountMapper.delete(new QueryWrapper<Account>().eq("group_id", userDTO.getGroupId()).eq("message_id", replayToMessageId));
                 issueService.updateIssueDown(account.getDown(), userDTO.getGroupId());
             } else {
                 return;
