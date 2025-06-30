@@ -184,7 +184,7 @@ public class AccountServiceImpl implements AccountService {
         if (accountDTOList!=null){
             accountDTOList.stream().filter(Objects::nonNull).filter(this::isCallBackUserIdNoNull)
                     .forEach(accountDTO -> {
-                        String userId = accountDTO.getUserId();
+                        String userId = accountDTO.getCallBackUserId();
                         BigDecimal total = accountDTO.getTotal();
                         BigDecimal downing = accountDTO.getDowning();
                         BigDecimal exchange = accountDTO.getExchange();
@@ -217,7 +217,7 @@ public class AccountServiceImpl implements AccountService {
         if (issueDTOList!=null){
             issueDTOList.stream().filter(Objects::nonNull).filter(this::isCallBackUserIdNoNullIssue)
                     .forEach(issueDTO -> {
-                        String userId = issueDTO.getUserId();
+                        String userId = issueDTO.getCallBackUserId();
                         BigDecimal total = issueDTO.getDowned();
                         BigDecimal down = issueDTO.getDown();//未下发
 //                        BigDecimal downing = issueDTO.getDowning();
