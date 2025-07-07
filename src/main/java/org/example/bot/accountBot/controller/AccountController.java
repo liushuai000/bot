@@ -31,12 +31,16 @@ public class AccountController {
         return new JsonResult(accountService.findAccountByGroupId(queryType));
     }
 
-    @ApiOperation("获取所有账单信息")
+    @ApiOperation("登录")
     @PostMapping("/accountLogin")
     public JsonResult accountLogin(@RequestBody LoginFromDTO loginFromDTO) {
         return accountService.login(loginFromDTO);
     }
-
+    @ApiOperation("注册")
+    @PostMapping("/accountRegister")
+    public JsonResult accountRegister(@RequestBody LoginFromDTO loginFromDTO) {
+        return accountService.accountRegister(loginFromDTO);
+    }
     @ApiOperation("获取所有群组")
     @PostMapping("/findGroupList")
     public JsonResult findGroupList(@RequestBody QueryGroupDTO queryDTO) {

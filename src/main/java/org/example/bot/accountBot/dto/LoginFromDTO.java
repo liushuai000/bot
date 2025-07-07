@@ -10,10 +10,10 @@ import lombok.experimental.Accessors;
 @ApiModel("LoginFromDTO")
 public class LoginFromDTO {
     @ApiModelProperty("password")
-    public String password;//使用SM4校验
+    public String password;
     @ApiModelProperty("username")
     public String username;
-
-
+    @ApiModelProperty("token")
+    public String token;
 
 }

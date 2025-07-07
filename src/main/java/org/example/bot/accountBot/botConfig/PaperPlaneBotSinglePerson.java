@@ -340,7 +340,7 @@ public class PaperPlaneBotSinglePerson {
                         "\n" +
                         "请输入您要广播的内容:");
             }else {
-                sendMessage.setText("\uD83D\uDCE1 群发广播：\n" +
+                sendMessage.setText("\uD83D\uDCE1 Group Broadcast：\n" +
                         "\n" +
                         "Only send the group you invite, if you need to send all groups, please operate in the background.\n" +
                         "Support pure text, image + text, video + text.\n" +
@@ -729,8 +729,8 @@ public class PaperPlaneBotSinglePerson {
         User user = userService.findByUserId(userDTO.getUserId());
         if (user==null){
             user = new User();
-//            LocalDateTime tomorrow = LocalDateTime.now().plusHours(48);
-            LocalDateTime tomorrow = LocalDateTime.now().plusHours(8);//英文8小时  1111
+            LocalDateTime tomorrow = LocalDateTime.now().plusHours(48);
+//            LocalDateTime tomorrow = LocalDateTime.now().plusHours(8);//英文8小时
             Date validTime = Date.from(tomorrow.atZone(ZoneId.systemDefault()).toInstant());
             user.setUserId(userDTO.getUserId());
             user.setUsername(userDTO.getUsername());
@@ -743,8 +743,8 @@ public class PaperPlaneBotSinglePerson {
             userService.insertUser(user);
 
         }else if (!user.isValidFree()) {//还没有体验过免费6小时
-            LocalDateTime tomorrow = LocalDateTime.now().plusHours(8);//英文8小时
-//            LocalDateTime tomorrow = LocalDateTime.now().plusHours(48);//
+//            LocalDateTime tomorrow = LocalDateTime.now().plusHours(8);//英文8小时
+            LocalDateTime tomorrow = LocalDateTime.now().plusHours(48);//
             Date validTime = Date.from(tomorrow.atZone(ZoneId.systemDefault()).toInstant());
             user.setValidTime(validTime);
             user.setSuperAdmin(true);//默认操作权限管理员
@@ -820,7 +820,7 @@ public class PaperPlaneBotSinglePerson {
     }
 
     public void handlerPrivateUser(Update update, Message message, SendMessage sendMessage, UserDTO userDTO) {
-        if (userDTO.getText()!=null && userDTO.getText().equals("/login")){
+        if (userDTO.getText()!=null && userDTO.getText().equals("/admin")){
             sendMessage.setText("点击下方按钮进入超级管理后台!");
             Map<String, String> map = new HashMap<>();
             map.put("超级管理后台",vueUrl+"AccountLogin");
@@ -828,7 +828,13 @@ public class PaperPlaneBotSinglePerson {
             accountBot.sendMessage(sendMessage);
             return;
         }
-
+        String text = userDTO.getText();
+        boolean b = text.equals("获取个人信息（personal information）")|| text.equals("监听列表（listening address）")||
+        text.equals("使用说明（illustrate）")||text.equals("群发广播（Group Broadcast）")||
+                text.equals("自助续费（Self-service renewal）");
+        if (text!=null && b){
+            return;
+        }
         String userId = userDTO.getUserId();
         String userState = userStates.getOrDefault(userId, STATE_NORMAL);
         GroupInfoSetting groupInfoSetting = groupInfoSettingMapper.selectOne(new QueryWrapper<GroupInfoSetting>().eq("group_id", userId));

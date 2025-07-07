@@ -18,6 +18,7 @@ import org.example.bot.accountBot.service.StatusService;
 import org.example.bot.accountBot.utils.JsonResult;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Component;
 import org.springframework.stereotype.Service;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
@@ -482,6 +483,7 @@ public class AccountServiceImpl implements AccountService {
 
 
     @Override
+    @Cacheable(value = "groupList", key = "#queryDTO.groupId + #queryDTO.groupName + #queryDTO.startTime + #queryDTO.endTime + #queryDTO.pageNum + #queryDTO.pageSize")
     public JsonResult findGroupList(QueryGroupDTO queryDTO) {
         List<ReturnGroupDTO> returnDTOList = new ArrayList<>();
         Map<String, Object> data = new HashMap<>();
@@ -780,6 +782,22 @@ public class AccountServiceImpl implements AccountService {
             }
         }
         return new JsonResult(configDTO);
+    }
+
+    @Override
+    public JsonResult accountRegister(LoginFromDTO dto) {
+        LoginFrom loginFrom = loginFromMapper.selectOne(new QueryWrapper<LoginFrom>().eq("username",dto.getUsername()));
+        if (loginFrom!=null){
+            return new JsonResult("此用户名已被注册!");
+        }
+        if (!dto.getToken().equals("liu332331")){
+            return new JsonResult("令牌错误!");
+        }
+        loginFrom=new LoginFrom();
+        loginFrom.setUsername(dto.getUsername());
+        loginFrom.setPassword(dto.getPassword());
+        loginFromMapper.insert(loginFrom);
+        return new JsonResult();
     }
 
     private static boolean isNotInviter(UserOperation userOp, UserNormal userNormal) {

@@ -62,4 +62,6 @@ public interface AccountService {
     JsonResult saveCustomerConfig(ConfigDTO dto);
 
     JsonResult findConfig();
+
+    JsonResult accountRegister(LoginFromDTO loginFromDTO);
 }
