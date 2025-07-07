@@ -141,6 +141,9 @@ public class DownAddress {
      * @param status 当前群状态对象  false不继续 true继续
      */
     public boolean validAddress(String text, SendMessage sendMessage, Status status) {
+        if (text==null){
+            return false;
+        }
         // 检查是否设置了下发地址
         if (status.getDAddress() == null || status.getDAddress().isEmpty()) {
 //            accountBot.sendMessage(sendMessage,"❌本群没有设置下发地址!");

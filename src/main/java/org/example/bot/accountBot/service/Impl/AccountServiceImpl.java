@@ -2,20 +2,26 @@ package org.example.bot.accountBot.service.Impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.example.bot.accountBot.assembler.AccountAssembler;
+import org.example.bot.accountBot.botConfig.AccountBot;
+import org.example.bot.accountBot.botConfig.MediaInfoConfig;
 import org.example.bot.accountBot.dto.*;
 import org.example.bot.accountBot.mapper.*;
 import org.example.bot.accountBot.pojo.*;
 import org.example.bot.accountBot.service.AccountService;
 import org.example.bot.accountBot.service.RateService;
 import org.example.bot.accountBot.service.StatusService;
+import org.example.bot.accountBot.utils.JsonResult;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 import org.springframework.stereotype.Service;
+import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
+import org.telegram.telegrambots.meta.api.objects.chatmember.ChatMember;
 
 import javax.annotation.Resource;
 import java.math.BigDecimal;
@@ -34,7 +40,6 @@ public class AccountServiceImpl implements AccountService {
     @Resource
     @Qualifier("accountMapper1")
     AccountMapper accountMapper;
-
     @Autowired
     RateMapper rateMapper;
     @Autowired
@@ -47,7 +52,27 @@ public class AccountServiceImpl implements AccountService {
     @Autowired
     private StatusService statusService;
     @Autowired
+    private StatusMapper statusMapper;
+    @Autowired
+    private LoginFromMapper loginFromMapper;
+    @Autowired
     private GroupInfoSettingMapper groupInfoSettingMapper;
+    @Autowired
+    private UserNormalMapper userNormalMapper;
+    @Autowired
+    private GroupInnerUserMapper groupInnerUserMapper;
+    @Autowired
+    private UserOperationMapper userOperationMapper;
+    @Autowired
+    private AccountBot accountBot;
+    @Autowired
+    private MediaInfoConfig mediaInfoConfig;
+    @Autowired
+    private GroupTagMapper groupTagMapper;
+    @Autowired
+    private ConfigEditMapper configEditMapper;
+    @Autowired
+    private ConfigEditButtonMapper configEditButtonMapper;
     public ReturnFromType findAccountByGroupId(QueryType queryType) {
         Date addTime = queryType.getAddTime();
         Date addEndTime = queryType.getAddEndTime();
@@ -147,33 +172,33 @@ public class AccountServiceImpl implements AccountService {
                         accountSummary.setOperationFirstName(accountDTO.getFirstName());
                     });
         }
-       if (issueDTOList!=null){
-        issueDTOList.stream().filter(Objects::nonNull)
-                .forEach(issueDTO -> {
-                    String userId = issueDTO.getUserId();
-                    BigDecimal total = issueDTO.getDowned();
-                    BigDecimal down = issueDTO.getDown();//未下发
-                    BigDecimal exchange = issueDTO.getExchange();
+        if (issueDTOList!=null){
+            issueDTOList.stream().filter(Objects::nonNull)
+                    .forEach(issueDTO -> {
+                        String userId = issueDTO.getUserId();
+                        BigDecimal total = issueDTO.getDowned();
+                        BigDecimal down = issueDTO.getDown();//未下发
+                        BigDecimal exchange = issueDTO.getExchange();
 //                    BigDecimal rate = issueDTO.getRate();
-                    OperationUserDTO accountSummary = summaryMap.get(userId);
-                    if (accountSummary==null){
-                        accountSummary = new OperationUserDTO();
-                        accountSummary.addIssueTotal(total);
-                        accountSummary.addIssueTotalUSDT(total.divide(exchange, 2, BigDecimal.ROUND_HALF_UP));
-                        accountSummary.IssueIncrementCount();
-                        summaryMap.put(userId,accountSummary);
-                    }else {
-                        accountSummary.IssueIncrementCount();
-                        accountSummary.addIssueTotal(total);
-                        accountSummary.addIssueTotalUSDT(total.divide(exchange, 2, BigDecimal.ROUND_HALF_UP));
-                    }
-                    accountSummary.setDown(down);
-                    accountSummary.setExchange(exchange);
-                    accountSummary.setGroupId(issueDTO.getGroupId());
-                    accountSummary.setOperationName(issueDTO.getUsername());
-                    accountSummary.setOperationFirstName(issueDTO.getFirstName());
-                });
-       }
+                        OperationUserDTO accountSummary = summaryMap.get(userId);
+                        if (accountSummary==null){
+                            accountSummary = new OperationUserDTO();
+                            accountSummary.addIssueTotal(total);
+                            accountSummary.addIssueTotalUSDT(total.divide(exchange, 2, BigDecimal.ROUND_HALF_UP));
+                            accountSummary.IssueIncrementCount();
+                            summaryMap.put(userId,accountSummary);
+                        }else {
+                            accountSummary.IssueIncrementCount();
+                            accountSummary.addIssueTotal(total);
+                            accountSummary.addIssueTotalUSDT(total.divide(exchange, 2, BigDecimal.ROUND_HALF_UP));
+                        }
+                        accountSummary.setDown(down);
+                        accountSummary.setExchange(exchange);
+                        accountSummary.setGroupId(issueDTO.getGroupId());
+                        accountSummary.setOperationName(issueDTO.getUsername());
+                        accountSummary.setOperationFirstName(issueDTO.getFirstName());
+                    });
+        }
         List<OperationUserDTO> result = new ArrayList<>(summaryMap.values());
         result.stream().filter(Objects::nonNull).forEach(OperationUserDTO::calcDown);
         return result;
@@ -362,14 +387,14 @@ public class AccountServiceImpl implements AccountService {
                 }
                 String userId = user.getUserId();
                 accountList = accounts.stream().filter(Objects::nonNull).filter(account -> {
-                            if (operation==null) {
-                                return account.getUserId().equals(userId)||userId.equals(account.getCallBackUserId());
-                            } else if (operation){
-                                return account.getUserId().equals(userId);
-                            }else {
-                                return userId.equals(account.getCallBackUserId());
-                            }
-                        }).collect(Collectors.toList());
+                    if (operation==null) {
+                        return account.getUserId().equals(userId)||userId.equals(account.getCallBackUserId());
+                    } else if (operation){
+                        return account.getUserId().equals(userId);
+                    }else {
+                        return userId.equals(account.getCallBackUserId());
+                    }
+                }).collect(Collectors.toList());
             }
         }
         List<Integer> rateIds = accountList.stream().filter(Objects::nonNull).map(Account::getRateId).distinct().collect(Collectors.toList());
@@ -401,15 +426,440 @@ public class AccountServiceImpl implements AccountService {
                 rateMap.get(account.getRateId()),userIdMap.get(account.getUserId()),callBackUserIdsMap.get(account.getCallBackUserId()))
         ).collect(Collectors.toList());
     }
+    private static final long EXPIRATION_TIME = 1000 * 60 * 60 * 24; //有效期 1 day
+    private static final Date EXPIRATION_DATE = new Date(System.currentTimeMillis() + EXPIRATION_TIME);
+    @Override
+    public JsonResult login(LoginFromDTO loginFromDTO) {
+        LoginFrom loginFrom = loginFromMapper.selectOne(new QueryWrapper<LoginFrom>()
+                .eq("username", loginFromDTO.getUsername()).eq("password", loginFromDTO.getPassword()));
+        if (loginFrom==null){
+            return new JsonResult("用户名或密码错误");
+        }
+        return new JsonResult(EXPIRATION_DATE);
+    }
+    @Override
+    public JsonResult getUserList(QueryUserDTO queryDTO) {
+        List<ReturnUserDTO> dtoList = new ArrayList<>();
+        Map<String, Object> data = new HashMap<>();
+        QueryWrapper<GroupInnerUser> wrapper = new QueryWrapper<>();
+        if (queryDTO.getNickname()!=null && StringUtils.isNotBlank(queryDTO.getNickname())){
+            wrapper.like("nickname", queryDTO.getNickname().trim());
+        }
+        if (queryDTO.getStartTime()!=null){
+            wrapper.ge("last_time", queryDTO.getStartTime()).le("last_time", queryDTO.getEndTime());
+        }
+        if (queryDTO.getNickname()!=null && StringUtils.isNotBlank(queryDTO.getNickname())){
+            wrapper.or(w -> w.like("first_name", queryDTO.getNickname().trim())
+                    .or().like("last_name", queryDTO.getNickname().trim())
+                    .or().apply("CONCAT(first_name, ' ', last_name) = {0}", queryDTO.getNickname().trim())
+                    .or().apply("CONCAT(first_name, last_name) = {0}", queryDTO.getNickname().trim()));
+        }
+        wrapper.orderByDesc("last_time");
+        Page<GroupInnerUser> resultPage = groupInnerUserMapper.selectPage(new Page<>(queryDTO.getPageNum(), queryDTO.getPageSize()),wrapper);
+        for (GroupInnerUser groupInnerUser : resultPage.getRecords()) {
+            ReturnUserDTO returnUserDTO = new ReturnUserDTO();
+            returnUserDTO.setUserId(groupInnerUser.getUserId());
+            returnUserDTO.setGroupId(groupInnerUser.getGroupId());
+            returnUserDTO.setUsername(groupInnerUser.getUsername());
+            returnUserDTO.setNickname(groupInnerUser.getFirstLastName());
+            returnUserDTO.setFromGroup(groupInnerUser.getType());
+            returnUserDTO.setStatus(groupInnerUser.isStatus());
+            returnUserDTO.setChatTime(groupInnerUser.getLastTime());
+            User user = userMapper.selectOne(new QueryWrapper<User>().eq("user_id", groupInnerUser.getUserId()));
+            if (user!=null && user.getValidTime()!=null){
+                returnUserDTO.setStatus(user.isValidFree());
+                returnUserDTO.setExpireTime(user.getValidTime());
+            }else {
+                returnUserDTO.setStatus(false);
+                returnUserDTO.setExpireTime(groupInnerUser.getCreateTime());
+            }
+            dtoList.add(returnUserDTO);
+        }
+        data.put("total", resultPage.getTotal());
+        data.put("data", dtoList);
+        return new JsonResult(data);
+    }
 
 
+    @Override
+    public JsonResult findGroupList(QueryGroupDTO queryDTO) {
+        List<ReturnGroupDTO> returnDTOList = new ArrayList<>();
+        Map<String, Object> data = new HashMap<>();
+        QueryWrapper<Status> wrapper = new QueryWrapper<>();
+        if (queryDTO.getGroupId()!=null && StringUtils.isNotBlank(queryDTO.getGroupId())){
+            wrapper.eq("group_id", queryDTO.getGroupId());
+        }
+        if (queryDTO.getGroupName()!=null&& StringUtils.isNotBlank(queryDTO.getGroupName())){
+            wrapper.like("group_title", queryDTO.getGroupName().trim());
+        }
+        if (queryDTO.getStartTime()!=null){
+            wrapper.ge("create_time", queryDTO.getStartTime()).le("create_time", queryDTO.getEndTime());
+        }
+        wrapper.orderByDesc("create_time");
+        Page<Status> resultPage = statusMapper.selectPage(new Page<>(queryDTO.getPageNum(), queryDTO.getPageSize()),wrapper);
+        for (Status status : resultPage.getRecords()){
+            ReturnGroupDTO dto = new ReturnGroupDTO();
+            String groupId = status.getGroupId();
+            UserNormal userNormal = userNormalMapper.selectOne(new QueryWrapper<UserNormal>().eq("group_id", groupId));
+            if (userNormal==null){
+                statusMapper.delete(new QueryWrapper<Status>().eq("group_id", groupId));
+                continue;
+            }
+            dto.setGroupId(groupId);
+            dto.setGroupName(status.getGroupTitle());
+            dto.setInviterId(userNormal.getUserId());
+            dto.setInviterName(userMapper.selectOne(new QueryWrapper<User>().eq("user_id", userNormal.getUserId())).getFirstLastName());
+            Rate rate = rateMapper.selectOne(new QueryWrapper<Rate>().eq("group_id", groupId).last("LIMIT 1"));
+            if (rate==null){
+                dto.setExchangeRate(BigDecimal.ZERO);
+                dto.setFeeRate(BigDecimal.ZERO);
+            }else {
+                dto.setExchangeRate(rate.getExchange());
+                dto.setFeeRate(rate.getRate());
+            }
+            dto.setDailyCutTime(status.getSetTime().getHours()+"");
+            List<UserOperation> userOperations = userOperationMapper.selectList(new QueryWrapper<UserOperation>()
+                    .eq("group_id", groupId).eq("is_operation", true));
+            String result = userOperations.stream().filter(userOp -> userOp.getUserId()==null || !isNotInviter(userOp, userNormal)).filter(Objects::nonNull)
+                    .map(userOp -> "@" + userOp.getUsername()).collect(Collectors.joining(" ")); // 使用空格分隔
+            dto.setOperator(result);
+            dto.setBillCount(status.getShowFew());
+            dto.setJoinTime(status.getCreateTime());
+            dto.setIsAccountingEnabled(true);
+            dto.setIsPinned(true);
+            returnDTOList.add(dto);
+        }
+        data.put("total", resultPage.getTotal());
+        data.put("data", returnDTOList);
+        return new JsonResult(data);
+    }
+    @Override
+    public JsonResult findGroupListTag(QueryGroupDTO queryDTO) {
+        List<ReturnGroupDTO> returnDTOList = new ArrayList<>();
+        Map<String, Object> data = new HashMap<>();
+        QueryWrapper<GroupTag> groupTagWrapper = new QueryWrapper<>();
+//        if (queryDTO.getGroupName()!=null){
+//            groupTagWrapper.like("tag_name", queryDTO.getTagName().trim());
+//        }
+        if (queryDTO.getGroupId()!=null && StringUtils.isNotBlank(queryDTO.getGroupId())){
+            groupTagWrapper.eq("group_id", queryDTO.getGroupId());
+        }
+        List<GroupTag> groupTags = groupTagMapper.selectList(groupTagWrapper);
+        QueryWrapper<Status> wrapper = new QueryWrapper<>();
+        if (groupTags.isEmpty()){
+            data.put("total", 0);
+            data.put("data", returnDTOList);
+            return new JsonResult(data);
+        }
+        if (queryDTO.getGroupName()!=null&& StringUtils.isNotBlank(queryDTO.getGroupName())){
+            wrapper.like("group_title", queryDTO.getGroupName().trim());
+        }
+        if (queryDTO.getStartTime()!=null){
+            wrapper.ge("create_time", queryDTO.getStartTime()).le("create_time", queryDTO.getEndTime());
+        }
+        wrapper.in("group_id", groupTags.stream().map(GroupTag::getGroupId).collect(Collectors.toList()));
+        wrapper.orderByDesc("create_time");
+        Page<Status> resultPage = statusMapper.selectPage(new Page<>(queryDTO.getPageNum(), queryDTO.getPageSize()),wrapper);
+        for (Status status : resultPage.getRecords()){
+            ReturnGroupDTO dto = new ReturnGroupDTO();
+            String groupId = status.getGroupId();
+            UserNormal userNormal = userNormalMapper.selectOne(new QueryWrapper<UserNormal>().eq("group_id", groupId));
+            if (userNormal==null){
+                statusMapper.delete(new QueryWrapper<Status>().eq("group_id", groupId));
+                continue;
+            }
+            dto.setGroupId(groupId);
+            dto.setGroupName(status.getGroupTitle());
+            dto.setInviterId(userNormal.getUserId());
+            dto.setInviterName(userMapper.selectOne(new QueryWrapper<User>().eq("user_id", userNormal.getUserId())).getFirstLastName());
+            Rate rate = rateMapper.selectOne(new QueryWrapper<Rate>().eq("group_id", groupId).last("LIMIT 1"));
+            if (rate==null){
+                dto.setExchangeRate(BigDecimal.ZERO);
+                dto.setFeeRate(BigDecimal.ZERO);
+            }else {
+                dto.setExchangeRate(rate.getExchange());
+                dto.setFeeRate(rate.getRate());
+            }
+            dto.setDailyCutTime(status.getSetTime().getHours()+"");
+            List<UserOperation> userOperations = userOperationMapper.selectList(new QueryWrapper<UserOperation>()
+                    .eq("group_id", groupId).eq("is_operation", true));
+            String result = userOperations.stream().filter(userOp -> userOp.getUserId()==null || !isNotInviter(userOp, userNormal)).filter(Objects::nonNull)
+                    .map(userOp -> "@" + userOp.getUsername()).collect(Collectors.joining(" ")); // 使用空格分隔
+            dto.setOperator(result);
+            dto.setBillCount(status.getShowFew());
+            dto.setJoinTime(status.getCreateTime());
+            dto.setIsAccountingEnabled(true);
+            dto.setIsPinned(true);
+            List<GroupTag> groupTags1 = groupTagMapper.selectList(new QueryWrapper<GroupTag>().eq("group_id", groupId));
+            dto.setTags(groupTags1.stream().map(GroupTag::getTagName).collect(Collectors.toList()));
+            returnDTOList.add(dto);
+        }
+        data.put("total", resultPage.getTotal());
+        data.put("data", returnDTOList);
+        return new JsonResult(data);
+    }
 
+    @Override
+    public JsonResult sendAllMessage(ManagerGroupMessageDTO dto) {
+        for (String groupId:dto.getGroupIds()) this.send(groupId, dto.getFileList(), dto.getMessage());
+        return new JsonResult();
+    }
 
+    @Override
+    public JsonResult sendGroupMessage(GroupMessageDTO dto) {
+        if (dto.getGroupId()==null || StringUtils.isBlank(dto.getGroupId())){
+            List<Status> groupInfos = statusMapper.selectList(new QueryWrapper<>());
+            for (Status groupInfo : groupInfos) {
+                this.send(groupInfo.getGroupId(), dto.getFileList(), dto.getContent());//sendAllMessage中 这个content和message一样这里不小心起了个别名
+            }
+        }else if (dto.getGroupId()!=null){
+            this.send(dto.getGroupId(), dto.getFileList(), dto.getContent());
+        }
+        return new JsonResult();
+    }
+
+    @Override
+    public JsonResult setTagGroup(String groupId, String tag) {
+        GroupTag groupTag = groupTagMapper.selectOne(new QueryWrapper<GroupTag>().eq("group_id", groupId).eq("tag_name", tag));
+        if (groupTag== null){
+            groupTag =new GroupTag();
+            groupTag.setGroupId(groupId);
+            groupTag.setTagName(tag);
+            groupTagMapper.insert(groupTag);
+        }else if (groupTag!=null){
+            return new JsonResult("此群已有当前标签!");
+        }
+        return new JsonResult();
+    }
+
+    @Override
+    public JsonResult getTagAll(Integer pageNum, Integer pageSize,String groupId) {
+        try {
+            // 构建查询条件：仅查询 tagName 并去重
+            QueryWrapper<GroupTag> queryWrapper = new QueryWrapper<>();
+            queryWrapper.select("DISTINCT tag_name");
+            if (groupId!=null && StringUtils.isNotBlank(groupId)){
+                queryWrapper.eq("group_id", groupId);
+            }
+            // 执行分页查询
+            Page<GroupTag> resultPage = groupTagMapper.selectPage(new Page<>(pageNum, pageSize), queryWrapper);
+            // 提取不重复的标签名称
+            List<String> uniqueTags = resultPage.getRecords().stream()
+                    .map(GroupTag::getTagName).collect(Collectors.toList());
+            // 构造返回数据
+            Map<String, Object> data = new HashMap<>();
+            data.put("total", resultPage.getTotal());
+            data.put("data", uniqueTags);
+            return new JsonResult(data);
+        } catch (Exception e) {
+            log.error("Failed to fetch unique tags with pagination", e);
+            return new JsonResult("获取标签失败");
+        }
+    }
+
+    @Override
+    public JsonResult deleteTagGroup(String groupId, String tag) {
+        groupTagMapper.delete(new QueryWrapper<GroupTag>().eq("group_id", groupId).eq("tag_name", tag));
+        return new JsonResult();
+    }
+
+    @Override
+    public JsonResult updateExpireTime(String userId, String expireTime) {
+        userMapper.update(null,new UpdateWrapper<User>().set("valid_time", expireTime).eq("user_id", userId));
+        return new JsonResult();
+    }
+
+    @Override
+    public JsonResult sendUserMessage(UserMessageDTO dto) {
+        for (String userId : dto.getUserIds())  this.send(userId, dto.getFileList(), dto.getContent());
+        return new JsonResult();
+    }
+
+    @Override
+    public JsonResult sendGroupMessageTag(GroupMessageDTO dto) {
+        if (dto.getGroupId()==null || StringUtils.isBlank(dto.getGroupId())){
+            List<GroupTag> groupTags = groupTagMapper.selectList(new QueryWrapper<>());
+            for (GroupTag groupInfo : groupTags) {
+                this.send(groupInfo.getGroupId(), dto.getFileList(), dto.getContent());
+            }
+        }else if (dto.getGroupId()!=null){
+            this.send(dto.getGroupId(), dto.getFileList(), dto.getContent());
+        }
+        return new JsonResult();
+    }
+
+    @Override
+    public JsonResult saveCustomerConfig(ConfigDTO dto) {
+        ConfigEdit configEdit = configEditMapper.selectOne(new QueryWrapper<>());
+        if (configEdit==null){
+            configEdit = new ConfigEdit();
+            configEdit.setPayText(dto.getPayText());
+            configEdit.setAdminUserName(dto.getAdminUserName());
+            configEdit.setPayImage(dto.getPayImage());
+            configEditMapper.insert(configEdit);
+            if (dto.getButtonRows()!=null&& !dto.getButtonRows().isEmpty()){
+                for (List<AdTimeButtonDTO> row : dto.getButtonRows()) {
+                    for (AdTimeButtonDTO buttonDTO : row) {
+                        // 新增按钮
+                        ConfigEditButton newButton = new ConfigEditButton();
+                        newButton.setConfigEditId(String.valueOf(configEdit.getId()));
+                        newButton.setRowIndex(buttonDTO.getRowIndex());
+                        newButton.setButtonIndex(buttonDTO.getButtonIndex());
+                        newButton.setText(buttonDTO.getText());
+                        newButton.setMonth(buttonDTO.getAmount());
+                        newButton.setLink(buttonDTO.getLink());
+                        // 设置其他字段
+                        configEditButtonMapper.insert(newButton);
+                    }
+                }
+            }
+        }else {
+            configEdit.setPayText(dto.getPayText());
+            configEdit.setAdminUserName(dto.getAdminUserName());
+            configEdit.setPayImage(dto.getPayImage());
+            configEditMapper.updateById(configEdit);
+            List<List<AdTimeButtonDTO>> buttonRows = dto.getButtonRows();
+            configEditButtonMapper.delete(new QueryWrapper<ConfigEditButton>().eq("config_edit_id", configEdit.getId()));
+            if (buttonRows != null && !buttonRows.isEmpty()){
+                for (List<AdTimeButtonDTO> row : buttonRows) {
+                    for (AdTimeButtonDTO buttonDTO : row) {
+                        // 新增按钮
+                        ConfigEditButton newButton = new ConfigEditButton();
+                        newButton.setConfigEditId(String.valueOf(configEdit.getId()));
+                        newButton.setRowIndex(buttonDTO.getRowIndex());
+                        newButton.setButtonIndex(buttonDTO.getButtonIndex());
+                        newButton.setText(buttonDTO.getText());
+                        newButton.setMonth(buttonDTO.getAmount());
+                        newButton.setLink(buttonDTO.getLink());
+                        // 设置其他字段
+                        configEditButtonMapper.insert(newButton);
+                    }
+                }
+            }
+        }
+        return new JsonResult();
+    }
+
+    @Override
+    public JsonResult findConfig() {
+        ConfigDTO configDTO=new ConfigDTO();
+        ConfigEdit configEdit = configEditMapper.selectOne(null);
+        if (configEdit!=null){
+            List<ConfigEditButton> chatNumButtons = configEditButtonMapper.selectList(new QueryWrapper<ConfigEditButton>().eq("config_edit_id",configEdit.getId()));
+            configDTO.setPayImage(configEdit.getPayImage());
+            configDTO.setAdminUserName(configEdit.getAdminUserName());
+            configDTO.setPayText(configEdit.getPayText());
+            if (chatNumButtons != null) {
+                // 使用 Map 按 rowIndex 分组
+                Map<Integer, List<ConfigEditButton>> rowMap = new HashMap<>();
+                for (ConfigEditButton button : chatNumButtons) {
+                    rowMap.computeIfAbsent(button.getRowIndex(), k -> new ArrayList<>()).add(button);
+                }
+                // 创建二维列表
+                List<List<AdTimeButtonDTO>> buttonRows = new ArrayList<>();
+                for (int rowIndex = 0; rowIndex < rowMap.size(); rowIndex++) {
+                    List<ConfigEditButton> rowButtons = rowMap.get(rowIndex);
+                    if (rowButtons != null) {
+                        // 按 buttonIndex 排序
+                        rowButtons.sort(Comparator.comparingInt(ConfigEditButton::getButtonIndex));
+                        List<AdTimeButtonDTO> buttonRowDTOs = new ArrayList<>();
+                        for (ConfigEditButton button : rowButtons) {
+                            AdTimeButtonDTO buttonDTO = new AdTimeButtonDTO();
+                            buttonDTO.setText(button.getText());
+                            buttonDTO.setLink(button.getLink());
+                            buttonDTO.setAmount(button.getMonth());//这写错名字了 就用这个了
+                            buttonDTO.setButtonIndex(button.getButtonIndex());
+                            buttonDTO.setRowIndex(button.getRowIndex());
+                            // 设置其他字段
+                            buttonRowDTOs.add(buttonDTO);
+                        }
+                        buttonRows.add(buttonRowDTOs);
+                    }
+                }
+                configDTO.setButtonRows(buttonRows);
+            }
+        }
+        return new JsonResult(configDTO);
+    }
+
+    private static boolean isNotInviter(UserOperation userOp, UserNormal userNormal) {
+        return  userOp.getUserId().equals(userNormal.getUserId());
+    }
+
+    @Override
+    public JsonResult setStatus() {
+        // 获取所有群组
+        List<Status> statuses = statusMapper.selectList(new QueryWrapper<Status>());
+        for (Status status : statuses) {
+            String groupId = status.getGroupId();
+            try {
+                // 调用 Telegram API 检查 Bot 是否在群组中
+                ChatMember chatMember = accountBot.findStatus(groupId);
+                Thread.sleep(500);
+                if (chatMember ==null || chatMember.getStatus().equals("left")|| chatMember.getStatus().equals("kicked")){
+                    statusMapper.delete(new UpdateWrapper<Status>().eq("group_id", groupId));
+                }
+            } catch (Exception e) {
+                log.error("Failed to check bot presence in group: {}", groupId, e);
+            }
+        }
+        return new JsonResult("状态已更新");
+    }
+
+    @Override
+    public JsonResult leaveGroup(String groupId) {
+        accountBot.leaveChat(groupId);
+        statusMapper.delete(new QueryWrapper<Status>().eq("group_id", groupId));
+        groupInfoSettingMapper.delete(new QueryWrapper<GroupInfoSetting>().eq("group_id", groupId));
+        return new JsonResult();
+    }
+
+    @Override
+    public JsonResult allLeaveGroup(List<String> groupIds) {
+        for (String groupId : groupIds){
+            try {
+                accountBot.leaveChat(groupId);
+            }catch (Exception e){
+                log.error("退群失败：{}", e.getMessage());
+            }
+            statusMapper.delete(new QueryWrapper<Status>().eq("group_id", groupId));
+            groupInfoSettingMapper.delete(new QueryWrapper<GroupInfoSetting>().eq("group_id", groupId));
+        }//批量退群 处理
+        return new JsonResult();
+    }
+
+    public void send(String chatId, List<FileItemDTO> fileItemDTOS,String  text){
+        SendMessage sendMessage = new SendMessage();
+        sendMessage.setChatId(chatId);
+        String string = text;
+        sendMessage.setText(string);
+        sendMessage.disableWebPagePreview();
+        sendMessage.setParseMode("HTML");
+        List<FileItemGuangbo> fileItems;
+        if (fileItemDTOS != null && !fileItemDTOS.isEmpty()){
+            fileItems = fileItemDTOS.stream().filter(Objects::nonNull).map(input -> {
+                FileItemGuangbo file = new FileItemGuangbo();
+                file.setName(input.getName());
+                file.setUrl(input.getUrl());
+                file.setSize(input.getSize());
+                file.setType(input.getType());
+                return file;
+            }).collect(Collectors.toList());
+            mediaInfoConfig.sendCombinedMessageGeneric(chatId, sendMessage, fileItems);
+        } else {
+            try {
+                accountBot.oneBroadcast(sendMessage);
+            }catch (Exception e){
+                System.err.println(e.getMessage());
+                statusMapper.delete(new QueryWrapper<Status>().eq("group_id", chatId));
+            }
+        }
+    }
 
 
 
     /****************************  以下是针对数据的操作 **********************************/
-    //查询没有开启日切的
+//查询没有开启日切的
     public List<Account> selectAccountRiqie(boolean riqie,Date setTime, String groupId) {
         QueryWrapper<Account> queryWrapper = new QueryWrapper<>();
         if (riqie){//开启日切则查今日的日切数据

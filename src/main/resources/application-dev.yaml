@@ -26,8 +26,6 @@ logging:
 #threeAdminUserId: 7045880082 #TTpayxz66
 #botUserId: 6764218833
 
-
-
 #http://43.128.113.117:8081
 #Origin: http://www.yaoke.cc
 #Origin1: http://www.yaoke.cc
@@ -49,6 +47,7 @@ apiKey2: e9b66829-5dde-4f5e-9611-37bc9f26f4c7
 #获取最新汇率
 tranAccountUrl: https://apilist.tronscanapi.com/api/accountv2?address=
 tranHistoryUrl: https://apilist.tronscanapi.com/api/filter/trc20/transfers?limit=10&start=0&sort=-timestamp&count=true&filterTokenValue=0&relatedAddress=
+uploadFileGangbo: /usr/local/jar/UpgradeGangbo/
 telegram:
   bot:
     #正式环境

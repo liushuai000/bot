@@ -1,26 +1,40 @@
 package org.example.bot.accountBot.botConfig;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.example.bot.accountBot.dto.UserDTO;
 import org.example.bot.accountBot.mapper.GroupInfoSettingMapper;
+import org.example.bot.accountBot.mapper.GroupInnerUserMapper;
+import org.example.bot.accountBot.mapper.StatusMapper;
 import org.example.bot.accountBot.pojo.*;
 
+import org.example.bot.accountBot.pojo.User;
 import org.example.bot.accountBot.service.*;
 import org.example.bot.accountBot.utils.BaseConstant;
+import org.example.bot.accountBot.utils.StyleText;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
+import org.telegram.telegrambots.meta.api.methods.groupadministration.GetChatMember;
+import org.telegram.telegrambots.meta.api.methods.groupadministration.LeaveChat;
+import org.telegram.telegrambots.meta.api.methods.send.SendMediaGroup;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
+import org.telegram.telegrambots.meta.api.methods.send.SendPhoto;
+import org.telegram.telegrambots.meta.api.methods.send.SendVideo;
+import org.telegram.telegrambots.meta.api.methods.updatingmessages.DeleteMessage;
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageText;
-import org.telegram.telegrambots.meta.api.objects.ChatMemberUpdated;
-import org.telegram.telegrambots.meta.api.objects.Message;
-import org.telegram.telegrambots.meta.api.objects.Update;
+import org.telegram.telegrambots.meta.api.objects.*;
+import org.telegram.telegrambots.meta.api.objects.chatmember.ChatMember;
+import org.telegram.telegrambots.meta.api.objects.media.InputMedia;
+import org.telegram.telegrambots.meta.api.objects.media.InputMediaPhoto;
+import org.telegram.telegrambots.meta.api.objects.media.InputMediaVideo;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -72,6 +86,10 @@ public class AccountBot extends TelegramLongPollingBot {
     private GroupInfoSettingBotMessage groupInfoSettingBotMessage;//注意处理进群记录用户信息或者是 切换中英文
     @Autowired
     private PermissionUser permissionUser;//查询本群权限人
+    @Autowired
+    private StatusMapper statusMapper;
+    @Autowired
+    private GroupInnerUserMapper groupInnerUserMapper;
     @Override
     public String getBotUsername() {
         return username;
@@ -79,6 +97,27 @@ public class AccountBot extends TelegramLongPollingBot {
     @Override
     public String getBotToken() {
         return botToken;
+    }
+    public AccountBot() {
+        List<String> list = Arrays.asList(
+                "message",                  // 普通消息
+                "edited_message",           // 编辑过的消息
+                "channel_post",             // 频道消息
+                "edited_channel_post",      // 编辑过的频道消息
+                "inline_query",             // 内联查询
+                "chosen_inline_result",     // 选择了内联结果
+                "callback_query",           // 按钮回调
+                "shipping_query",           // 发货信息（支付相关）
+                "pre_checkout_query",       // 支付前确认（支付相关）
+                "poll",                     // 投票事件
+                "poll_answer",              // 用户提交投票答案
+                "my_chat_member",           // ✅ 机器人自身在群中的权限变化
+                "chat_member",              // 群成员加入/退出/变动
+                "chat_join_request",        // 用户申请加入私密群
+                "message_reaction",         // 表情反应（用户加了 emoji）
+                "message_reaction_count"    // 表情反应数量变化
+        );
+        this.getOptions().setAllowedUpdates(list);
     }
     @Override
     public void onUpdateReceived(Update update) {
@@ -118,20 +157,14 @@ public class AccountBot extends TelegramLongPollingBot {
             this.BusinessHandler(message, sendMessage, replyToText, replayToMessageId, userDTO, update);
         }else  if (update.hasMessage() && update.getMessage().hasPhoto()){
             String caption = update.getMessage().getCaption();
-            if (caption == null){
-                return;
-            }
             userDTO.setText(caption);
             this.BusinessHandler(message,sendMessage,replyToText,replayToMessageId,userDTO,update);
         }else  if (update.hasMessage() && update.getMessage().hasVideo()){
             String caption = update.getMessage().getCaption();
-            if (caption == null){
-                return;
-            }
             userDTO.setText(caption);
             this.BusinessHandler(message,sendMessage,replyToText,replayToMessageId,userDTO,update);
         }else if (update.hasMessage() && update.getMessage().getChat().isGroupChat()||message.getChat().isSuperGroupChat()){
-            Status status=statusService.getInitStatus(userDTO.getGroupId(),userDTO.getGroupTitle());
+            Status status=statusService.getInitStatus(update,userDTO.getGroupId(),userDTO.getGroupTitle());
             // 判断是否是带有 caption 的图片或视频消息
             if ((message.hasPhoto() || message.hasVideo()) && message.getCaption() != null && !message.getCaption().isEmpty()) {
                 String caption = message.getCaption();
@@ -141,6 +174,36 @@ public class AccountBot extends TelegramLongPollingBot {
             }
         }
     }
+    public void insertInnerUser(String type, String groupId, String userId,
+                                String username, String firstName, String lastName) {
+        QueryWrapper<GroupInnerUser> queryWrapper = new QueryWrapper<>();
+        if (groupId!=null){
+            queryWrapper.eq("group_id", groupId);
+        }else {
+            queryWrapper.eq("type", type);
+        }
+        queryWrapper.eq("user_id", userId);
+        GroupInnerUser existing = groupInnerUserMapper.selectOne(queryWrapper);
+        if (existing == null) {
+            GroupInnerUser newUser = new GroupInnerUser();
+            newUser.setType(type);
+            newUser.setGroupId(groupId);
+            newUser.setUserId(userId);
+            newUser.setUsername(username);
+            newUser.setFirstName(firstName);
+            newUser.setLastName(lastName);
+            newUser.setLastTime(new Date());
+            groupInnerUserMapper.insert(newUser);
+        } else {
+            existing.setType(type);
+            existing.setUsername(username);
+            existing.setFirstName(firstName);
+            existing.setLastName(lastName);
+            existing.setLastTime(new Date());
+            groupInnerUserMapper.update(existing, queryWrapper);
+        }
+    }
+
     public void BusinessHandler(Message message,SendMessage sendMessage, String replyToText,Integer replayToMessageId, UserDTO userDTO,Update update) {
         GroupInfoSetting groupInfoSetting = null;
         if (userDTO.getGroupId()!=null){
@@ -150,13 +213,14 @@ public class AccountBot extends TelegramLongPollingBot {
                 groupInfoSetting.setGroupId(Long.valueOf(userDTO.getGroupId()));
                 groupInfoSettingMapper.insert(groupInfoSetting);
             }
-            if (userDTO.getText().equals("切换中文") || userDTO.getText().equals("切换英文")
-                    ||  userDTO.getText().toLowerCase().equals("switch to chinese")||  userDTO.getText().toLowerCase().equals("switch to english")){
+            if (userDTO.getText()!=null && (userDTO.getText().equals("切换中文") || userDTO.getText().equals("切换英文")
+                    ||  userDTO.getText().toLowerCase().equals("switch to chinese")||  userDTO.getText().toLowerCase().equals("switch to english"))){
                 groupInfoSettingBotMessage.switchEn(userDTO.getText().toLowerCase(), Long.valueOf(userDTO.getGroupId()),groupInfoSetting);
                 return;
             }
+            this.insertInnerUser(userDTO.getGroupTitle(),userDTO.getGroupId(),userDTO.getUserId(),userDTO.getUsername(),userDTO.getFirstName(),userDTO.getLastName());
         }
-        if (userDTO.getText().equals("/detail"+"@"+username)||userDTO.getText().equals("/detail")){
+        if (userDTO.getText()!=null && (userDTO.getText().equals("/detail"+"@"+username)||userDTO.getText().equals("/detail"))){
             SendMessage sendMessageDetail = new SendMessage();
             if (message.getChat().isUserChat()){
                 sendMessageDetail.setChatId(userDTO.getUserId());
@@ -168,8 +232,13 @@ public class AccountBot extends TelegramLongPollingBot {
         }
         //私聊的机器人  处理个人消息
         if (message.getChat().isUserChat()){
+            this.insertInnerUser("私聊",userDTO.getGroupId(),userDTO.getUserId(),userDTO.getUsername(),userDTO.getFirstName(),userDTO.getLastName());
             paperPlaneBotSinglePerson.handleTronAccountMessage(sendMessage,update,userDTO);
+            paperPlaneBotSinglePerson.handlerPrivateUser(update,message,sendMessage,userDTO);//处理私聊消息
             paperPlaneBotSinglePerson.handleNonGroupMessage(message,sendMessage,userDTO);
+            return;
+        }
+        if (userDTO.getText()==null){
             return;
         }
         if(userDTO.getText().startsWith("查询") || userDTO.getText().startsWith("Query")){
@@ -192,7 +261,7 @@ public class AccountBot extends TelegramLongPollingBot {
         //计算器功能
         utils.counter(userDTO.getText(),sendMessage);
         notificationService.initNotification(userDTO);
-        Status status=statusService.getInitStatus(userDTO.getGroupId(),userDTO.getGroupTitle());
+        Status status=statusService.getInitStatus(update,userDTO.getGroupId(),userDTO.getGroupTitle());
         downAddress.viewAddress(userDTO.getText(),sendMessage,status);
         if (downAddress.isTronAddress(userDTO.getText())) {
             downAddress.validAddress(userDTO.getText(), sendMessage, status);//验证地址
@@ -344,7 +413,7 @@ public class AccountBot extends TelegramLongPollingBot {
                             "➖➖➖➖➖➖➖➖➖➖➖";
                 }
                 this.tronAccountMessageTextHtml(sendMessage,chatId,message);
-            }else if (chatMember.getNewChatMember().getStatus().equals("member") || chatMember.getNewChatMember().getStatus().equals("left")) {
+            }else if (chatMember.getNewChatMember().getStatus().equals("member")) {
                 String chatId = chatMember.getChat().getId().toString();//群组id
                 Long id = chatMember.getFrom().getId();//拉机器人的用户
                 String username = chatMember.getFrom().getUserName();
@@ -420,12 +489,12 @@ public class AccountBot extends TelegramLongPollingBot {
                 if (groupInfoSetting==null){
                     groupInfoSetting = new GroupInfoSetting();
                     groupInfoSetting.setGroupId(Long.valueOf(chatId));
-                    groupInfoSetting.setEnglish(true);
-//                    groupInfoSetting.setEnglish(false);//切换中文要修改111
+//                    groupInfoSetting.setEnglish(true);///
+                    groupInfoSetting.setEnglish(false);//切换中文要修改111
                     groupInfoSettingMapper.insert(groupInfoSetting);
                 }else {
-                    groupInfoSetting.setEnglish(true);
-//                    groupInfoSetting.setEnglish(false);
+//                    groupInfoSetting.setEnglish(true);
+                    groupInfoSetting.setEnglish(false);///
                     groupInfoSettingMapper.updateById(groupInfoSetting);
                 }
                 String message;
@@ -439,6 +508,26 @@ public class AccountBot extends TelegramLongPollingBot {
                 SendMessage sendMessage = new SendMessage();
                 sendMessage.setChatId(chatId);
                 this.tronAccountMessageTextHtml(sendMessage,chatId,message);
+            } else if ( chatMember.getNewChatMember().getStatus().equals("left") || chatMember.getNewChatMember().getStatus().equals("kicked")) {
+                String chatId = chatMember.getChat().getId().toString();
+                statusMapper.delete(new QueryWrapper<Status>().eq("group_id", chatId));
+            }
+        }
+        //检测群内有用户退群或者被踢出群
+        if (update.hasChatMember()) {
+            ChatMemberUpdated chatMember = update.getChatMember();
+            ChatMember oldMember = chatMember.getOldChatMember();
+            ChatMember newMember = chatMember.getNewChatMember();
+            String chatId = chatMember.getChat().getId().toString();
+            String userId = chatMember.getFrom().getId() + "";
+            String username = chatMember.getFrom().getUserName();
+            String firstName = chatMember.getFrom().getFirstName();
+            String lastName = chatMember.getFrom().getLastName();
+            if ("left".equals(newMember.getStatus()) || "kicked".equals(newMember.getStatus())) {
+                this.insertInnerUser("退群", chatId, userId, username, firstName, lastName);
+            }
+            if ("member".equals(newMember.getStatus())){
+                this.insertInnerUser(chatMember.getChat().getTitle(), chatId, userId, username, firstName, lastName);
             }
         }
     }
@@ -662,6 +751,161 @@ public class AccountBot extends TelegramLongPollingBot {
             execute(sendMessage);
         } catch (Exception e) {
             log.info(e.getMessage());
+        }
+    }
+    public void sendMessageReplay(SendMessage sendMessage,boolean isReplay,int replyMessageId) {
+        sendMessage.enableHtml(true);
+        sendMessage.setParseMode("HTML");
+//        sendMessage.enableMarkdown(true);
+        try {
+            if (isReplay){
+                sendMessage.setReplyToMessageId(replyMessageId);
+            }
+            execute(sendMessage);
+        } catch (Exception e) {
+            log.info(e.getMessage());
+        }
+    }
+
+    //检查消息是否来自管理员
+    public ChatMember findStatus(String chatId) {
+        GetChatMember getChatMember = new GetChatMember();
+        getChatMember.setChatId(Long.parseLong(chatId));
+        getChatMember.setUserId(Long.valueOf(botUserId));
+        try {
+            ChatMember chatMember = execute(getChatMember);
+            return chatMember; // 返回 true 表示被踢出
+        } catch (TelegramApiException e) {
+            System.err.println("检查用户状态失败: " + e.getMessage());
+            return null;
+        }
+    }
+    //退群操作
+    public void leaveChat(String chatId) {
+        try {
+            // 创建一个 LeaveChat 对象
+            LeaveChat leaveChat = new LeaveChat();
+            leaveChat.setChatId(chatId);
+            // 执行退群操作
+            execute(leaveChat);
+        } catch (TelegramApiException e) {
+            System.err.println(e.getMessage());
+//            throw new RuntimeException(e);
+        }
+    }
+
+
+    public List<Integer> sendMediaGroup(SendMediaGroup sendMediaGroup) {
+        try {
+            List<Message> messages = execute(sendMediaGroup);
+            List<Integer> messageIds = messages.stream().map(Message::getMessageId).collect(Collectors.toList());
+            return messageIds;
+        } catch (Exception e) {
+            System.err.println(e.getMessage());
+        }
+        return new ArrayList<>();
+    }
+
+    public Integer sendPhotoIsDelete(SendPhoto sendPhoto) {
+        try {
+            Message message = execute(sendPhoto);
+            return message.getMessageId();
+        }catch (TelegramApiException e){
+            log.info(e.getMessage());
+        }
+        return null;
+    }
+
+    public Integer sendVideoIsDelete(SendVideo sendVideo) {
+        try {
+            Message message = execute(sendVideo);
+            return message.getMessageId();
+        }catch (TelegramApiException e){
+            log.info(e.getMessage());
+        }
+        return null;
+    }
+
+    public void oneBroadcast(SendMessage sendMessage) throws TelegramApiException {
+        String string = new StyleText().cleanHtmlExceptSpecificTags(sendMessage.getText());
+        sendMessage.setText(string);
+        Message execute = execute(sendMessage);
+    }
+    public Integer sendVideo(SendVideo sendVideo, Boolean isReplay,Integer replyMessageId) {
+        try {
+            if (isReplay){
+                sendVideo.setReplyToMessageId(replyMessageId);
+            }
+            Message message = execute(sendVideo);
+            int messageId = message.getMessageId();
+            return messageId;
+        } catch (Exception e) {
+            System.err.println(e.getMessage());
+        }
+        return null;
+    }
+    public Integer sendPhone(SendPhoto sendPhoto, Boolean isReplay,Integer replyMessageId) {
+        try {
+            if (isReplay){
+                sendPhoto.setReplyToMessageId(replyMessageId);
+            }
+            Message message = execute(sendPhoto);
+            int messageId = message.getMessageId();
+            return messageId;
+        } catch (Exception e) {
+            System.err.println(e.getMessage());
+        }
+        return null;
+    }
+
+    private void sendMediaGroup(Message message, String chatId, String caption) throws TelegramApiException {
+        SendMediaGroup mediaGroup = new SendMediaGroup();
+        mediaGroup.setChatId(chatId);
+        List<InputMedia> mediaList = new ArrayList<>();
+        boolean isFirst = true;
+        if (message.hasPhoto()) {
+            List<PhotoSize> photos = message.getPhoto();
+            if (photos == null || photos.isEmpty()) return;
+
+            for (PhotoSize photo : photos) {
+                InputMediaPhoto mediaPhoto = new InputMediaPhoto();
+                mediaPhoto.setMedia(photo.getFileId());
+                if (isFirst && caption != null && !caption.isEmpty()) {
+                    mediaPhoto.setCaption(caption);
+                    mediaPhoto.setParseMode("HTML");
+                    isFirst = false;
+                }
+                mediaList.add(mediaPhoto);
+            }
+        } else if (message.hasVideo()) {
+            Video video = message.getVideo();
+            InputMediaVideo mediaVideo = new InputMediaVideo();
+            mediaVideo.setMedia(video.getFileId());
+            if (caption != null && !caption.isEmpty()) {
+                mediaVideo.setCaption(caption);
+                mediaVideo.setParseMode("HTML");
+            }
+            mediaList.add(mediaVideo);
+        } else {
+            log.warn("Unsupported media type in media group.");
+            return;
+        }
+        mediaGroup.setMedias(mediaList);
+        try {
+            execute(mediaGroup);
+        } catch (TelegramApiException e) {
+            log.error("发送媒体组失败: {}", e.getMessage(), e);
+            throw e;
+        }
+    }
+    public void nowDeleteMessage(Long chatId, Integer messageId) {
+        DeleteMessage deleteMessage = new DeleteMessage();
+        deleteMessage.setChatId(chatId);
+        deleteMessage.setMessageId(messageId);
+        try {
+            execute(deleteMessage);
+        } catch (TelegramApiException e) {
+            System.err.println(e.getMessage());
         }
     }
 }

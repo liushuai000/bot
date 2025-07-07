@@ -12,18 +12,23 @@ import org.apache.commons.lang3.StringUtils;
 import org.example.bot.accountBot.config.RestTemplateConfig;
 import org.example.bot.accountBot.dto.*;
 import org.example.bot.accountBot.mapper.GroupInfoSettingMapper;
-import org.example.bot.accountBot.pojo.Account;
-import org.example.bot.accountBot.pojo.GroupInfoSetting;
-import org.example.bot.accountBot.pojo.Rate;
-import org.example.bot.accountBot.pojo.WalletListener;
+import org.example.bot.accountBot.mapper.UserNormalMapper;
+import org.example.bot.accountBot.pojo.*;
 import org.example.bot.accountBot.service.WalletListenerService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.telegram.telegrambots.meta.api.methods.send.SendMediaGroup;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
+import org.telegram.telegrambots.meta.api.methods.send.SendPhoto;
+import org.telegram.telegrambots.meta.api.methods.send.SendVideo;
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageText;
+import org.telegram.telegrambots.meta.api.objects.InputFile;
 import org.telegram.telegrambots.meta.api.objects.Message;
+import org.telegram.telegrambots.meta.api.objects.PhotoSize;
 import org.telegram.telegrambots.meta.api.objects.Update;
+import org.telegram.telegrambots.meta.api.objects.media.InputMedia;
+import org.telegram.telegrambots.meta.api.objects.media.InputMediaPhoto;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
 
@@ -60,11 +65,15 @@ public class NowExchange {
     protected WalletListenerService walletListenerService;
     @Resource
     protected AccountBot accountBot;
+    @Autowired
+    private ConfigEditHandler configEditHandler;
     private final OkHttpClient client = new OkHttpClient();
     // 定时任务调度器
 //    private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(16);
     @Autowired
     private GroupInfoSettingMapper groupInfoSettingMapper;
+    @Autowired
+    private UserNormalMapper userNormalMapper;
 //    @Autowired
 //    private SettingOperatorPerson settingOperatorPerson;
 
@@ -219,6 +228,31 @@ public class NowExchange {
             } else if (nicknameToAddressMap.values().contains(callbackData)) {
                 this.getWallerListener(update.getCallbackQuery().getMessage(),sendMessage,callbackData,nicknameToAddressMap,groupInfoSetting);
                 return;
+            } else if (callbackData.startsWith("confirm_broadcast_")) {
+                String userId = callbackData.replace("confirm_broadcast_", "");
+                List<UserNormal> userNormals = userNormalMapper.selectList(new QueryWrapper<UserNormal>().eq("user_id", userId));
+                if (groupInfoSetting.getEnglish()){
+                    sendMessage.setText("共计【"+userNormals.size()+"】个群组，群发已开始");
+                }else {
+                    sendMessage.setText("total【"+userNormals.size()+"】Groups, group messaging has started");
+                }
+                accountBot.sendMessage(sendMessage);
+                if (userNormals.isEmpty()) {
+                    return;
+                }
+                for (UserNormal userNormal : userNormals){
+                    handleConfirmBroadcast(userNormal.getGroupId(), update.getCallbackQuery().getMessage().getReplyToMessage());
+                }
+                accountBot.nowDeleteMessage(Long.valueOf(userId), messageId);
+                return;
+            } else if (callbackData.startsWith("cancel_broadcast_")) {
+                String userId = callbackData.replace("cancel_broadcast_", "");
+                accountBot.nowDeleteMessage(Long.valueOf(userId), messageId);
+                return;
+            } else if (callbackData.startsWith("ButtonId:")) {
+                String buttonId = callbackData.replace("ButtonId:", "");
+                configEditHandler.sendButtonMessage(buttonId,chatId,messageId);
+                return;
             } else if (callbackData.equals("取消通知")) {
                 // 找到第一个左括号和右括号的位置
                 int start = text.indexOf('(');
@@ -347,6 +381,62 @@ public class NowExchange {
             accountBot.editMessageText(editMessage,chatId, messageId, result);
         }
     }
+
+    /**
+     * 确定发送的逻辑
+     * @param chatId  这个
+     */
+    private void handleConfirmBroadcast(String chatId, Message originalMessage) {
+        try {
+            // 调用 AccountBot 发送广播消息
+            if (originalMessage.hasText()) {
+                SendMessage sendMessage = new SendMessage();
+                sendMessage.setChatId(chatId);
+                sendMessage.setText(originalMessage.getText());
+                sendMessage.setParseMode("HTML");
+                accountBot.sendMessage(sendMessage);
+            } else if (originalMessage.hasPhoto()) {
+                SendPhoto sendPhoto = new SendPhoto();
+                sendPhoto.setChatId(chatId);
+                sendPhoto.setPhoto(new InputFile(originalMessage.getPhoto().get(0).getFileId())); //不应该只第一个发送文本消息
+                if (originalMessage.getCaption() != null) {
+                    sendPhoto.setCaption(originalMessage.getCaption());
+                    sendPhoto.setParseMode("HTML");
+                }
+                accountBot.sendPhone(sendPhoto, false, null);
+            } else if (originalMessage.hasVideo()) {
+                SendVideo sendVideo = new SendVideo();
+                sendVideo.setChatId(chatId);
+                sendVideo.setVideo(new InputFile(originalMessage.getVideo().getFileId()));
+                if (originalMessage.getCaption() != null) {
+                    sendVideo.setCaption(originalMessage.getCaption());
+                    sendVideo.setParseMode("HTML");
+                }
+                accountBot.sendVideo(sendVideo, false, null);
+            } else if (originalMessage.getMediaGroupId()!=null) {
+                SendMediaGroup mediaGroup = new SendMediaGroup();
+                mediaGroup.setChatId(chatId);
+                List<InputMedia> mediaList = new ArrayList<>();
+                for (PhotoSize photo : originalMessage.getPhoto()) {
+                    InputMediaPhoto inputMedia = new InputMediaPhoto();
+                    inputMedia.setMedia(photo.getFileId());
+                    if (mediaList.isEmpty() && originalMessage.getCaption() != null) {
+                        inputMedia.setCaption(originalMessage.getCaption());
+                        inputMedia.setParseMode("HTML");
+                    }
+                    mediaList.add(inputMedia);
+                }
+                mediaGroup.setMedias(mediaList);
+                accountBot.sendMediaGroup(mediaGroup);
+            } else {
+                log.warn("不支持的消息类型");
+            }
+        } catch (Exception e) {
+            log.error("发送广播消息失败", e);
+        }
+    }
+
+
     private void getWallerListener(Message message, SendMessage sendMessage, String callbackData,Map<String, String> map1,GroupInfoSetting groupInfoSetting) {
         String urls = tranHistoryUrl+callbackData;//callbackData这里的key昵称
         List<TronHistoryDTO> tradingList=restTemplateConfig.getForObjectHistoryTrading(urls,TronHistoryDTO.class);

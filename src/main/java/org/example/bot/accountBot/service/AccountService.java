@@ -1,9 +1,10 @@
 package org.example.bot.accountBot.service;
 
-import org.example.bot.accountBot.dto.QueryType;
-import org.example.bot.accountBot.dto.ReturnFromType;
+import org.example.bot.accountBot.dto.*;
 import org.example.bot.accountBot.pojo.Account;
 import org.example.bot.accountBot.pojo.Status;
+import org.example.bot.accountBot.utils.JsonResult;
+import org.springframework.web.bind.annotation.RequestParam;
 
 import java.math.BigDecimal;
 import java.util.Date;
@@ -28,4 +29,37 @@ public interface AccountService {
 
     void deleteHistoryData(String groupId);
 
+    JsonResult login(LoginFromDTO loginFromDTO);
+
+    JsonResult findGroupList(QueryGroupDTO queryDTO);
+
+    JsonResult getUserList(QueryUserDTO queryDTO);
+
+    JsonResult setStatus();
+
+    JsonResult leaveGroup(String groupId);
+
+    JsonResult allLeaveGroup(List<String> groupIds);
+
+    JsonResult findGroupListTag(QueryGroupDTO dto);
+
+    JsonResult sendAllMessage(ManagerGroupMessageDTO dto);
+
+    JsonResult sendGroupMessage(GroupMessageDTO dto);
+
+    JsonResult setTagGroup(String groupId, String tag);
+
+    JsonResult getTagAll(Integer page, Integer size,String groupId);
+
+    JsonResult deleteTagGroup(String groupId, String tag);
+
+    JsonResult updateExpireTime(String userId, String expireTime);
+
+    JsonResult sendUserMessage(UserMessageDTO dto);
+
+    JsonResult sendGroupMessageTag(GroupMessageDTO dto);
+
+    JsonResult saveCustomerConfig(ConfigDTO dto);
+
+    JsonResult findConfig();
 }

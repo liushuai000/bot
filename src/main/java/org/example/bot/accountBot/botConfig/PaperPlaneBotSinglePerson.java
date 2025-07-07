@@ -7,6 +7,8 @@ import org.example.bot.accountBot.config.RestTemplateConfig;
 import org.example.bot.accountBot.dto.TronAccountDTO;
 import org.example.bot.accountBot.dto.TronHistoryDTO;
 import org.example.bot.accountBot.dto.UserDTO;
+import org.example.bot.accountBot.mapper.ConfigEditButtonMapper;
+import org.example.bot.accountBot.mapper.ConfigEditMapper;
 import org.example.bot.accountBot.mapper.GroupInfoSettingMapper;
 import org.example.bot.accountBot.mapper.UserNormalMapper;
 import org.example.bot.accountBot.pojo.*;
@@ -14,13 +16,17 @@ import org.example.bot.accountBot.service.UserNormalService;
 import org.example.bot.accountBot.service.UserOperationService;
 import org.example.bot.accountBot.service.UserService;
 import org.example.bot.accountBot.service.WalletListenerService;
+import org.example.bot.accountBot.utils.DateUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Message;
+import org.telegram.telegrambots.meta.api.objects.PhotoSize;
 import org.telegram.telegrambots.meta.api.objects.Update;
+import org.telegram.telegrambots.meta.api.objects.media.InputMediaPhoto;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardMarkup;
 
 import javax.annotation.PostConstruct;
@@ -59,11 +65,19 @@ public class PaperPlaneBotSinglePerson {
     @Autowired
     private GroupInfoSettingMapper groupInfoSettingMapper;
     @Autowired
+    private ConfigEditMapper configEditMapper;
+    @Autowired
+    private ConfigEditButtonMapper configEditButtonMapper;
+    @Autowired
     WalletListenerService walletListenerService;
+    @Autowired
+    private ButtonList buttonList;
     @Value("${tranAccountUrl}")
     protected String tranAccountUrl;//查询账户余额
     @Value("${tranHistoryUrl}")
     protected String tranHistoryUrl;//查询账户历史交易
+    @Value("${vueUrl}")
+    protected String vueUrl;
     @Resource
     RestTemplateConfig restTemplateConfig;
     // 创建 SimpleDateFormat 对象，指定日期格式
@@ -199,6 +213,9 @@ public class PaperPlaneBotSinglePerson {
     //获取个人账户信息
     protected void handleTronAccountMessage(SendMessage sendMessage, Update update,UserDTO userDTO){
         String text = userDTO.getText();
+        if (text==null){
+            return;
+        }
         GroupInfoSetting groupInfoSetting = groupInfoSettingMapper.selectOne(new QueryWrapper<GroupInfoSetting>().eq("group_id", userDTO.getUserId()));
         if (groupInfoSetting==null){
             groupInfoSetting=new GroupInfoSetting();
@@ -284,10 +301,15 @@ public class PaperPlaneBotSinglePerson {
         buttonList.sendButton(sendMessage, String.valueOf(userId),buttonTextMap);
         accountBot.tronAccountMessageText(sendMessage,userId,result);
     }
-
-
+    public static final String STATE_BROADCAST = "broadcast";
+    public static final String STATE_NORMAL = "normal";
+    // 广播状态
+    private static final Map<String, String> userStates = new ConcurrentHashMap<>();
     //设置机器人在群组内的有效时间 默认免费使用日期6小时. 机器人底部按钮 获取个人信息 获取最新用户名 获取个人id 使用日期;
     protected void handleNonGroupMessage(Message message, SendMessage sendMessage, UserDTO userDTO) {
+        if (userDTO.getText()==null){
+            return;
+        }
         String text = userDTO.getText().toLowerCase();
         //授权-123456789-30  用户id -30
         PaperPlaneBotButton buttonList = new PaperPlaneBotButton();
@@ -307,6 +329,28 @@ public class PaperPlaneBotSinglePerson {
             return;
         }else if (text.equals("使用说明（illustrate）")){
             this.useInfo(message,sendMessage,userDTO);
+            return;
+        }else if (text.equals("群发广播（group broadcast）")){
+            userStates.put(userDTO.getUserId(), STATE_BROADCAST);
+            if (groupInfoSetting.getEnglish()){
+                sendMessage.setText("\uD83D\uDCE1 群发广播：\n" +
+                        "\n" +
+                        "仅发送自己邀请的群组，如需发送所有群，请在后台操作。\n" +
+                        "支持纯文本、图片+文字、视频+文字。\n" +
+                        "\n" +
+                        "请输入您要广播的内容:");
+            }else {
+                sendMessage.setText("\uD83D\uDCE1 群发广播：\n" +
+                        "\n" +
+                        "Only send the group you invite, if you need to send all groups, please operate in the background.\n" +
+                        "Support pure text, image + text, video + text.\n" +
+                        "\n" +
+                        "Please enter the content you want to broadcast:");
+            }
+            accountBot.sendMessage(sendMessage);
+            return;
+        }else if (text.equals("自助续费（self-service renewal）")){
+            this.renewal(message,sendMessage,userDTO);
             return;
         }else if (text.contains("##") &&text.length()>=37){
             // 使用 split 方法分割字符串
@@ -545,6 +589,35 @@ public class PaperPlaneBotSinglePerson {
         }
     }
 
+    private void renewal(Message message, SendMessage sendMessage, UserDTO userDTO) {
+        GroupInfoSetting groupInfoSetting = groupInfoSettingMapper.selectOne(new QueryWrapper<GroupInfoSetting>().eq("group_id", userDTO.getUserId()));
+        User user = userService.findByUserId(userDTO.getUserId());
+        String msg;
+        if (groupInfoSetting.getEnglish()){
+            msg="自助续费机器人\n" +
+                    "\n" +
+                    "记账机器人使用有效期截至：";
+        }else{
+            msg="Self-service renewal robot\n" +
+                    "\n" +
+                    "The validity period of the accounting robot ends：";
+        }
+        if (user==null || user.getValidTime()==null){
+            msg+= new DateUtils().parseDate(user.getCreateTime());
+        } else if (user.getValidTime()!=null) {
+            msg+= new DateUtils().parseDate(user.getValidTime());
+        }
+        sendMessage.setText( msg);
+        ConfigEdit configEdit = configEditMapper.selectOne(new QueryWrapper<>());
+        if (configEdit!=null){
+            List<ConfigEditButton> configEditButtonList = configEditButtonMapper.selectList(new QueryWrapper<ConfigEditButton>().eq("config_edit_id", configEdit.getId()));
+            if (configEditButtonList!=null && !configEditButtonList.isEmpty()){
+                buttonList.moneyButton(sendMessage,configEditButtonList);
+            }
+        }
+        accountBot.sendMessage(sendMessage);
+    }
+
     //使用说明
     private void useInfo(Message message, SendMessage sendMessage, UserDTO userDTO) {
         String msg="1\uFE0F⃣增加机器人进群。群右上角--Add member-输入 @"+this.username+"\n" +
@@ -656,8 +729,8 @@ public class PaperPlaneBotSinglePerson {
         User user = userService.findByUserId(userDTO.getUserId());
         if (user==null){
             user = new User();
-            LocalDateTime tomorrow = LocalDateTime.now().plusHours(48);
-//            LocalDateTime tomorrow = LocalDateTime.now().plusHours(8);//英文8小时
+//            LocalDateTime tomorrow = LocalDateTime.now().plusHours(48);
+            LocalDateTime tomorrow = LocalDateTime.now().plusHours(8);//英文8小时  1111
             Date validTime = Date.from(tomorrow.atZone(ZoneId.systemDefault()).toInstant());
             user.setUserId(userDTO.getUserId());
             user.setUsername(userDTO.getUsername());
@@ -670,8 +743,8 @@ public class PaperPlaneBotSinglePerson {
             userService.insertUser(user);
 
         }else if (!user.isValidFree()) {//还没有体验过免费6小时
-//            LocalDateTime tomorrow = LocalDateTime.now().plusHours(8);//英文8小时
-            LocalDateTime tomorrow = LocalDateTime.now().plusHours(48);
+            LocalDateTime tomorrow = LocalDateTime.now().plusHours(8);//英文8小时
+//            LocalDateTime tomorrow = LocalDateTime.now().plusHours(48);//
             Date validTime = Date.from(tomorrow.atZone(ZoneId.systemDefault()).toInstant());
             user.setValidTime(validTime);
             user.setSuperAdmin(true);//默认操作权限管理员
@@ -715,6 +788,88 @@ public class PaperPlaneBotSinglePerson {
         }
         buttonList.sendButton(sendMessage, map);
         accountBot.tronAccountMessageTextHtml(sendMessage,userDTO.getUserId(),message1);
+    }
+    // 存储用户正在广播的媒体组 ID 及其已处理的消息数量
+    private static final Map<String, Set<String>> processedMediaGroups = new ConcurrentHashMap<>();
+    private static final Map<String, List<Integer>> pendingBroadcastMessageMap = new ConcurrentHashMap<>();
+    private static final Map<String, Long> lastActiveTimeMap = new ConcurrentHashMap<>();
+    @Scheduled(fixedRate = 3600000) // 每小时执行一次
+    public void cleanupExpiredData() {
+        long now = System.currentTimeMillis();
+        List<String> toRemove = new ArrayList<>();
+        for (Map.Entry<String, String> entry : userStates.entrySet()) {
+            String userId = entry.getKey();
+            Long lastActive = getLastActiveTime(userId);
+            // 判断是否超时（24小时）
+            if (lastActive == null || now - lastActive > TimeUnit.HOURS.toMillis(24)) {
+                toRemove.add(userId);
+            }
+        }
+        // 执行清理
+        toRemove.forEach(this::removeUserData);
+    }
+    private Long getLastActiveTime(String userId) {
+        return lastActiveTimeMap.get(userId);
+    }
+    private void removeUserData(String userId) {
+        userStates.remove(userId);
+        processedMediaGroups.remove(userId);
+        pendingBroadcastMessageMap.remove(userId);
+        lastActiveTimeMap.remove(userId);
+        log.info("已清理超时用户状态: {}", userId);
+    }
+
+    public void handlerPrivateUser(Update update, Message message, SendMessage sendMessage, UserDTO userDTO) {
+        if (userDTO.getText()!=null && userDTO.getText().equals("/login")){
+            sendMessage.setText("点击下方按钮进入超级管理后台!");
+            Map<String, String> map = new HashMap<>();
+            map.put("超级管理后台",vueUrl+"AccountLogin");
+            buttonList.sendButtonLink(sendMessage,userDTO.getUserId(),map);
+            accountBot.sendMessage(sendMessage);
+            return;
+        }
+
+        String userId = userDTO.getUserId();
+        String userState = userStates.getOrDefault(userId, STATE_NORMAL);
+        GroupInfoSetting groupInfoSetting = groupInfoSettingMapper.selectOne(new QueryWrapper<GroupInfoSetting>().eq("group_id", userId));
+        if (STATE_BROADCAST.equals(userState)) {
+            // 更新最后活跃时间
+            updateLastActiveTime(userId);
+            // 构建按钮并发送确认消息
+            Map<String, String> buttonText = new LinkedHashMap<>();
+            if (groupInfoSetting.getEnglish()) {
+                buttonText.put("确认发送", "confirm_broadcast_" + userDTO.getUserId());
+                buttonText.put("取消广播", "cancel_broadcast_" + userDTO.getUserId());
+                sendMessage.setText("请确认您要广播的内容!");
+            } else {
+                buttonText.put("Confirm Send", "confirm_broadcast_" + userDTO.getUserId());
+                buttonText.put("Cancel Broadcast", "cancel_broadcast_" + userDTO.getUserId());
+                sendMessage.setText("Please confirm what you want to broadcast!");
+            }
+            buttonList.sendButton(sendMessage, userId, buttonText);
+            // 获取 mediaGroupId
+            String mediaGroupId = message.getMediaGroupId();
+            // 缓存消息 ID
+            if (mediaGroupId != null) {
+                pendingBroadcastMessageMap.computeIfAbsent(userId, k -> new ArrayList<>()).add(message.getMessageId());
+            } else if (message.hasText()) {
+                pendingBroadcastMessageMap.computeIfAbsent(userId, k -> new ArrayList<>()).add(message.getMessageId());
+            }
+            // 判断是否是该媒体组的第一个消息
+            boolean isFirstMedia = mediaGroupId != null &&
+                    processedMediaGroups.computeIfAbsent(userId, k -> new HashSet<>()).add(mediaGroupId);
+            // 判断是否是该媒体组的最后一个消息
+            boolean isLastMedia = mediaGroupId == null || !isFirstMedia;
+            // 只有是最后一个媒体项时才清除状态
+            if (isLastMedia) {
+                userStates.remove(userId); // ✅ 只在最后一张图清除状态
+            }
+            accountBot.sendMessageReplay(sendMessage, true, message.getMessageId());
+        }
+    }
+
+    private void updateLastActiveTime(String userId) {
+        lastActiveTimeMap.put(userId, System.currentTimeMillis());
     }
 
 

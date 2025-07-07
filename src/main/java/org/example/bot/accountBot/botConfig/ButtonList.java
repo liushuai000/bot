@@ -2,20 +2,24 @@ package org.example.bot.accountBot.botConfig;
 
 
 import lombok.extern.slf4j.Slf4j;
+import org.example.bot.accountBot.pojo.ConfigEditButton;
 import org.example.bot.accountBot.pojo.GroupInfoSetting;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.telegram.telegrambots.meta.api.methods.send.SendMediaGroup;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
+import org.telegram.telegrambots.meta.api.methods.send.SendPhoto;
+import org.telegram.telegrambots.meta.api.methods.send.SendVideo;
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageText;
+import org.telegram.telegrambots.meta.api.objects.media.InputMedia;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
 
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -42,7 +46,61 @@ public class ButtonList {
         markup.setKeyboard(rowsInline);
         sendMessage.setReplyMarkup(markup);
     }
-
+    public void sendButtonLink(SendMessage sendMessage, String groupId, Map<String,String> buttonText) {
+        InlineKeyboardMarkup markup = new InlineKeyboardMarkup();
+        List<List<InlineKeyboardButton>> rowsInline = new ArrayList<>();
+        List<InlineKeyboardButton> rowInline = new ArrayList<>();
+        for (Map.Entry<String, String> entry : buttonText.entrySet()) {
+            String buttonTextName = entry.getKey();
+            String callbackData = entry.getValue();
+            InlineKeyboardButton button = new InlineKeyboardButton();
+            button.setText(buttonTextName);
+            button.setUrl(callbackData);
+            rowInline.add(button);
+        }
+        rowsInline.add(rowInline);
+        sendMessage.setChatId(groupId);
+        markup.setKeyboard(rowsInline);
+        sendMessage.setReplyMarkup(markup);
+    }
+    public void moneyButton(SendMessage sendMessage,List<ConfigEditButton> configEditButtonList) {
+        // 按 rowIndex 分组，并为每行内的按钮按 buttonIndex 排序
+        Map<Integer, List<ConfigEditButton>> rowMap = new HashMap<>();
+        for (ConfigEditButton button : configEditButtonList) {
+            rowMap.computeIfAbsent(button.getRowIndex(), k -> new ArrayList<>())
+                    .add(button);
+        }
+        // 创建最终键盘结构
+        List<List<InlineKeyboardButton>> keyboard = new ArrayList<>();
+        // 对 rowIndex 排序
+        List<Integer> sortedRowIndices = new ArrayList<>(rowMap.keySet());
+        Collections.sort(sortedRowIndices);
+        // 遍历每一行
+        for (Integer rowIndex : sortedRowIndices) {
+            List<ConfigEditButton> buttonsInRow = rowMap.get(rowIndex);
+            // 每行内部按 buttonIndex 排序
+            buttonsInRow.sort(Comparator.comparingInt(ConfigEditButton::getButtonIndex));
+            // 转换为 InlineKeyboardButton 并加入一行
+            List<InlineKeyboardButton> inlineButtons = buttonsInRow.stream().map(button -> {
+                        InlineKeyboardButton inlineBtn = new InlineKeyboardButton();
+                        inlineBtn.setText(button.getText());
+                        inlineBtn.setCallbackData("ButtonId:"+button.getId());
+                        return inlineBtn;
+                    })
+                    .collect(Collectors.toList());
+            keyboard.add(inlineButtons);
+        }
+        // 设置键盘并绑定到消息
+        InlineKeyboardMarkup inlineKeyboardMarkup = new InlineKeyboardMarkup();
+        inlineKeyboardMarkup.setKeyboard(keyboard);
+        sendMessage.setReplyMarkup(inlineKeyboardMarkup);
+    }
+    private InlineKeyboardButton createButton(String text, String callbackData) {
+        InlineKeyboardButton button = new InlineKeyboardButton();
+        button.setText(text);
+        button.setCallbackData(callbackData);
+        return button;
+    }
 
     public void exchangeList(SendMessage sendMessage, String groupId, GroupInfoSetting groupInfoSetting) {
         InlineKeyboardMarkup markup = new InlineKeyboardMarkup();
@@ -156,6 +214,5 @@ public class ButtonList {
         markup.setKeyboard(rowsInline);
         sendMessage.setReplyMarkup(markup);
     }
-
 
 }

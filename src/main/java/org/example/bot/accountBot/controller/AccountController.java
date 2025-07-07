@@ -1,25 +1,21 @@
 package org.example.bot.accountBot.controller;
 
 import io.swagger.annotations.Api;
-import io.swagger.annotations.ApiImplicitParam;
 import io.swagger.annotations.ApiOperation;
-import org.example.bot.accountBot.config.RestTemplateConfig;
-import org.example.bot.accountBot.dto.QueryType;
+import org.example.bot.accountBot.dto.*;
+
 import org.example.bot.accountBot.service.AccountService;
-import org.example.bot.accountBot.utils.ExcelExportUtil;
 import org.example.bot.accountBot.utils.JsonResult;
-import org.example.bot.accountBot.utils.TronKeyUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
-import javax.annotation.Resource;
-import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.HashMap;
 import java.util.Map;
 
 @Api(tags="账单查询请求")
@@ -28,75 +24,146 @@ import java.util.Map;
 public class AccountController {
     @Autowired
     AccountService accountService;
-
-    //通知功能有bug      根据群组id查
-//    @ApiOperation("获取所有账单信息")
-//    @GetMapping("/findAccountByGroupId")
-//    public JsonResult findAccountByGroupId(@RequestParam("groupId") String groupId,@RequestParam("addTime")  Date addTime,
-//                                           @RequestParam("findAll")  boolean findAll,@RequestParam("isOperation")  boolean isOperation,
-//                                           @RequestParam("username")  String username) {
-//        QueryType queryType = new QueryType();
-//        queryType.setGroupId(groupId).setAddTime(addTime).setFindAll(findAll).setOperation(isOperation).setUsername(username);
-//        return new JsonResult(accountService.findAccountByGroupId(queryType));
-//    }
-
     //通知功能有bug      根据群组id查
     @ApiOperation("获取所有账单信息")
     @PostMapping("/findAccountByGroupIdPost")
     public JsonResult findAccountByGroupIdPost(@RequestBody QueryType queryType) {
         return new JsonResult(accountService.findAccountByGroupId(queryType));
     }
-    @Resource
-    RestTemplateConfig restTemplateConfig;
 
     @ApiOperation("获取所有账单信息")
-    @GetMapping("/get1")
-    public Object get1() {
-        String fullUrl = "https://www.htx.com/-/x/otc/v1/data/trade-market" + "?coinId=2&currency=172&tradeType=sell&currPage=1&payMethod=0&acceptOrder=0&country=" +
-                "&blockType=general&online=1&range=0&amount=&isThumbsUp=false&isMerchant=false" +
-                "&isTraded=false&onlyTradable=false&isFollowed=false&makerCompleteRate=0";
-
-        HttpHeaders headers = new HttpHeaders();
-        headers.set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0.0.0 Safari/537.36");
-        headers.set("Accept", MediaType.APPLICATION_JSON_VALUE);
-//        headers.set("Authorization", "Bearer YOUR_API_KEY"); // 如果需要 API 密钥
-
-        ResponseEntity<Object> forEntity = restTemplateConfig.restTemplate().exchange(
-                fullUrl,
-                HttpMethod.GET,
-                new HttpEntity<>(headers),
-                Object.class
-        );
-
-        Object body = forEntity.getBody();
-        System.err.println(body);
-        return body;
+    @PostMapping("/accountLogin")
+    public JsonResult accountLogin(@RequestBody LoginFromDTO loginFromDTO) {
+        return accountService.login(loginFromDTO);
     }
-    //    @GetMapping("/generate-keys-excel")
-//    public ResponseEntity<byte[]> generateAndExportKeys() throws IOException {
-//        List<TrxKeyGenerator.KeyPair> keys = TrxKeyGenerator.generateKeys(100);
-//        byte[] excelBytes = ExcelExporter.exportToExcel(keys);
-//
-//        HttpHeaders headers = new HttpHeaders();
-//        headers.setContentType(MediaType.APPLICATION_OCTET_STREAM);
-//        headers.setContentDispositionFormData("attachment", "trx_keys.xlsx");
-//
-//        return ResponseEntity.ok().headers(headers).body(excelBytes);
-//    }
-    @GetMapping("/generateTron")
-    public void generateTronKeys(@RequestParam(required = false, defaultValue = "100") Integer count, HttpServletResponse response) {
+
+    @ApiOperation("获取所有群组")
+    @PostMapping("/findGroupList")
+    public JsonResult findGroupList(@RequestBody QueryGroupDTO queryDTO) {
+        return accountService.findGroupList(queryDTO);
+    }
+
+    @ApiOperation("查询标签列的群")
+    @GetMapping("/updateExpireTime")
+    public JsonResult updateExpireTime(@RequestParam("userId") String userId,@RequestParam("expireTime") String expireTime) {
+        return accountService.updateExpireTime(userId,expireTime);
+    }
+    @ApiOperation("查询标签列的群")
+    @PostMapping("/findGroupListTag")
+    public JsonResult findGroupListTag(@RequestBody QueryGroupDTO dto) {
+        return accountService.findGroupListTag(dto);
+    }
+    @ApiOperation("获取所有用户")
+    @PostMapping("/getUserList")
+    public JsonResult getUserList(@RequestBody QueryUserDTO queryDTO) {
+        return accountService.getUserList(queryDTO);
+    }
+    @ApiOperation("保存收款图片和收款地址等..配置")
+    @PostMapping("/saveAccountConfigEdit")
+    public JsonResult saveCustomerConfig(@RequestBody ConfigDTO dto) {
+        return accountService.saveCustomerConfig(dto);
+    }
+    @ApiOperation("更新机器人在群组的状态")
+    @GetMapping("/setStatus")
+    public JsonResult setStatus() {
+        return accountService.setStatus();
+    }
+    @ApiOperation("机器人退群")
+    @GetMapping("/leaveGroup")
+    public JsonResult leaveGroup(@RequestParam String groupId) {
+        return accountService.leaveGroup(groupId);
+    }
+    @ApiOperation("批量退群")
+    @PostMapping("/allLeaveGroup")
+    public JsonResult allLeaveGroup(@RequestBody MangerAllGroupQueryDTO dto) {
+        return accountService.allLeaveGroup(dto.getGroupIds());
+    }
+    @ApiOperation("一键广播 向勾选群发送消息")
+    @PostMapping("/sendAllMessage")
+    public JsonResult sendAllMessage(@RequestBody ManagerGroupMessageDTO dto) {
+        return accountService.sendAllMessage(dto);
+    }
+
+    @ApiOperation("广播 如果UserId为空则全部")
+    @PostMapping("/sendUserMessage")
+    public JsonResult sendUserMessage(@RequestBody UserMessageDTO dto) {
+        return accountService.sendUserMessage(dto);
+    }
+    @ApiOperation("如果groupId为空则全部")
+    @PostMapping("/sendGroupMessage")
+    public JsonResult sendGroupMessage(@RequestBody GroupMessageDTO dto) {
+        return accountService.sendGroupMessage(dto);
+    }
+    @ApiOperation("如果groupId为空则全部")
+    @PostMapping("/sendGroupMessageTag")
+    public JsonResult sendGroupMessageTag(@RequestBody GroupMessageDTO dto) {
+        return accountService.sendGroupMessageTag(dto);
+    }
+
+    @ApiOperation("设置群标签")
+    @GetMapping("/setTagGroup")
+    public JsonResult setTagGroup(@RequestParam("groupId") String groupId, @RequestParam("tag") String tag) {
+        return accountService.setTagGroup(groupId, tag);
+    }
+    @ApiOperation("根据群标签")
+    @GetMapping("/getTagAll")
+    public JsonResult getTagAll(@RequestParam("page") Integer page, @RequestParam("pageSize") Integer size, @RequestParam("groupId") String groupId) {
+        return accountService.getTagAll(page, size, groupId);
+    }
+    @ApiOperation("群标签")
+    @GetMapping("/deleteTagGroup")
+    public JsonResult deleteTagGroup(@RequestParam("groupId") String groupId, @RequestParam("tag") String tag) {
+        return accountService.deleteTagGroup(groupId, tag);
+    }
+    @ApiOperation("查询收款图片和收款地址")
+    @GetMapping("/findConfig")
+    public JsonResult findConfig() {
+        return accountService.findConfig();
+    }
+
+    @Value("${uploadFileGangbo}")
+    private String uploadFileGangbo;
+    @Value("${vueUrl}")
+    private String vueUrl;
+    @PostMapping("/uploadFileGangbo")//这个是进群欢迎消息配置上传文件
+    public JsonResult uploadFileGangbo(@RequestParam("file") MultipartFile file) {
         try {
-            List<Map<String, String>> keys = new ArrayList<>();
-            for (int i = 0; i < count; i++) {
-                keys.add(TronKeyUtil.generateTronKey());
+            JsonResult jsonResult = new JsonResult();
+            // 创建上传目录
+            Path uploadPath = Paths.get(uploadFileGangbo);
+            if (!Files.exists(uploadPath)) {
+                Files.createDirectories(uploadPath);
             }
-            ExcelExportUtil.exportToExcel(keys, response);
-        } catch (Exception e) {
-            throw new RuntimeException("导出失败", e);
+            // 生成唯一的文件名
+            String originalFilename = file.getOriginalFilename();
+            String baseName = originalFilename.substring(0, originalFilename.lastIndexOf('.'));
+            String extension = originalFilename.substring(originalFilename.lastIndexOf('.'));
+            Path filePath = uploadPath.resolve(originalFilename);
+            int counter = 1;
+            while (Files.exists(filePath)) {
+                String newFilename = baseName + "_" + counter + extension;
+                filePath = uploadPath.resolve(newFilename);
+                counter++;
+            }
+            // 保存文件
+            Files.copy(file.getInputStream(), filePath);
+            // 构建文件的 URL
+            String fileUrl = vueUrl + "UpgradeGangbo/" + filePath.getFileName().toString();
+            String fileName = filePath.getFileName().toString();
+            // 封装文件信息到 Map
+            Map<String, String> fileInfo = new HashMap<>();
+            fileInfo.put("url", fileUrl);
+            fileInfo.put("name", fileName);
+            // 设置返回的数据
+            jsonResult.setData(fileInfo);
+            jsonResult.setMessage("文件上传成功");
+            jsonResult.setCode(200);
+            return jsonResult;
+        } catch (IOException e) {
+            JsonResult jsonResult = new JsonResult();
+            jsonResult.setCode(1); // 假设 1 表示失败
+            jsonResult.setMessage("文件上传失败: " + e.getMessage());
+            return jsonResult;
         }
     }
-
-
-
-
 }

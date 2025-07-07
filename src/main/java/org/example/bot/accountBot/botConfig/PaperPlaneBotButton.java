@@ -27,13 +27,17 @@ public class PaperPlaneBotButton {
         // 创建按钮行
         KeyboardRow row1 = new KeyboardRow();
         KeyboardRow row2 = new KeyboardRow();
+        KeyboardRow row3 = new KeyboardRow();
         row1.add(new KeyboardButton("获取个人信息（personal information）"));
         row2.add(new KeyboardButton("监听列表（listening address）"));
         row2.add(new KeyboardButton("使用说明（illustrate）"));
+        row3.add(new KeyboardButton("群发广播（Group Broadcast）"));
+        row3.add(new KeyboardButton("自助续费（Self-service renewal）"));
         // 将按钮行添加到键盘列表中
         List<KeyboardRow> keyboard = new ArrayList<>();
         keyboard.add(row1);
         keyboard.add(row2);
+        keyboard.add(row3);
         // 设置键盘
         replyKeyboardMarkup.setKeyboard(keyboard);
         return replyKeyboardMarkup;

@@ -105,7 +105,8 @@ public class RestTemplateConfig {
         CloseableHttpClient httpClient = HttpClients.createDefault();
         HttpGet httpGet = new HttpGet(url);
         httpGet.setHeader("Accept",  MediaType.APPLICATION_JSON_VALUE);
-        httpGet.setHeader("TRON-PRO-API-KEY", apiKey1);
+//        httpGet.setHeader("TRON-PRO-API-KEY", apiKey2);
+        httpGet.setHeader("TRON-PRO-API-KEY", apiKey1);//117用的 apiKey1 221用的apiKey2 和getForObjectHistoryTrading2取反
         httpGet.setHeader("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36");
         httpGet.setHeader("Origin", Origin1);
         List<TronHistoryDTO> list;
@@ -131,6 +132,7 @@ public class RestTemplateConfig {
         CloseableHttpClient httpClient = HttpClients.createDefault();
         HttpGet httpGet = new HttpGet(url);
         httpGet.setHeader("Accept",  MediaType.APPLICATION_JSON_VALUE);
+//        httpGet.setHeader("TRON-PRO-API-KEY", apiKey1);//117用的 apiKey2 221用的apiKey1
         httpGet.setHeader("TRON-PRO-API-KEY", apiKey2);
         httpGet.setHeader("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36");
         httpGet.setHeader("Origin", Origin2);
@@ -151,7 +153,32 @@ public class RestTemplateConfig {
             return new ArrayList<>();
         }
         return list;
+    }
+    //方法是一样的但是apiKey不一样 因为每个最多1秒调用5次所以用三个apiKey来处理
+    public List<TronHistoryDTO> getForObjectHistoryTrading3(String url, Class clazz) {
+        CloseableHttpClient httpClient = HttpClients.createDefault();
+        HttpGet httpGet = new HttpGet(url);
+        httpGet.setHeader("Accept",  MediaType.APPLICATION_JSON_VALUE);
+        httpGet.setHeader("TRON-PRO-API-KEY", apiKey);
+        httpGet.setHeader("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36");
+        httpGet.setHeader("Origin", Origin);
+        List<TronHistoryDTO> list;
+        try {
+            CloseableHttpResponse response = httpClient.execute(httpGet);
+            String responseBody = EntityUtils.toString(response.getEntity());
 
+            Gson gson = new Gson();
+            Map map = gson.fromJson(responseBody, Map.class);
+            List<Map<String, Object>> data = (List<Map<String, Object>>) map.get("token_transfers");
+            Type tronHistoryDTOType = new TypeToken<List<TronHistoryDTO>>() {}.getType();
+            list = gson.fromJson(gson.toJson(data), tronHistoryDTOType);
+            response.close();
+            httpClient.close();
+        }catch (Exception e){
+            e.printStackTrace();
+            return new ArrayList<>();
+        }
+        return list;
     }
 }
 
