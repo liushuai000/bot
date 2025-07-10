@@ -28,8 +28,11 @@ import javax.annotation.Resource;
 import java.math.BigDecimal;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
+import java.time.Instant;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
@@ -74,6 +77,10 @@ public class AccountServiceImpl implements AccountService {
     private ConfigEditMapper configEditMapper;
     @Autowired
     private ConfigEditButtonMapper configEditButtonMapper;
+    @Autowired
+    private UserOrderMapper userOrderMapper;
+    @Autowired
+    private AccountSettingMapper accountSettingMapper;
     public ReturnFromType findAccountByGroupId(QueryType queryType) {
         Date addTime = queryType.getAddTime();
         Date addEndTime = queryType.getAddEndTime();
@@ -443,11 +450,15 @@ public class AccountServiceImpl implements AccountService {
         List<ReturnUserDTO> dtoList = new ArrayList<>();
         Map<String, Object> data = new HashMap<>();
         QueryWrapper<GroupInnerUser> wrapper = new QueryWrapper<>();
-        if (queryDTO.getNickname()!=null && StringUtils.isNotBlank(queryDTO.getNickname())){
-            wrapper.like("nickname", queryDTO.getNickname().trim());
-        }
-        if (queryDTO.getStartTime()!=null){
-            wrapper.ge("last_time", queryDTO.getStartTime()).le("last_time", queryDTO.getEndTime());
+        if (queryDTO.getStartTime()!=null && StringUtils.isNotBlank(queryDTO.getStartTime())){
+            LocalDate startDate = LocalDate.parse(queryDTO.getStartTime(), DateTimeFormatter.ISO_DATE);
+            LocalDate endDate = LocalDate.parse(queryDTO.getEndTime(), DateTimeFormatter.ISO_DATE);
+            // 补全时间为当天的 00:00:00 和 23:59:59
+            LocalDateTime startDateTime = startDate.atStartOfDay();
+            LocalDateTime endDateTime = endDate.atTime(23, 59, 59);
+            Date startDateValue = Date.from(startDateTime.atZone(ZoneId.systemDefault()).toInstant());
+            Date endDateValue = Date.from(endDateTime.atZone(ZoneId.systemDefault()).toInstant());
+            wrapper.between("last_time", startDateValue, endDateValue);
         }
         if (queryDTO.getNickname()!=null && StringUtils.isNotBlank(queryDTO.getNickname())){
             wrapper.or(w -> w.like("first_name", queryDTO.getNickname().trim())
@@ -455,9 +466,18 @@ public class AccountServiceImpl implements AccountService {
                     .or().apply("CONCAT(first_name, ' ', last_name) = {0}", queryDTO.getNickname().trim())
                     .or().apply("CONCAT(first_name, last_name) = {0}", queryDTO.getNickname().trim()));
         }
+        Boolean isRepeatUser = queryDTO.getIsRepeatUser();
+        if (!isRepeatUser){
+            wrapper.select("user_id", "MAX(last_time) as last_time")
+                    .groupBy("user_id");
+        }
         wrapper.orderByDesc("last_time");
         Page<GroupInnerUser> resultPage = groupInnerUserMapper.selectPage(new Page<>(queryDTO.getPageNum(), queryDTO.getPageSize()),wrapper);
         for (GroupInnerUser groupInnerUser : resultPage.getRecords()) {
+            if (!isRepeatUser){
+                groupInnerUser=groupInnerUserMapper.selectOne(new QueryWrapper<GroupInnerUser>()
+                        .eq("user_id", groupInnerUser.getUserId()).eq("last_time", groupInnerUser.getLastTime()));
+            }
             ReturnUserDTO returnUserDTO = new ReturnUserDTO();
             returnUserDTO.setUserId(groupInnerUser.getUserId());
             returnUserDTO.setGroupId(groupInnerUser.getGroupId());
@@ -481,9 +501,7 @@ public class AccountServiceImpl implements AccountService {
         return new JsonResult(data);
     }
 
-
     @Override
-    @Cacheable(value = "groupList", key = "#queryDTO.groupId + #queryDTO.groupName + #queryDTO.startTime + #queryDTO.endTime + #queryDTO.pageNum + #queryDTO.pageSize")
     public JsonResult findGroupList(QueryGroupDTO queryDTO) {
         List<ReturnGroupDTO> returnDTOList = new ArrayList<>();
         Map<String, Object> data = new HashMap<>();
@@ -494,8 +512,16 @@ public class AccountServiceImpl implements AccountService {
         if (queryDTO.getGroupName()!=null&& StringUtils.isNotBlank(queryDTO.getGroupName())){
             wrapper.like("group_title", queryDTO.getGroupName().trim());
         }
-        if (queryDTO.getStartTime()!=null){
-            wrapper.ge("create_time", queryDTO.getStartTime()).le("create_time", queryDTO.getEndTime());
+        if (queryDTO.getStartTime()!=null && StringUtils.isNotBlank(queryDTO.getStartTime())){
+            LocalDate startDate = LocalDate.parse(queryDTO.getStartTime(), DateTimeFormatter.ISO_DATE);
+            LocalDate endDate = LocalDate.parse(queryDTO.getEndTime(), DateTimeFormatter.ISO_DATE);
+            // 补全时间为当天的 00:00:00 和 23:59:59
+            LocalDateTime startDateTime = startDate.atStartOfDay();
+            LocalDateTime endDateTime = endDate.atTime(23, 59, 59);
+            // 转换为 Date 类型用于数据库查询
+            Date startDateValue = Date.from(startDateTime.atZone(ZoneId.systemDefault()).toInstant());
+            Date endDateValue = Date.from(endDateTime.atZone(ZoneId.systemDefault()).toInstant());
+            wrapper.between("create_time", startDateValue, endDateValue);
         }
         wrapper.orderByDesc("create_time");
         Page<Status> resultPage = statusMapper.selectPage(new Page<>(queryDTO.getPageNum(), queryDTO.getPageSize()),wrapper);
@@ -511,13 +537,13 @@ public class AccountServiceImpl implements AccountService {
             dto.setGroupName(status.getGroupTitle());
             dto.setInviterId(userNormal.getUserId());
             dto.setInviterName(userMapper.selectOne(new QueryWrapper<User>().eq("user_id", userNormal.getUserId())).getFirstLastName());
-            Rate rate = rateMapper.selectOne(new QueryWrapper<Rate>().eq("group_id", groupId).last("LIMIT 1"));
-            if (rate==null){
+            List<Rate> rates = rateService.selectRateList(groupId);
+            if (rates==null || rates.isEmpty()){
                 dto.setExchangeRate(BigDecimal.ZERO);
                 dto.setFeeRate(BigDecimal.ZERO);
             }else {
-                dto.setExchangeRate(rate.getExchange());
-                dto.setFeeRate(rate.getRate());
+                dto.setExchangeRate(rates.get(0).getExchange());
+                dto.setFeeRate(rates.get(0).getRate());
             }
             dto.setDailyCutTime(status.getSetTime().getHours()+"");
             List<UserOperation> userOperations = userOperationMapper.selectList(new QueryWrapper<UserOperation>()
@@ -531,21 +557,23 @@ public class AccountServiceImpl implements AccountService {
             dto.setIsPinned(true);
             returnDTOList.add(dto);
         }
+        returnDTOList.sort(Comparator.comparing(ReturnGroupDTO::getInviterName, Comparator.nullsFirst(String::compareTo)));
         data.put("total", resultPage.getTotal());
         data.put("data", returnDTOList);
         return new JsonResult(data);
     }
     @Override
-    public JsonResult findGroupListTag(QueryGroupDTO queryDTO) {
+    public JsonResult findGroupListTag(QueryGroupTagDTO queryDTO) {
         List<ReturnGroupDTO> returnDTOList = new ArrayList<>();
         Map<String, Object> data = new HashMap<>();
         QueryWrapper<GroupTag> groupTagWrapper = new QueryWrapper<>();
-//        if (queryDTO.getGroupName()!=null){
-//            groupTagWrapper.like("tag_name", queryDTO.getTagName().trim());
-//        }
+        if (queryDTO.getTagName()!=null){
+            groupTagWrapper.like("tag_name", queryDTO.getTagName().trim());
+        }
         if (queryDTO.getGroupId()!=null && StringUtils.isNotBlank(queryDTO.getGroupId())){
             groupTagWrapper.eq("group_id", queryDTO.getGroupId());
         }
+        groupTagWrapper.orderByDesc("tag_name");
         List<GroupTag> groupTags = groupTagMapper.selectList(groupTagWrapper);
         QueryWrapper<Status> wrapper = new QueryWrapper<>();
         if (groupTags.isEmpty()){
@@ -556,8 +584,16 @@ public class AccountServiceImpl implements AccountService {
         if (queryDTO.getGroupName()!=null&& StringUtils.isNotBlank(queryDTO.getGroupName())){
             wrapper.like("group_title", queryDTO.getGroupName().trim());
         }
-        if (queryDTO.getStartTime()!=null){
-            wrapper.ge("create_time", queryDTO.getStartTime()).le("create_time", queryDTO.getEndTime());
+        if (queryDTO.getStartTime()!=null && StringUtils.isNotBlank(queryDTO.getStartTime())){
+            LocalDate startDate = LocalDate.parse(queryDTO.getStartTime(), DateTimeFormatter.ISO_DATE);
+            LocalDate endDate = LocalDate.parse(queryDTO.getEndTime(), DateTimeFormatter.ISO_DATE);
+            // 补全时间为当天的 00:00:00 和 23:59:59
+            LocalDateTime startDateTime = startDate.atStartOfDay();
+            LocalDateTime endDateTime = endDate.atTime(23, 59, 59);
+            // 转换为 Date 类型用于数据库查询
+            Date startDateValue = Date.from(startDateTime.atZone(ZoneId.systemDefault()).toInstant());
+            Date endDateValue = Date.from(endDateTime.atZone(ZoneId.systemDefault()).toInstant());
+            wrapper.between("create_time", startDateValue, endDateValue);
         }
         wrapper.in("group_id", groupTags.stream().map(GroupTag::getGroupId).collect(Collectors.toList()));
         wrapper.orderByDesc("create_time");
@@ -596,6 +632,8 @@ public class AccountServiceImpl implements AccountService {
             dto.setTags(groupTags1.stream().map(GroupTag::getTagName).collect(Collectors.toList()));
             returnDTOList.add(dto);
         }
+        returnDTOList.sort(Comparator.comparing((ReturnGroupDTO dto) -> dto.getTags().isEmpty() ? "" : dto.getTags().get(0))
+                        .thenComparing(ReturnGroupDTO::getJoinTime, Comparator.nullsLast(Comparator.reverseOrder())));
         data.put("total", resultPage.getTotal());
         data.put("data", returnDTOList);
         return new JsonResult(data);
@@ -698,6 +736,7 @@ public class AccountServiceImpl implements AccountService {
             configEdit.setPayText(dto.getPayText());
             configEdit.setAdminUserName(dto.getAdminUserName());
             configEdit.setPayImage(dto.getPayImage());
+            configEdit.setShowRenewal(dto.getShowRenewal());
             configEditMapper.insert(configEdit);
             if (dto.getButtonRows()!=null&& !dto.getButtonRows().isEmpty()){
                 for (List<AdTimeButtonDTO> row : dto.getButtonRows()) {
@@ -719,6 +758,7 @@ public class AccountServiceImpl implements AccountService {
             configEdit.setPayText(dto.getPayText());
             configEdit.setAdminUserName(dto.getAdminUserName());
             configEdit.setPayImage(dto.getPayImage());
+            configEdit.setShowRenewal(dto.getShowRenewal());
             configEditMapper.updateById(configEdit);
             List<List<AdTimeButtonDTO>> buttonRows = dto.getButtonRows();
             configEditButtonMapper.delete(new QueryWrapper<ConfigEditButton>().eq("config_edit_id", configEdit.getId()));
@@ -751,6 +791,7 @@ public class AccountServiceImpl implements AccountService {
             configDTO.setPayImage(configEdit.getPayImage());
             configDTO.setAdminUserName(configEdit.getAdminUserName());
             configDTO.setPayText(configEdit.getPayText());
+            configDTO.setShowRenewal(configEdit.getShowRenewal());
             if (chatNumButtons != null) {
                 // 使用 Map 按 rowIndex 分组
                 Map<Integer, List<ConfigEditButton>> rowMap = new HashMap<>();
@@ -797,6 +838,141 @@ public class AccountServiceImpl implements AccountService {
         loginFrom.setUsername(dto.getUsername());
         loginFrom.setPassword(dto.getPassword());
         loginFromMapper.insert(loginFrom);
+        return new JsonResult();
+    }
+
+    @Override
+    public JsonResult getAccountSetting() {
+        AccountSetting accountSetting = accountSettingMapper.selectOne(new QueryWrapper<>());
+        return new JsonResult(accountSetting);
+    }
+
+    @Override
+    public JsonResult saveAccountSetting(AccountSettingDTO dto) {
+        AccountSetting accountSetting = accountSettingMapper.selectOne(new QueryWrapper<>());
+        if (accountSetting==null){
+            accountSetting=new AccountSetting();
+            accountSetting.setExpireNotice(dto.getExpireNotice());
+            accountSetting.setAdminExpireNotice(dto.getAdminExpireNotice());
+            accountSetting.setEnglishExpireNotice(dto.getEnglishExpireNotice());
+            accountSetting.setEnglishAdminExpireNotice(dto.getEnglishAdminExpireNotice());
+            accountSetting.setNoneNotice(dto.getNoneNotice());
+            accountSetting.setAdminNotice(dto.getAdminNotice());
+            accountSetting.setEnglishNotGroupAdminNotice(dto.getEnglishNotGroupAdminNotice());
+            accountSetting.setNotGroupAdminNotice(dto.getNotGroupAdminNotice());
+            accountSetting.setNotGroupAdminNoticeHtml(dto.getNotGroupAdminNoticeHtml());
+            accountSetting.setGroupLanguage(dto.getGroupLanguage().equals("zh"));
+            accountSettingMapper.insert(accountSetting);
+        }else{
+            accountSetting.setExpireNotice(dto.getExpireNotice());
+            accountSetting.setAdminExpireNotice(dto.getAdminExpireNotice());
+            accountSetting.setNoneNotice(dto.getNoneNotice());
+            accountSetting.setAdminNotice(dto.getAdminNotice());
+            accountSetting.setEnglishExpireNotice(dto.getEnglishExpireNotice());
+            accountSetting.setEnglishAdminExpireNotice(dto.getEnglishAdminExpireNotice());
+            accountSetting.setGroupLanguage(dto.getGroupLanguage().equals("zh"));
+            accountSetting.setEnglishNotGroupAdminNotice(dto.getEnglishNotGroupAdminNotice());
+            accountSetting.setNotGroupAdminNotice(dto.getNotGroupAdminNotice());
+            accountSetting.setNotGroupAdminNoticeHtml(dto.getNotGroupAdminNoticeHtml());
+            accountSettingMapper.updateById(accountSetting);
+        }
+        return new JsonResult();
+    }
+
+    @Override
+    public JsonResult findAccountUser(Integer page, Integer size, String keyword) {
+        List<AccountUserAdminDTO> dtoList = new ArrayList<>();
+        Map<String, Object> data = new HashMap<>();
+        QueryWrapper<User> wrapper = new QueryWrapper<>();
+        if (keyword!=null && StringUtils.isNotBlank(keyword)){
+            wrapper.or(w -> w.like("first_name", keyword.trim())
+                    .or().like("last_name", keyword.trim())
+                    .or().like("user_id", keyword.trim())
+                    .or().apply("CONCAT(first_name, ' ', last_name) = {0}", keyword.trim())
+                    .or().apply("CONCAT(first_name, last_name) = {0}", keyword.trim()));
+        }
+        wrapper.orderByDesc("cjgl").orderByDesc("create_time"); // 先按 cjgl 字段降序（true 在前）
+        Page<User> resultPage = userMapper.selectPage(new Page<>(page, size),wrapper);
+        for (User groupInnerUser : resultPage.getRecords()) {
+            AccountUserAdminDTO returnUserDTO = new AccountUserAdminDTO();
+            returnUserDTO.setUserId(groupInnerUser.getUserId());
+            returnUserDTO.setCreateTime(groupInnerUser.getCreateTime());
+            returnUserDTO.setCjgl(groupInnerUser.isCjgl());
+            returnUserDTO.setUsername(groupInnerUser.getUsername());
+            returnUserDTO.setNickname(groupInnerUser.getFirstLastName());
+            dtoList.add(returnUserDTO);
+        }
+        data.put("total", resultPage.getTotal());
+        data.put("data", dtoList);
+        return new JsonResult(data);
+    }
+
+    @Override
+    public JsonResult quxiaoAccountSuperAdminUser(String userId) {
+        User user = userMapper.selectOne(new QueryWrapper<User>().eq("user_id",userId));
+        user.setCjgl(false);
+        userMapper.updateById(user);
+        return new JsonResult();
+    }
+
+
+    @Override
+    public JsonResult findAccountUserOrder(Integer page, Integer size, String keyword, String startTime, String endTime, String selectedType) {
+        QueryWrapper<UserOrder> userOrderQueryWrapper = new QueryWrapper<>();
+        if (StringUtils.isNotBlank( keyword)){
+            userOrderQueryWrapper.like("user_id",keyword);
+        }
+        if (startTime!=null && StringUtils.isNotBlank(startTime)){
+            userOrderQueryWrapper.between("create_time", startTime, endTime);
+        }
+        if (StringUtils.isNotBlank(selectedType)){
+            userOrderQueryWrapper.eq("type",selectedType);
+        }
+        Page<UserOrder> userOrderPage = userOrderMapper.selectPage(new Page<>(page, size), userOrderQueryWrapper);
+        List<UserOrderDTO> dtoList = new ArrayList<>();
+        Map<String, Object> map = new HashMap<>();
+        for (UserOrder userOrder : userOrderPage.getRecords()) {
+            UserOrderDTO userOrderDTO = new UserOrderDTO();
+            userOrderDTO.setUserId(userOrder.getUserId());
+            User user = userMapper.selectOne(new QueryWrapper<User>().eq("user_id", userOrder.getUserId()));
+            if (user != null){
+                userOrderDTO.setUsername(user.getUsername());
+                userOrderDTO.setNickname(user.getFirstLastName());
+            }
+            userOrderDTO.setAmount(userOrder.getAmount());
+            userOrderDTO.setType(userOrder.getType());
+            userOrderDTO.setConfigEditButtonName(userOrder.getConfigEditButtonName());
+            userOrderDTO.setMonth(userOrder.getMonth()+"天");
+            userOrderDTO.setOrderNumber(userOrder.getOrderNumber());
+            userOrderDTO.setCreateTime(userOrder.getCreateTime());
+            userOrderDTO.setEndTime(userOrder.getEndTime());
+            dtoList.add(userOrderDTO);
+        }
+        map.put("total", userOrderPage.getTotal());
+        map.put("data", dtoList);
+        return new JsonResult(map);
+    }
+
+    @Override
+    public JsonResult accountChangePassword(String username,String newPassword, String secretKey) {
+        if (!secretKey.equals("liu332331")){
+            return new JsonResult("密钥错误!");
+        }
+        LoginFrom loginFrom = loginFromMapper.selectOne(new QueryWrapper<LoginFrom>().eq("username", username));
+        if (loginFrom != null){
+            loginFrom.setPassword(newPassword);
+            loginFromMapper.updateById(loginFrom);
+            return new JsonResult();
+        }else {
+            return new JsonResult("用户名或原密码错误!");
+        }
+    }
+
+    @Override
+    public JsonResult setAccountSuperAdminUser(String userId) {
+        User user = userMapper.selectOne(new QueryWrapper<User>().eq("user_id",userId));
+        user.setCjgl(true);
+        userMapper.updateById(user);
         return new JsonResult();
     }
 

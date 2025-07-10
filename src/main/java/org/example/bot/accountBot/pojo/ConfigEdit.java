@@ -19,6 +19,8 @@ public class ConfigEdit {
     private String adminUserName;
     @TableField("pay_image")
     private String payImage;
+    @TableField("show_renewal")
+    private Boolean showRenewal=false;//是否显示续费开关
 
 
 }

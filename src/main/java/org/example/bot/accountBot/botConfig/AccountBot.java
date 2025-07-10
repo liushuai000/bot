@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.example.bot.accountBot.dto.UserDTO;
+import org.example.bot.accountBot.mapper.AccountSettingMapper;
 import org.example.bot.accountBot.mapper.GroupInfoSettingMapper;
 import org.example.bot.accountBot.mapper.GroupInnerUserMapper;
 import org.example.bot.accountBot.mapper.StatusMapper;
@@ -46,16 +47,12 @@ public class AccountBot extends TelegramLongPollingBot {
     protected String username;
     @Value("${botUserId}")
     protected String botUserId;
-    @Value("${adminUserId}")
-    protected String adminUserId;
-    @Value("${toAdminUserId}")
-    protected String toAdminUserId;
-    @Value("${threeAdminUserId}")
-    protected String threeAdminUserId;
     @Autowired
     protected RateService rateService;
     @Autowired
     protected UserService userService;
+    @Autowired
+    protected AccountSettingMapper accountSettingMapper;
     @Autowired
     protected StatusService statusService;
     @Autowired
@@ -164,6 +161,9 @@ public class AccountBot extends TelegramLongPollingBot {
             userDTO.setText(caption);
             this.BusinessHandler(message,sendMessage,replyToText,replayToMessageId,userDTO,update);
         }else if (update.hasMessage() && update.getMessage().getChat().isGroupChat()||message.getChat().isSuperGroupChat()){
+            if (update.getMessage().getLeftChatMember()!=null && update.getMessage().getLeftChatMember().getId().toString().equals(botUserId)){
+                return;
+            }
             Status status=statusService.getInitStatus(update,userDTO.getGroupId(),userDTO.getGroupTitle());
             // 判断是否是带有 caption 的图片或视频消息
             if ((message.hasPhoto() || message.hasVideo()) && message.getCaption() != null && !message.getCaption().isEmpty()) {
@@ -232,6 +232,22 @@ public class AccountBot extends TelegramLongPollingBot {
         }
         //私聊的机器人  处理个人消息
         if (message.getChat().isUserChat()){
+            User byUser = userService.findByUserId(userDTO.getUserId());
+            if (byUser==null) {
+                byUser = new User();
+                byUser.setUserId(userDTO.getUserId()+ "");
+                byUser.setSuperAdmin(false);
+                byUser.setUsername(userDTO.getUsername());
+                byUser.setLastName(userDTO.getLastName());
+                byUser.setCreateTime(new Date());
+                byUser.setFirstName(userDTO.getFirstName());
+                userService.insertUser(byUser);
+            }else {
+                byUser.setUsername(userDTO.getUsername());
+                byUser.setLastName(userDTO.getLastName());
+                byUser.setFirstName(userDTO.getFirstName());
+                userService.updateUser(byUser);
+            }
             this.insertInnerUser("私聊",userDTO.getGroupId(),userDTO.getUserId(),userDTO.getUsername(),userDTO.getFirstName(),userDTO.getLastName());
             paperPlaneBotSinglePerson.handleTronAccountMessage(sendMessage,update,userDTO);
             paperPlaneBotSinglePerson.handlerPrivateUser(update,message,sendMessage,userDTO);//处理私聊消息
@@ -285,6 +301,7 @@ public class AccountBot extends TelegramLongPollingBot {
                 (userDTO.getText().toLowerCase().equals("cancel") && replyToText == null)){
             return;
         }
+        AccountSetting accountSetting = accountSettingMapper.selectOne(new QueryWrapper<>());
         if (userOperation==null || !userOperation.isOperation()){
 //            String format = String.format("<a href=\"tg://user?id=%d\">%s</a>", Long.parseLong(userNormalTempAdmin.getUserId()), "权限人");
 //            this.sendMessage(sendMessage,"没有使用权限，请联系本群权限人 "+format);
@@ -295,11 +312,13 @@ public class AccountBot extends TelegramLongPollingBot {
                 UserNormal userNormal = userNormalService.selectByUserId(userOperation.getUserId(), userDTO.getGroupId());
                 if (userNormal==null || !userNormal.isAdmin() ){
                     if (groupInfoSetting.getEnglish()){
-                        String format = String.format("<a href=\"tg://user?id=%d\">%s</a>", Long.parseLong(threeAdminUserId), "管理员");
-                        this.sendMessage(sendMessage,"您在本群不是管理!请联系: "+format);
+                        if (accountSetting!=null && accountSetting.getNotGroupAdminNotice()){
+                            this.sendMessage(sendMessage,accountSetting.getNotGroupAdminNoticeHtml());
+                        }
                     }else {
-                        String format = String.format("<a href=\"tg://user?id=%d\">%s</a>", Long.parseLong(threeAdminUserId), "admin");
-                        this.sendMessage(sendMessage,"You are not an administrator in this group! Please contact: "+format);
+                        if (accountSetting!=null && accountSetting.getNotGroupAdminNotice()){
+                            this.sendMessage(sendMessage,accountSetting.getEnglishNotGroupAdminNotice());
+                        }
                     }
                     return;
                 }else {
@@ -315,12 +334,13 @@ public class AccountBot extends TelegramLongPollingBot {
                         }
                         return;
                     }else if (new Date().compareTo(byUserId.getValidTime())>=0){
-                        if (groupInfoSetting.getEnglish()){
-                            String format = String.format("<a href=\"tg://user?id=%d\">%s</a>", Long.parseLong(threeAdminUserId), "管理员");
-                            this.sendMessage(sendMessage,"您的使用期限已到期,请私聊管理员 @"+format);
-                        }else{
-                            String format = String.format("<a href=\"tg://user?id=%d\">%s</a>", Long.parseLong(threeAdminUserId), "admin");
-                            this.sendMessage(sendMessage,"Your usage period has expired, please chat with the administrator @"+format);
+                        if (accountSetting!=null && accountSetting.getNoneNotice()){
+                            if (groupInfoSetting.getEnglish()){
+                                sendMessage.setText(new StyleText().cleanHtmlExceptSpecificTags(accountSetting.getExpireNotice()));
+                            }else{
+                                sendMessage.setText(new StyleText().cleanHtmlExceptSpecificTags(accountSetting.getEnglishExpireNotice()));
+                            }
+                            this.sendMessage(sendMessage);
                         }
                         return;
                     }
@@ -329,21 +349,23 @@ public class AccountBot extends TelegramLongPollingBot {
                 User userAuth = userService.findByUserId(userOperation.getAdminUserId());
                 //如果有效期没过期
                 if (userAuth.getValidTime()==null){
-                    if (groupInfoSetting.getEnglish()){
-                        String format = String.format("<a href=\"tg://user?id=%d\">%s</a>", Long.parseLong(botUserId), "记账机器人");
-                        this.sendMessage(sendMessage,"本群权限人现在没有使用权限,请私聊机器人 @"+format+" .点击获取个人信息获取权限.");
-                    }else{
-                        String format = String.format("<a href=\"tg://user?id=%d\">%s</a>", Long.parseLong(botUserId), "Accounting Robot");
-                        this.sendMessage(sendMessage,"The authorized person in this group does not have permission to use it now. Please privately chat with the robot @"+format+" .Click to obtain personal information access permission.");
+                    if (accountSetting!=null && accountSetting.getAdminNotice()){
+                        if (groupInfoSetting.getEnglish()){
+                            sendMessage.setText(new StyleText().cleanHtmlExceptSpecificTags(accountSetting.getAdminExpireNotice()));
+                        }else{
+                            sendMessage.setText(new StyleText().cleanHtmlExceptSpecificTags(accountSetting.getEnglishAdminExpireNotice()));
+                        }
+                        this.sendMessage(sendMessage);
                     }
                     return;
                 }else if (new Date().compareTo(userAuth.getValidTime())>=0){
-                    if (groupInfoSetting.getEnglish()){
-                        String format = String.format("<a href=\"tg://user?id=%d\">%s</a>", Long.parseLong(threeAdminUserId), "管理员");
-                        this.sendMessage(sendMessage,"本群权限人的使用期限已到期,请私聊管理员 @"+format);
-                    }else{
-                        String format = String.format("<a href=\"tg://user?id=%d\">%s</a>", Long.parseLong(threeAdminUserId), "admin");
-                        this.sendMessage(sendMessage,"The period of use for this group has expired. Please privately chat with the administrator. @"+format);
+                    if (accountSetting!=null && accountSetting.getAdminNotice()){
+                        if (groupInfoSetting.getEnglish()){
+                            sendMessage.setText(new StyleText().cleanHtmlExceptSpecificTags(accountSetting.getAdminExpireNotice()));
+                        }else{
+                            sendMessage.setText(new StyleText().cleanHtmlExceptSpecificTags(accountSetting.getEnglishAdminExpireNotice()));
+                        }
+                        this.sendMessage(sendMessage);
                     }
                     return;
                 }
@@ -397,6 +419,7 @@ public class AccountBot extends TelegramLongPollingBot {
             if (chatMember.getNewChatMember().getStatus().equals("administrator")){
                 SendMessage sendMessage = new SendMessage();
                 String chatId = chatMember.getChat().getId().toString();//群组id
+                String groupTitle = chatMember.getChat().getTitle().toString();//群组id
                 sendMessage.setChatId(chatId);
                 GroupInfoSetting groupInfoSetting=groupInfoSettingMapper.selectOne(new QueryWrapper<GroupInfoSetting>().eq("group_id", chatId));
                 if (groupInfoSetting==null){
@@ -413,6 +436,7 @@ public class AccountBot extends TelegramLongPollingBot {
                             "➖➖➖➖➖➖➖➖➖➖➖";
                 }
                 this.tronAccountMessageTextHtml(sendMessage,chatId,message);
+                Status status=statusService.getInitStatus(update,chatId,groupTitle);
             }else if (chatMember.getNewChatMember().getStatus().equals("member")) {
                 String chatId = chatMember.getChat().getId().toString();//群组id
                 Long id = chatMember.getFrom().getId();//拉机器人的用户
@@ -457,44 +481,45 @@ public class AccountBot extends TelegramLongPollingBot {
                         userOperationService.update(userOperation);
                     }
                 }else if (byUser!=null){
-                        UserNormal userNormal = userNormalService.selectByUserAndGroupId(id + "", chatId);
-                        if (userNormal==null){
-                            userNormal = new UserNormal();
-                            userNormal.setAdmin(true);
-                            userNormal.setGroupId(chatId);
-                            userNormal.setUserId(id+"");
-                            userNormal.setUsername(username);
-                            userNormal.setCreateTime(new Date());
-                            userNormalService.insertUserNormal(userNormal);
-                        }else {
-                            userNormal.setAdmin(true);
-                            userNormalService.update(userNormal);
-                        }
-                        UserOperation userOperation = userOperationService.selectByUserAndGroupId(id + "", chatId);
-                        if (userOperation==null){
-                            userOperation=new UserOperation();
-                            userOperation.setUserId(id+"");
-                            userOperation.setOperation(true);
-                            userOperation.setAdminUserId(id+"");
-                            userOperation.setGroupId(chatId);
-                            userOperation.setUsername(username);
-                            userOperation.setCreateTime(new Date());
-                            userOperationService.insertUserOperation(userOperation);
-                        }else {
-                            userOperation.setOperation(true);
-                            userOperationService.update(userOperation);
-                        }
+                    UserNormal userNormal = userNormalService.selectByUserAndGroupId(id + "", chatId);
+                    if (userNormal==null){
+                        userNormal = new UserNormal();
+                        userNormal.setAdmin(true);
+                        userNormal.setGroupId(chatId);
+                        userNormal.setUserId(id+"");
+                        userNormal.setUsername(username);
+                        userNormal.setCreateTime(new Date());
+                        userNormalService.insertUserNormal(userNormal);
+                    }else {
+                        userNormal.setAdmin(true);
+                        userNormalService.update(userNormal);
+                    }
+                    UserOperation userOperation = userOperationService.selectByUserAndGroupId(id + "", chatId);
+                    if (userOperation==null){
+                        userOperation=new UserOperation();
+                        userOperation.setUserId(id+"");
+                        userOperation.setOperation(true);
+                        userOperation.setAdminUserId(id+"");
+                        userOperation.setGroupId(chatId);
+                        userOperation.setUsername(username);
+                        userOperation.setCreateTime(new Date());
+                        userOperationService.insertUserOperation(userOperation);
+                    }else {
+                        userOperation.setOperation(true);
+                        userOperationService.update(userOperation);
+                    }
                 }
                 GroupInfoSetting groupInfoSetting = groupInfoSettingMapper.selectOne(new QueryWrapper<GroupInfoSetting>().eq("group_id", chatId));
+                AccountSetting accountSetting = accountSettingMapper.selectOne(new QueryWrapper<>());
                 if (groupInfoSetting==null){
                     groupInfoSetting = new GroupInfoSetting();
                     groupInfoSetting.setGroupId(Long.valueOf(chatId));
-//                    groupInfoSetting.setEnglish(true);///
-                    groupInfoSetting.setEnglish(false);//切换中文要修改111
+                    groupInfoSetting.setEnglish(accountSetting.isGroupLanguage());
+//                    groupInfoSetting.setEnglish(false);//切换中文要修改111
                     groupInfoSettingMapper.insert(groupInfoSetting);
                 }else {
-//                    groupInfoSetting.setEnglish(true);
-                    groupInfoSetting.setEnglish(false);///
+                    groupInfoSetting.setEnglish(accountSetting.isGroupLanguage());
+//                    groupInfoSetting.setEnglish(false);
                     groupInfoSettingMapper.updateById(groupInfoSetting);
                 }
                 String message;
@@ -511,6 +536,15 @@ public class AccountBot extends TelegramLongPollingBot {
             } else if ( chatMember.getNewChatMember().getStatus().equals("left") || chatMember.getNewChatMember().getStatus().equals("kicked")) {
                 String chatId = chatMember.getChat().getId().toString();
                 statusMapper.delete(new QueryWrapper<Status>().eq("group_id", chatId));
+                //如果存在已退群 不产生重复数据
+                List<GroupInnerUser> userList = groupInnerUserMapper.selectList(new QueryWrapper<GroupInnerUser>().eq("group_id", chatId));
+                if (userList.isEmpty())return;
+                for (GroupInnerUser user : userList){
+                    GroupInnerUser groupInnerUser = groupInnerUserMapper.selectOne(new QueryWrapper<GroupInnerUser>().eq("user_id", user.getUserId()).eq("type", "退群"));
+                    if (groupInnerUser !=null && user !=null){
+                        groupInnerUserMapper.deleteById(user.getId());
+                    }
+                }
             }
         }
         //检测群内有用户退群或者被踢出群
@@ -524,10 +558,25 @@ public class AccountBot extends TelegramLongPollingBot {
             String firstName = chatMember.getFrom().getFirstName();
             String lastName = chatMember.getFrom().getLastName();
             if ("left".equals(newMember.getStatus()) || "kicked".equals(newMember.getStatus())) {
-                this.insertInnerUser("退群", chatId, userId, username, firstName, lastName);
+                GroupInnerUser user = groupInnerUserMapper.selectOne(new QueryWrapper<GroupInnerUser>().eq("user_id", userId).eq("group_id", chatId));
+                GroupInnerUser groupInnerUser = groupInnerUserMapper.selectOne(new QueryWrapper<GroupInnerUser>().eq("user_id", userId).eq("type", "退群"));
+                if (groupInnerUser !=null && user !=null){
+                    groupInnerUserMapper.deleteById(user.getId());
+                }else{
+                    this.insertInnerUser("退群", chatId, userId, username, firstName, lastName);
+                }
             }
             if ("member".equals(newMember.getStatus())){
                 this.insertInnerUser(chatMember.getChat().getTitle(), chatId, userId, username, firstName, lastName);
+            }
+        }else if (update.getMessage()!=null && update.getMessage().getLeftChatMember()!=null){
+            org.telegram.telegrambots.meta.api.objects.User leftChatMember = update.getMessage().getLeftChatMember();
+            GroupInnerUser user = groupInnerUserMapper.selectOne(new QueryWrapper<GroupInnerUser>().eq("user_id", leftChatMember.getId()).eq("group_id", update.getMessage().getChat().getId().toString()));
+            GroupInnerUser groupInnerUser = groupInnerUserMapper.selectOne(new QueryWrapper<GroupInnerUser>().eq("user_id", leftChatMember.getId()).eq("type", "退群"));
+            if (groupInnerUser !=null && user !=null){
+                groupInnerUserMapper.deleteById(user.getId());
+            }else{
+                this.insertInnerUser("退群", update.getMessage().getChat().getId().toString(), leftChatMember.getId()+"", leftChatMember.getUserName(), leftChatMember.getFirstName(), leftChatMember.getLastName());
             }
         }
     }

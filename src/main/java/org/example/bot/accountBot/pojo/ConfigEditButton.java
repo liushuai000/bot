@@ -18,11 +18,11 @@ public class ConfigEditButton implements BotButtonInfo {
     @TableField("config_edit_id")
     private String configEditId;
     @TableField("month")
-    private String month;//续费时长 0.5表示半个月 最小单位
+    private String month;//续费时长 1天 实际表示天
     @TableField("text")
     private String text;//按钮文本
     @TableField("link")
-    private String link;//按钮链接
+    private String link;//这里表示金额
     @TableField("row_index")
     private int rowIndex;//行下标
     @TableField("button_index")

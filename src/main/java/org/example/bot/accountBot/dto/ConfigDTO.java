@@ -30,6 +30,8 @@ public class ConfigDTO {
      */
     @ApiModelProperty("payImage")
     private String payImage;
+    @ApiModelProperty("showRenewal")
+    private Boolean showRenewal;//是否显示自主续费
 
     /**说明频道地址
      */

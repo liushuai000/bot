@@ -1,6 +1,8 @@
 package org.example.bot.accountBot.botConfig;
 
+import org.example.bot.accountBot.pojo.ConfigEdit;
 import org.example.bot.accountBot.pojo.GroupInfoSetting;
+import org.example.bot.accountBot.pojo.User;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardMarkup;
@@ -20,7 +22,7 @@ public class PaperPlaneBotButton {
      * 设置底部按钮
      * @return
      */
-    protected ReplyKeyboardMarkup sendReplyKeyboard(GroupInfoSetting groupInfoSetting) {
+    protected ReplyKeyboardMarkup sendReplyKeyboard(ConfigEdit configEdit, User user) {
         ReplyKeyboardMarkup replyKeyboardMarkup = new ReplyKeyboardMarkup();
         replyKeyboardMarkup.setResizeKeyboard(true);
         replyKeyboardMarkup.setOneTimeKeyboard(false); // 可选：一旦用户选择了按钮，键盘会消失
@@ -32,7 +34,12 @@ public class PaperPlaneBotButton {
         row2.add(new KeyboardButton("监听列表（listening address）"));
         row2.add(new KeyboardButton("使用说明（illustrate）"));
         row3.add(new KeyboardButton("群发广播（Group Broadcast）"));
-        row3.add(new KeyboardButton("自助续费（Self-service renewal）"));
+        if (configEdit.getShowRenewal()){
+            row3.add(new KeyboardButton("自助续费（Self-service renewal）"));
+        }
+        if (user.isCjgl()){
+            row1.add(new KeyboardButton("超级管理员广播（Super Management Broadcast）"));
+        }
         // 将按钮行添加到键盘列表中
         List<KeyboardRow> keyboard = new ArrayList<>();
         keyboard.add(row1);

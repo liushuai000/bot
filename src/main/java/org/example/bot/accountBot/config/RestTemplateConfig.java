@@ -105,8 +105,8 @@ public class RestTemplateConfig {
         CloseableHttpClient httpClient = HttpClients.createDefault();
         HttpGet httpGet = new HttpGet(url);
         httpGet.setHeader("Accept",  MediaType.APPLICATION_JSON_VALUE);
-//        httpGet.setHeader("TRON-PRO-API-KEY", apiKey2);
-        httpGet.setHeader("TRON-PRO-API-KEY", apiKey1);//117用的 apiKey1 221用的apiKey2 和getForObjectHistoryTrading2取反
+        httpGet.setHeader("TRON-PRO-API-KEY", apiKey2);
+//        httpGet.setHeader("TRON-PRO-API-KEY", apiKey1);//117用的 apiKey1 221用的apiKey2 和getForObjectHistoryTrading2取反
         httpGet.setHeader("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36");
         httpGet.setHeader("Origin", Origin1);
         List<TronHistoryDTO> list;
@@ -132,8 +132,8 @@ public class RestTemplateConfig {
         CloseableHttpClient httpClient = HttpClients.createDefault();
         HttpGet httpGet = new HttpGet(url);
         httpGet.setHeader("Accept",  MediaType.APPLICATION_JSON_VALUE);
-//        httpGet.setHeader("TRON-PRO-API-KEY", apiKey1);//117用的 apiKey2 221用的apiKey1
-        httpGet.setHeader("TRON-PRO-API-KEY", apiKey2);
+        httpGet.setHeader("TRON-PRO-API-KEY", apiKey1);//117用的 apiKey2 221用的apiKey1
+//        httpGet.setHeader("TRON-PRO-API-KEY", apiKey2);
         httpGet.setHeader("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36");
         httpGet.setHeader("Origin", Origin2);
         List<TronHistoryDTO> list;

@@ -7,10 +7,7 @@ import org.example.bot.accountBot.config.RestTemplateConfig;
 import org.example.bot.accountBot.dto.TronAccountDTO;
 import org.example.bot.accountBot.dto.TronHistoryDTO;
 import org.example.bot.accountBot.dto.UserDTO;
-import org.example.bot.accountBot.mapper.ConfigEditButtonMapper;
-import org.example.bot.accountBot.mapper.ConfigEditMapper;
-import org.example.bot.accountBot.mapper.GroupInfoSettingMapper;
-import org.example.bot.accountBot.mapper.UserNormalMapper;
+import org.example.bot.accountBot.mapper.*;
 import org.example.bot.accountBot.pojo.*;
 import org.example.bot.accountBot.service.UserNormalService;
 import org.example.bot.accountBot.service.UserOperationService;
@@ -52,12 +49,6 @@ public class PaperPlaneBotSinglePerson {
     AccountBot  accountBot;
     @Autowired
     UserService userService;
-    @Value("${adminUserId}")
-    protected String adminUserId;
-    @Value("${toAdminUserId}")
-    protected String toAdminUserId;
-    @Value("${threeAdminUserId}")
-    protected String threeAdminUserId;
     @Value("${telegram.bot.username}")
     protected String username;
     @Autowired
@@ -72,6 +63,8 @@ public class PaperPlaneBotSinglePerson {
     WalletListenerService walletListenerService;
     @Autowired
     private ButtonList buttonList;
+    @Autowired
+    private StatusMapper statusMapper;
     @Value("${tranAccountUrl}")
     protected String tranAccountUrl;//查询账户余额
     @Value("${tranHistoryUrl}")
@@ -89,6 +82,8 @@ public class PaperPlaneBotSinglePerson {
     private UserOperationService userOperationService;
     // 记录已处理过的交易 ID + 地址组合
     private final Set<String> processedTransactions = Collections.newSetFromMap(new ConcurrentHashMap<>());
+    @Autowired
+    private UserMapper userMapper;
 
     @SneakyThrows
     @PostConstruct
@@ -302,9 +297,12 @@ public class PaperPlaneBotSinglePerson {
         accountBot.tronAccountMessageText(sendMessage,userId,result);
     }
     public static final String STATE_BROADCAST = "broadcast";
+    public static final String ADMIN_STATE_BROADCAST = "admin_broadcast";
     public static final String STATE_NORMAL = "normal";
     // 广播状态
     private static final Map<String, String> userStates = new ConcurrentHashMap<>();
+    @Autowired
+    private UserNormalMapper userNormalMapper;
     //设置机器人在群组内的有效时间 默认免费使用日期6小时. 机器人底部按钮 获取个人信息 获取最新用户名 获取个人id 使用日期;
     protected void handleNonGroupMessage(Message message, SendMessage sendMessage, UserDTO userDTO) {
         if (userDTO.getText()==null){
@@ -314,7 +312,9 @@ public class PaperPlaneBotSinglePerson {
         //授权-123456789-30  用户id -30
         PaperPlaneBotButton buttonList = new PaperPlaneBotButton();
         GroupInfoSetting groupInfoSetting = groupInfoSettingMapper.selectOne(new QueryWrapper<GroupInfoSetting>().eq("group_id", userDTO.getUserId()));
-        ReplyKeyboardMarkup replyKeyboardMarkup = buttonList.sendReplyKeyboard(groupInfoSetting);
+        ConfigEdit configEdit = configEditMapper.selectOne(new QueryWrapper<>());
+        User byUserId = userService.findByUserId(userDTO.getUserId());
+        ReplyKeyboardMarkup replyKeyboardMarkup = buttonList.sendReplyKeyboard(configEdit,byUserId);
         sendMessage.setReplyMarkup(replyKeyboardMarkup);//是否在onUpdateReceived设置
         String regex = "^授权-[a-zA-Z0-9]+-[a-zA-Z0-9]+$";
         String regexEn = "^authorization-[a-zA-Z0-9]+-[a-zA-Z0-9]+$";
@@ -331,6 +331,15 @@ public class PaperPlaneBotSinglePerson {
             this.useInfo(message,sendMessage,userDTO);
             return;
         }else if (text.equals("群发广播（group broadcast）")){
+            if (byUserId.getValidTime()==null || byUserId.getValidTime().getTime() <= System.currentTimeMillis()){
+                if (groupInfoSetting.getEnglish()){
+                    sendMessage.setText("你的使用权限已到期! 请续费使用此功能!");
+                }else{
+                    sendMessage.setText("Your usage rights have expired! Please renew to use this feature!");
+                }
+                accountBot.sendMessage(sendMessage);
+                return;
+            }
             userStates.put(userDTO.getUserId(), STATE_BROADCAST);
             if (groupInfoSetting.getEnglish()){
                 sendMessage.setText("\uD83D\uDCE1 群发广播：\n" +
@@ -341,6 +350,28 @@ public class PaperPlaneBotSinglePerson {
                         "请输入您要广播的内容:");
             }else {
                 sendMessage.setText("\uD83D\uDCE1 Group Broadcast：\n" +
+                        "\n" +
+                        "Only send the group you invite, if you need to send all groups, please operate in the background.\n" +
+                        "Support pure text, image + text, video + text.\n" +
+                        "\n" +
+                        "Please enter the content you want to broadcast:");
+            }
+            accountBot.sendMessage(sendMessage);
+            return;
+        }else if (text.equals("超级管理员广播（super management broadcast）")){
+            if (!byUserId.isCjgl()){
+                return;
+            }
+            userStates.put(userDTO.getUserId(), ADMIN_STATE_BROADCAST);
+            if (groupInfoSetting.getEnglish()){
+                sendMessage.setText("\uD83D\uDCE1 管理群发广播：\n" +
+                        "\n" +
+                        "仅发送自己邀请的群组，如需发送所有群，请在后台操作。\n" +
+                        "支持纯文本、图片+文字、视频+文字。\n" +
+                        "\n" +
+                        "请输入您要广播的内容:");
+            }else {
+                sendMessage.setText("\uD83D\uDCE1 Manage Group Broadcast：\n" +
                         "\n" +
                         "Only send the group you invite, if you need to send all groups, please operate in the background.\n" +
                         "Support pure text, image + text, video + text.\n" +
@@ -378,7 +409,7 @@ public class PaperPlaneBotSinglePerson {
             return;
         }
         if (text.startsWith("授权")){
-            if (text.startsWith("授权-")&&!userDTO.getUserId().equals(adminUserId) && !userDTO.getUserId().equals(threeAdminUserId) && !userDTO.getUserId().equals(toAdminUserId)){
+            if (text.startsWith("授权-") && !byUserId.isCjgl()){
                 accountBot.sendMessage(sendMessage,"您不是超级管理!无权限设置管理员!");
                 return;
             }
@@ -392,8 +423,8 @@ public class PaperPlaneBotSinglePerson {
                 accountBot.sendMessage(sendMessage,"格式不匹配!");
                 return;
             }
-            LocalDateTime tomorrow= LocalDateTime.now().plusDays(Long.parseLong(validTimeText));
-            Date validTime = Date.from(tomorrow.atZone(ZoneId.systemDefault()).toInstant());
+            DateUtils dateUtils = new DateUtils();
+            Date validTime = dateUtils.calculateRenewalDate(user.getValidTime(), Long.parseLong(validTimeText), ZoneId.systemDefault());
             if (user == null) {
                 user = new User();
                 user.setUserId(userId);
@@ -405,47 +436,16 @@ public class PaperPlaneBotSinglePerson {
                 user.setValidFree(true);
                 user.setValidTime(validTime);
                 userService.insertUser(user);
-                UserNormal userNormal = new UserNormal();
-                userNormal.setAdmin(true);
-                userNormal.setGroupId(message.getChatId().toString());
-                userNormal.setUserId(userDTO.getUserId());
-                userNormal.setCreateTime(new Date());
-                userNormal.setUsername(userDTO.getUsername());
-                userNormalService.insertUserNormal(userNormal);
-                UserOperation userOperation = new UserOperation();
-                userOperation.setAdminUserId(userDTO.getUserId());
-                userOperation.setOperation(true);
-                userOperation.setUserId(userDTO.getUserId());
-                userOperation.setUsername(userDTO.getUsername());
-                userOperation.setGroupId(message.getChatId().toString());
-                userOperation.setCreateTime(new Date());
-                userOperationService.insertUserOperation(userOperation);
             }else {
                 user.setSuperAdmin(true);//默认操作权限管理员
                 user.setValidTime(validTime);
                 user.setValidFree(true);
                 userService.updateUserValidTime(user,validTime);
-                UserNormal userNormal = new UserNormal();
-                userNormal.setAdmin(true);
-                userNormal.setGroupId(message.getChatId().toString());
-                userNormal.setUserId(userDTO.getUserId());
-                userNormal.setCreateTime(new Date());
-                userNormal.setUsername(userDTO.getUsername());
-                userNormalService.insertUserNormal(userNormal);
-                UserOperation userOperation = new UserOperation();
-                userOperation.setAdminUserId(userDTO.getUserId());
-                userOperation.setOperation(true);
-                userOperation.setUserId(userDTO.getUserId());
-                userOperation.setUsername(userDTO.getUsername());
-                userOperation.setGroupId(message.getChatId().toString());
-                userOperation.setCreateTime(new Date());
-                userOperationService.insertUserOperation(userOperation);
             }
-            accountBot.sendMessage(sendMessage,"用户ID: "+userId+" 有效期:"+tomorrow.getYear()+"年"+tomorrow.getMonthValue()+ "月"+
-                    tomorrow.getDayOfMonth()+"日"+ tomorrow.getHour()+"时"+tomorrow.getMinute()+"分" +tomorrow.getSecond()+"秒");
+            accountBot.sendMessage(sendMessage,"用户ID: "+userId+" 有效期: <b>"+dateUtils.parseDate(validTime)+"</b>");
             return;
         } else if (text.startsWith("authorization")) {
-            if (text.startsWith("authorization-")&&!userDTO.getUserId().equals(adminUserId) && !userDTO.getUserId().equals(threeAdminUserId) && !userDTO.getUserId().equals(toAdminUserId)){
+            if (text.startsWith("authorization-")&& !byUserId.isCjgl()){
                 accountBot.sendMessage(sendMessage,"You are not a super administrator! You do not have the authority to set up an administrator!");
                 return;
             }
@@ -459,8 +459,8 @@ public class PaperPlaneBotSinglePerson {
                 accountBot.sendMessage(sendMessage,"Format does not match!");
                 return;
             }
-            LocalDateTime tomorrow= LocalDateTime.now().plusDays(Long.parseLong(validTimeText));
-            Date validTime = Date.from(tomorrow.atZone(ZoneId.systemDefault()).toInstant());
+            DateUtils dateUtils = new DateUtils();
+            Date validTime = dateUtils.calculateRenewalDate(user.getValidTime(), Long.parseLong(validTimeText), ZoneId.systemDefault());
             if (user == null) {
                 user = new User();
                 user.setUserId(userId);
@@ -472,48 +472,16 @@ public class PaperPlaneBotSinglePerson {
                 user.setValidFree(true);
                 user.setValidTime(validTime);
                 userService.insertUser(user);
-                UserNormal userNormal = new UserNormal();
-                userNormal.setAdmin(true);
-                userNormal.setGroupId(message.getChatId().toString());
-                userNormal.setUserId(userDTO.getUserId());
-                userNormal.setCreateTime(new Date());
-                userNormal.setUsername(userDTO.getUsername());
-                userNormalService.insertUserNormal(userNormal);
-                UserOperation userOperation = new UserOperation();
-                userOperation.setAdminUserId(userDTO.getUserId());
-                userOperation.setOperation(true);
-                userOperation.setUserId(userDTO.getUserId());
-                userOperation.setUsername(userDTO.getUsername());
-                userOperation.setGroupId(message.getChatId().toString());
-                userOperation.setCreateTime(new Date());
-                userOperationService.insertUserOperation(userOperation);
             }else {
                 user.setSuperAdmin(true);//默认操作权限管理员
                 user.setValidTime(validTime);
                 user.setValidFree(true);
                 userService.updateUserValidTime(user,validTime);
-                UserNormal userNormal = new UserNormal();
-                userNormal.setAdmin(true);
-                userNormal.setGroupId(message.getChatId().toString());
-                userNormal.setUserId(userDTO.getUserId());
-                userNormal.setCreateTime(new Date());
-                userNormal.setUsername(userDTO.getUsername());
-                userNormalService.insertUserNormal(userNormal);
-                UserOperation userOperation = new UserOperation();
-                userOperation.setAdminUserId(userDTO.getUserId());
-                userOperation.setOperation(true);
-                userOperation.setUserId(userDTO.getUserId());
-                userOperation.setUsername(userDTO.getUsername());
-                userOperation.setGroupId(message.getChatId().toString());
-                userOperation.setCreateTime(new Date());
-                userOperationService.insertUserOperation(userOperation);
             }
-            accountBot.sendMessage(sendMessage,"User ID: "+userId+" Validity:"+tomorrow.getYear()+"Year"+tomorrow.getMonthValue()+ "month"+
-                    tomorrow.getDayOfMonth()+"day"+ tomorrow.getHour()+"hour"+tomorrow.getMinute()+"minute" +tomorrow.getSecond()+"second");
+            accountBot.sendMessage(sendMessage,"User ID: "+userId+" Validity:<b>"+dateUtils.parseDate(validTime)+"</b>");
             return;
         }else if (text.startsWith("删除授权")) {
-            if (text.startsWith("删除授权-") && !userDTO.getUserId().equals(adminUserId) &&
-                    !userDTO.getUserId().equals(threeAdminUserId) && !userDTO.getUserId().equals(toAdminUserId)) {
+            if (text.startsWith("删除授权-") && !byUserId.isCjgl()) {
                 accountBot.sendMessage(sendMessage, "您不是超级管理!无权限设置管理员!");
                 return;
             }
@@ -830,8 +798,8 @@ public class PaperPlaneBotSinglePerson {
         }
         String text = userDTO.getText();
         boolean b = text.equals("获取个人信息（personal information）")|| text.equals("监听列表（listening address）")||
-        text.equals("使用说明（illustrate）")||text.equals("群发广播（Group Broadcast）")||
-                text.equals("自助续费（Self-service renewal）");
+        text.equals("使用说明（illustrate）")||text.equals("群发广播（Group Broadcast）")||text.equals("超级管理员广播（Super Management Broadcast）")||
+                text.equals("自助续费（Self-service renewal）") || text.equals("/start");
         if (text!=null && b){
             return;
         }
@@ -843,14 +811,15 @@ public class PaperPlaneBotSinglePerson {
             updateLastActiveTime(userId);
             // 构建按钮并发送确认消息
             Map<String, String> buttonText = new LinkedHashMap<>();
+            List<UserNormal> userNormals = userNormalMapper.selectList(new QueryWrapper<UserNormal>().eq("user_id", userId));
             if (groupInfoSetting.getEnglish()) {
                 buttonText.put("确认发送", "confirm_broadcast_" + userDTO.getUserId());
                 buttonText.put("取消广播", "cancel_broadcast_" + userDTO.getUserId());
-                sendMessage.setText("请确认您要广播的内容!");
+                sendMessage.setText("请确认您要广播的内容! 共计发送到【"+userNormals.size()+"】个群组.");
             } else {
                 buttonText.put("Confirm Send", "confirm_broadcast_" + userDTO.getUserId());
                 buttonText.put("Cancel Broadcast", "cancel_broadcast_" + userDTO.getUserId());
-                sendMessage.setText("Please confirm what you want to broadcast!");
+                sendMessage.setText("Please confirm what you want to broadcast!"+" Total sent to ["+userNormals.size()+"] groups.");
             }
             buttonList.sendButton(sendMessage, userId, buttonText);
             // 获取 mediaGroupId
@@ -864,6 +833,39 @@ public class PaperPlaneBotSinglePerson {
             // 判断是否是该媒体组的第一个消息
             boolean isFirstMedia = mediaGroupId != null &&
                     processedMediaGroups.computeIfAbsent(userId, k -> new HashSet<>()).add(mediaGroupId);
+            // 判断是否是该媒体组的最后一个消息
+            boolean isLastMedia = mediaGroupId == null || !isFirstMedia;
+            // 只有是最后一个媒体项时才清除状态
+            if (isLastMedia) {
+                userStates.remove(userId); // ✅ 只在最后一张图清除状态
+            }
+            accountBot.sendMessageReplay(sendMessage, true, message.getMessageId());
+        }else if (ADMIN_STATE_BROADCAST.equals(userState)){
+            // 更新最后活跃时间
+            updateLastActiveTime(userId);
+            // 构建按钮并发送确认消息
+            Map<String, String> buttonText = new LinkedHashMap<>();
+            List<Status> statuses = statusMapper.selectList(new QueryWrapper<Status>().select("group_id").groupBy("group_id"));
+            if (groupInfoSetting.getEnglish()) {
+                buttonText.put("确认发送", "admin_confirm_broadcast_" + userDTO.getUserId());
+                buttonText.put("取消广播", "admin_cancel_broadcast_" + userDTO.getUserId());
+                sendMessage.setText("请确认您要广播的内容! 共计发送到【"+statuses.size()+"】个群组.");
+            } else {
+                buttonText.put("Confirm Send", "admin_confirm_broadcast_" + userDTO.getUserId());
+                buttonText.put("Cancel Broadcast", "admin_cancel_broadcast_" + userDTO.getUserId());
+                sendMessage.setText("Please confirm what you want to broadcast!"+" Total sent to ["+statuses.size()+"] groups.");
+            }
+            buttonList.sendButton(sendMessage, userId, buttonText);
+            // 获取 mediaGroupId
+            String mediaGroupId = message.getMediaGroupId();
+            // 缓存消息 ID
+            if (mediaGroupId != null) {
+                pendingBroadcastMessageMap.computeIfAbsent(userId, k -> new ArrayList<>()).add(message.getMessageId());
+            } else if (message.hasText()) {
+                pendingBroadcastMessageMap.computeIfAbsent(userId, k -> new ArrayList<>()).add(message.getMessageId());
+            }
+            // 判断是否是该媒体组的第一个消息
+            boolean isFirstMedia = mediaGroupId != null && processedMediaGroups.computeIfAbsent(userId, k -> new HashSet<>()).add(mediaGroupId);
             // 判断是否是该媒体组的最后一个消息
             boolean isLastMedia = mediaGroupId == null || !isFirstMedia;
             // 只有是最后一个媒体项时才清除状态

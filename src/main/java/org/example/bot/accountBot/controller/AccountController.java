@@ -54,7 +54,7 @@ public class AccountController {
     }
     @ApiOperation("查询标签列的群")
     @PostMapping("/findGroupListTag")
-    public JsonResult findGroupListTag(@RequestBody QueryGroupDTO dto) {
+    public JsonResult findGroupListTag(@RequestBody QueryGroupTagDTO dto) {
         return accountService.findGroupListTag(dto);
     }
     @ApiOperation("获取所有用户")
@@ -71,6 +71,48 @@ public class AccountController {
     @GetMapping("/setStatus")
     public JsonResult setStatus() {
         return accountService.setStatus();
+    }
+
+    @ApiOperation("批量退群")
+    @PostMapping("/saveAccountSetting")
+    public JsonResult saveAccountSetting(@RequestBody AccountSettingDTO dto) {
+        return accountService.saveAccountSetting(dto);
+    }
+//     username: '',
+//            oldPassword: '',
+//            newPassword: '',
+//            confirmNewPassword: '',
+//            secretKey: ''
+    @ApiOperation("修改登录密码")
+    @GetMapping("/accountChangePassword")
+    public JsonResult accountChangePassword(@RequestParam("username") String username,
+                                            @RequestParam("newPassword") String newPassword, @RequestParam("secretKey") String secretKey) {
+        return accountService.accountChangePassword(username,newPassword,secretKey);
+    }
+
+
+    @ApiOperation("设置超级管理的查询")
+    @GetMapping("/findAccountUser")
+    public JsonResult findAccountUser(@RequestParam("page") Integer page, @RequestParam("size") Integer size,
+                                      @RequestParam("keyword") String keyword) {
+        return accountService.findAccountUser(page,size,keyword);
+    }
+    @ApiOperation("设置超级管理")
+    @GetMapping("/setAccountSuperAdminUser")
+    public JsonResult setAccountSuperAdminUser(@RequestParam String userId) {
+        return accountService.setAccountSuperAdminUser(userId);
+    }
+    @ApiOperation("取消设置超级管理")
+    @GetMapping("/cancelAccountSuperAdminUser")
+    public JsonResult quxiaoAccountSuperAdminUser(@RequestParam String userId) {
+        return accountService.quxiaoAccountSuperAdminUser(userId);
+    }
+
+
+    @ApiOperation("机器人退群")
+    @GetMapping("/getAccountSetting")
+    public JsonResult getAccountSetting() {
+        return accountService.getAccountSetting();
     }
     @ApiOperation("机器人退群")
     @GetMapping("/leaveGroup")
@@ -113,6 +155,15 @@ public class AccountController {
     @GetMapping("/getTagAll")
     public JsonResult getTagAll(@RequestParam("page") Integer page, @RequestParam("pageSize") Integer size, @RequestParam("groupId") String groupId) {
         return accountService.getTagAll(page, size, groupId);
+    }
+    @ApiOperation("查询用户订单记录")
+    @GetMapping("/findAccountUserOrder")
+    public JsonResult findAccountUserOrder(@RequestParam("page") Integer page, @RequestParam("pageSize") Integer size,
+                                           @RequestParam(value = "keyword",required = false) String keyword,
+                                           @RequestParam(value = "startTime",required = false) String startTime,
+                                           @RequestParam(value = "endTime",required = false) String endTime,
+                                           @RequestParam(value = "selectedType",required = false) String selectedType) {
+        return accountService.findAccountUserOrder(page, size, keyword,startTime, endTime,selectedType);
     }
     @ApiOperation("群标签")
     @GetMapping("/deleteTagGroup")

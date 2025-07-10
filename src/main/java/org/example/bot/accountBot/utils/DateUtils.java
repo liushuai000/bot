@@ -2,6 +2,8 @@ package org.example.bot.accountBot.utils;
 
 import java.text.SimpleDateFormat;
 import java.time.Duration;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.Calendar;
 import java.util.Date;
 
@@ -33,6 +35,20 @@ public class DateUtils {
             return seconds + "秒";
         }
     }
+    public static Date calculateRenewalDate(Date validTime, long daysToAdd, ZoneId zoneId) {
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime baseTime;
+
+        if (validTime == null || validTime.before(Date.from(now.atZone(zoneId).toInstant()))) {
+            baseTime = now;
+        } else {
+            baseTime = validTime.toInstant().atZone(zoneId).toLocalDateTime();
+        }
+
+        LocalDateTime renewalTime = baseTime.plusDays(daysToAdd);
+        return Date.from(renewalTime.atZone(zoneId).toInstant());
+    }
+
     /**
      * 将Duration对象转换为时间字符串，根据不同的时间单位进行格式化。
      *

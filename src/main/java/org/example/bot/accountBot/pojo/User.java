@@ -36,7 +36,8 @@ public class User {
     private boolean validFree=false;//是否已经使用过免费时长6小时  只有在获取个人信息的时候赋值
     @TableField("valid_time")
     private Date validTime;//有效期  默认+6个小时有效期 只有在获取个人信息的时候赋值  或管理设置授权的时候
-
+    @TableField("cjgl")
+    private boolean cjgl=false;//手动设置的超级管理 true 是超级 false 不是
 
     public String getFirstLastName(){
         String fname=firstName==null?"":firstName;

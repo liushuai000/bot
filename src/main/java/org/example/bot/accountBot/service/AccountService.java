@@ -41,7 +41,7 @@ public interface AccountService {
 
     JsonResult allLeaveGroup(List<String> groupIds);
 
-    JsonResult findGroupListTag(QueryGroupDTO dto);
+    JsonResult findGroupListTag(QueryGroupTagDTO dto);
 
     JsonResult sendAllMessage(ManagerGroupMessageDTO dto);
 
@@ -64,4 +64,18 @@ public interface AccountService {
     JsonResult findConfig();
 
     JsonResult accountRegister(LoginFromDTO loginFromDTO);
+
+    JsonResult getAccountSetting();
+
+    JsonResult saveAccountSetting(AccountSettingDTO dto);
+
+    JsonResult setAccountSuperAdminUser(String userId);
+
+    JsonResult findAccountUser(Integer page, Integer size, String keyword);
+
+    JsonResult quxiaoAccountSuperAdminUser(String userId);
+
+    JsonResult findAccountUserOrder(Integer page, Integer size, String keyword, String startTime, String endTime, String selectedType);
+
+    JsonResult accountChangePassword(String username, String newPassword, String secretKey);
 }

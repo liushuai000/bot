@@ -20,10 +20,6 @@ logging:
     org.example.bot.accountBot.mapper: debug
   pattern:
     console: '%d{YYYY-MM-dd HH:mm:ss.SSS} %clr(%-5level) --- [%-15thread]%cyan(%-50logger{50}):%msg%n'
-#这个是超级管理员 可以私聊别人设置管理员权限
-adminUserId: 6636253835  #刘小帅 我自己
-toAdminUserId: 7855233620 #HQpay葫芦娃
-threeAdminUserId: 7045880082 #TTpayxz66
 botUserId: 7203617407   #我机器人的id
 vueUrl: http://192.168.0.9:8080/
 Origin: http://43.128.113.117:8081

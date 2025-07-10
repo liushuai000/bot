@@ -3,6 +3,7 @@ package org.example.bot.accountBot.service;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 import org.example.bot.accountBot.mapper.GroupInnerUserMapper;
 import org.example.bot.accountBot.mapper.StatusMapper;
 import org.example.bot.accountBot.pojo.GroupInnerUser;
@@ -74,12 +75,12 @@ public class StatusService {
             if ("group".equals(chat.getType()) || "supergroup".equals(chat.getType())) {
                 String chatId = chat.getId().toString();
                 // 检查是否是群组标题变更事件
-                if (messageTemp.getNewChatTitle()!=null) {
+                if (messageTemp.getNewChatTitle()!=null && StringUtils.isNotBlank(messageTemp.getNewChatTitle())) {
                     String newTitle = chat.getTitle(); // 获取新标题
-                    mapper.update(null,  new UpdateWrapper<Status>().eq("group_id", chatId).set("group_name", newTitle));
+                    mapper.update(null,  new UpdateWrapper<Status>().eq("group_id", chatId).set("group_title", newTitle));
                     GroupInnerUser groupInnerUser = groupInnerUserMapper.selectOne(new QueryWrapper<GroupInnerUser>().eq("group_id", chatId));
                     if (groupInnerUser!=null){
-                        groupInnerUserMapper.update(null, new UpdateWrapper<GroupInnerUser>().eq("group_id", chatId).set("group_name", newTitle));
+                        groupInnerUserMapper.update(null, new UpdateWrapper<GroupInnerUser>().eq("group_id", chatId).set("type", newTitle));
                     }
                 }
             }

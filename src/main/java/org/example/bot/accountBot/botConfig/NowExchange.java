@@ -3,7 +3,6 @@ package org.example.bot.accountBot.botConfig;
 import cn.hutool.json.JSONArray;
 import cn.hutool.json.JSONObject;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
@@ -12,6 +11,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.example.bot.accountBot.config.RestTemplateConfig;
 import org.example.bot.accountBot.dto.*;
 import org.example.bot.accountBot.mapper.GroupInfoSettingMapper;
+import org.example.bot.accountBot.mapper.StatusMapper;
 import org.example.bot.accountBot.mapper.UserNormalMapper;
 import org.example.bot.accountBot.pojo.*;
 import org.example.bot.accountBot.service.WalletListenerService;
@@ -29,19 +29,11 @@ import org.telegram.telegrambots.meta.api.objects.PhotoSize;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.media.InputMedia;
 import org.telegram.telegrambots.meta.api.objects.media.InputMediaPhoto;
-import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
-import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
 
-import javax.annotation.PostConstruct;
 import javax.annotation.Resource;
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.text.SimpleDateFormat;
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
@@ -74,6 +66,8 @@ public class NowExchange {
     private GroupInfoSettingMapper groupInfoSettingMapper;
     @Autowired
     private UserNormalMapper userNormalMapper;
+    @Autowired
+    private StatusMapper statusMapper;
 //    @Autowired
 //    private SettingOperatorPerson settingOperatorPerson;
 
@@ -228,20 +222,44 @@ public class NowExchange {
             } else if (nicknameToAddressMap.values().contains(callbackData)) {
                 this.getWallerListener(update.getCallbackQuery().getMessage(),sendMessage,callbackData,nicknameToAddressMap,groupInfoSetting);
                 return;
+
+            } else if (callbackData.startsWith("cancelOrder")) {
+                String userId = callbackData.replace("cancelOrder", "");
+                configEditHandler.cancelOrder(userId);
+                return;
             } else if (callbackData.startsWith("confirm_broadcast_")) {
                 String userId = callbackData.replace("confirm_broadcast_", "");
                 List<UserNormal> userNormals = userNormalMapper.selectList(new QueryWrapper<UserNormal>().eq("user_id", userId));
-                if (groupInfoSetting.getEnglish()){
-                    sendMessage.setText("共计【"+userNormals.size()+"】个群组，群发已开始");
-                }else {
-                    sendMessage.setText("total【"+userNormals.size()+"】Groups, group messaging has started");
-                }
-                accountBot.sendMessage(sendMessage);
                 if (userNormals.isEmpty()) {
                     return;
                 }
                 for (UserNormal userNormal : userNormals){
                     handleConfirmBroadcast(userNormal.getGroupId(), update.getCallbackQuery().getMessage().getReplyToMessage());
+                }
+                if (groupInfoSetting.getEnglish()) {
+                    accountBot.sendMessage(sendMessage,"群发已结束!");
+                }else{
+                    accountBot.sendMessage(sendMessage,"The group message has ended!");
+                }
+                accountBot.nowDeleteMessage(Long.valueOf(userId), messageId);
+                return;
+            } else if (callbackData.startsWith("admin_cancel_broadcast_")) {
+                String userId = callbackData.replace("admin_cancel_broadcast_", "");
+                accountBot.nowDeleteMessage(Long.valueOf(userId), messageId);
+                return;
+            } else if (callbackData.startsWith("admin_confirm_broadcast_")) {
+                String userId = callbackData.replace("admin_confirm_broadcast_", "");
+                List<Status> statuses = statusMapper.selectList(null);
+                if (statuses.isEmpty()) {
+                    return;
+                }
+                for (Status status : statuses){
+                    handleConfirmBroadcast(status.getGroupId(), update.getCallbackQuery().getMessage().getReplyToMessage());
+                }
+                if (groupInfoSetting.getEnglish()) {
+                    accountBot.sendMessage(sendMessage,"群发已结束!");
+                }else{
+                    accountBot.sendMessage(sendMessage,"The group message has ended!");
                 }
                 accountBot.nowDeleteMessage(Long.valueOf(userId), messageId);
                 return;
@@ -251,7 +269,7 @@ public class NowExchange {
                 return;
             } else if (callbackData.startsWith("ButtonId:")) {
                 String buttonId = callbackData.replace("ButtonId:", "");
-                configEditHandler.sendButtonMessage(buttonId,chatId,messageId);
+                configEditHandler.sendButtonMessage(buttonId,chatId,groupInfoSetting);
                 return;
             } else if (callbackData.equals("取消通知")) {
                 // 找到第一个左括号和右括号的位置
