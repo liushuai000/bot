@@ -78,11 +78,7 @@ public class AccountController {
     public JsonResult saveAccountSetting(@RequestBody AccountSettingDTO dto) {
         return accountService.saveAccountSetting(dto);
     }
-//     username: '',
-//            oldPassword: '',
-//            newPassword: '',
-//            confirmNewPassword: '',
-//            secretKey: ''
+
     @ApiOperation("修改登录密码")
     @GetMapping("/accountChangePassword")
     public JsonResult accountChangePassword(@RequestParam("username") String username,

@@ -41,5 +41,12 @@ public class AccountSetting {
 
     @TableField("english_not_group_admin_notice")
     private String englishNotGroupAdminNotice;//本群不是管理
-
+    @TableField("start_message_notice_switch")
+    private Boolean  startMessageNoticeSwitch;
+    @TableField("start_message_notice")
+    private String  startMessageNotice;
+    @TableField("english_start_message_notice")
+    private String englishStartMessageNotice;
+    @TableField("private_message_language")
+    private Boolean privateMessageLanguage;
 }

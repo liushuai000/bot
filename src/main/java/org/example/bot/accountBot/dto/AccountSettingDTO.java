@@ -34,6 +34,14 @@ public class AccountSettingDTO {
     @ApiModelProperty("englishNotGroupAdminNotice")
     private String englishNotGroupAdminNotice;//本群不是管理
 
+    @ApiModelProperty("startMessageNoticeSwitch")
+    private Boolean startMessageNoticeSwitch;
+    @ApiModelProperty("startMessageNotice")
+    private String  startMessageNotice;
+    @ApiModelProperty("englishStartMessageNotice")
+    private String englishStartMessageNotice;
+    @ApiModelProperty("privateMessageLanguage")
+    private String privateMessageLanguage;
 
 
 }

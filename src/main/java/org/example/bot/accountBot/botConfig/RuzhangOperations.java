@@ -497,6 +497,7 @@ public class RuzhangOperations {
                 issue.setCallBackUserId(userDTO.getCallBackUserId());
                 issue.setIssueHandlerMoney(status.getIssueHandlerMoney());
                 issue.setRiqie(status.isRiqie());
+                issue.setPm(false);
 //                issue.setSetTime(status.getSetTime());
                 issue.setMessageId(message.getMessageId());
                 issue.setDownExchange(status.getDownExchange());

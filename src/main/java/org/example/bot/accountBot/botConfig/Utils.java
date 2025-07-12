@@ -18,6 +18,7 @@ import javax.script.ScriptEngineManager;
 import javax.script.ScriptException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.text.DecimalFormat;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.Date;
@@ -255,16 +256,44 @@ public class Utils{
     }
 
     //计算器的判断是否符合+-*/
-    public  String calculate(String text) {
-        try {
-            BigDecimal result = evaluateExpression(text);
-            System.out.println("Result: " + result);
-            if (result!=null)  return text+"="+result;
-        } catch (Exception e) {
-            System.out.println("Error evaluating expression: " + e.getMessage());
+//    public  String calculate(String text) {
+//        try {
+//            BigDecimal result = evaluateExpression(text);
+//            System.out.println("Result: " + result);
+//            if (result!=null){
+//                String formattedResult = result.stripTrailingZeros().toPlainString();
+//                return text + "=" + formattedResult;
+//            }
+//        } catch (Exception e) {
+//            System.out.println("Error evaluating expression: " + e.getMessage());
+//        }
+//        return null;
+//    }
+    public String calculate(String text) {
+        if (text == null || text.trim().isEmpty()) {
+            return "";
         }
-        return null;
+        if (!isValidExpression(text)) {
+            return "";
+        }
+        // 判断是否包含数学运算符
+        boolean containsOperator = text.matches(".*[+\\-*/()].*");
+        if (!containsOperator) {
+            return ""; // 没有运算符，直接返回空字符串
+        }
+        ScriptEngineManager manager = new ScriptEngineManager();
+        ScriptEngine engine = manager.getEngineByName("JavaScript");
+        try {
+            Object result = engine.eval(text);
+            BigDecimal value = new BigDecimal(result.toString());
+            // 四舍五入保留两位小数，并去除无效的 0
+            String formattedValue = value.setScale(2, RoundingMode.HALF_UP).stripTrailingZeros().toPlainString();
+            return text + "=" + formattedValue;
+        } catch (ScriptException | NumberFormatException e) {
+            return "";
+        }
     }
+
     public static BigDecimal evaluateExpression(String expression) {
         // 移除空格
         expression = expression.replaceAll("\\s+", "");
@@ -302,7 +331,6 @@ public class Utils{
                         }
                     }
                 }
-
                 // 四舍五入
                 BigDecimal result = stack.pop().setScale(2, RoundingMode.HALF_UP);
                 return result;
@@ -315,12 +343,8 @@ public class Utils{
     }
 
     private static boolean isValidExpression(String expression) {
-        String[] tokens = expression.split("(?<=[-+*/])|(?=[-+*/])"); // 按运算符分割
-        // 检查是否只有三个token：一个数值、一个运算符、另一个数值
-        return tokens.length == 3 &&
-                isNumber(tokens[0]) &&
-                isOperator(tokens[1].charAt(0)) &&
-                isNumber(tokens[2]);
+        return expression.matches("^\\s*" +  "[+-]?(?:\\d+\\.?\\d*|\\d*\\.\\d+)" + "(?:\\s*[+\\-*/]\\s*" +
+                        "[+-]?(?:\\d+\\.?\\d*|\\d*\\.\\d+))+" +"\\s*$");
     }
 
     private static boolean isNumber(String token) {

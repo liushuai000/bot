@@ -10,10 +10,10 @@ import org.example.bot.accountBot.dto.UserDTO;
 import org.example.bot.accountBot.mapper.*;
 import org.example.bot.accountBot.pojo.*;
 import org.example.bot.accountBot.service.UserNormalService;
-import org.example.bot.accountBot.service.UserOperationService;
 import org.example.bot.accountBot.service.UserService;
 import org.example.bot.accountBot.service.WalletListenerService;
 import org.example.bot.accountBot.utils.DateUtils;
+import org.example.bot.accountBot.utils.StyleText;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
@@ -21,9 +21,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Message;
-import org.telegram.telegrambots.meta.api.objects.PhotoSize;
 import org.telegram.telegrambots.meta.api.objects.Update;
-import org.telegram.telegrambots.meta.api.objects.media.InputMediaPhoto;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardMarkup;
 
 import javax.annotation.PostConstruct;
@@ -35,7 +33,6 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.*;
 import java.util.concurrent.*;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
@@ -78,12 +75,10 @@ public class PaperPlaneBotSinglePerson {
     // 定时任务调度器
     private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(16);
     @Qualifier("userOperationService")
-    @Autowired
-    private UserOperationService userOperationService;
     // 记录已处理过的交易 ID + 地址组合
     private final Set<String> processedTransactions = Collections.newSetFromMap(new ConcurrentHashMap<>());
     @Autowired
-    private UserMapper userMapper;
+    private AccountSettingMapper accountSettingMapper;
 
     @SneakyThrows
     @PostConstruct
@@ -211,11 +206,16 @@ public class PaperPlaneBotSinglePerson {
         if (text==null){
             return;
         }
+        AccountSetting accountSetting = accountSettingMapper.selectOne(new QueryWrapper<>());
         GroupInfoSetting groupInfoSetting = groupInfoSettingMapper.selectOne(new QueryWrapper<GroupInfoSetting>().eq("group_id", userDTO.getUserId()));
         if (groupInfoSetting==null){
             groupInfoSetting=new GroupInfoSetting();
             groupInfoSetting.setGroupId(Long.valueOf(userDTO.getUserId()));
+            groupInfoSetting.setEnglish(accountSetting.getPrivateMessageLanguage());
             groupInfoSettingMapper.insert(groupInfoSetting);
+        }else {
+            groupInfoSetting.setEnglish(accountSetting.getPrivateMessageLanguage());
+            groupInfoSettingMapper.updateById(groupInfoSetting);
         }
         if (userDTO.getText().equals("切换中文") || userDTO.getText().equals("切换英文")
                 ||  userDTO.getText().toLowerCase().equals("switch to chinese")||  userDTO.getText().toLowerCase().equals("switch to english")){
@@ -525,34 +525,16 @@ public class PaperPlaneBotSinglePerson {
             return;
         }
         if (text.equals("/start")) {
+            StyleText styleText=new StyleText();
+            AccountSetting accountSetting = accountSettingMapper.selectOne(new QueryWrapper<>());
             if (groupInfoSetting.getEnglish()){
-                accountBot.tronAccountMessageTextHtml(sendMessage,userDTO.getUserId(),"<b>你好！欢迎使用本机器人：\n" +
-                        "\n" +
-                        "点击下方底部按钮：获取个人信息\n" +
-                        "（将我拉入群组可免费使用48小时）\n" +
-                        "\n" +
-                        "将TRC20地址发送给我，即可设置入款通知；\n" +
-                        "群友在群中发送U地址即可查询该地址当前余额； \n" +
-                        "\n" +
-                        "➖➖➖➖➖➖➖➖➖➖➖\n" +
-                        "本机器人用户名 ： </b><code>@"+username+"</code>\n" +
-                        "\n" +
-                        "<b>联系客服：</b>@vipkefu\n" +
-                        "<b>双向客服：</b>@yaokevipBot");
+                if (accountSetting!=null && accountSetting.getStartMessageNoticeSwitch()){
+                    accountBot.tronAccountMessageTextHtml(sendMessage,userDTO.getUserId(),styleText.cleanHtmlExceptSpecificTags(accountSetting.getStartMessageNotice()));
+                }
             }else{
-                accountBot.tronAccountMessageTextHtml(sendMessage,userDTO.getUserId(),"<b>Hello! Welcome to this robot: \n" +
-                        "\n" +
-                        "Click the bottom button below: Get personal information\n" +
-                        "(Add me to the group for free use for 48 hours)\n" +
-                        "\n" +
-                        "Send me the TRC20 address to set up a deposit notification; \n" +
-                        "Group members can check the current balance of the address by sending the U address in the group; \n" +
-                        "\n" +
-                        "➖➖➖➖➖➖➖➖➖➖➖\n" +
-                        "This robot's user name: </b><code>@"+username+"</code>\n" +
-                        "\n" +
-                        "<b>Contact customer service: </b>@vipkefu\n" +
-                        "<b>Two-way customer service: </b>@yaokevipBot");
+                if (accountSetting!=null && accountSetting.getStartMessageNoticeSwitch()){
+                    accountBot.tronAccountMessageTextHtml(sendMessage,userDTO.getUserId(),styleText.cleanHtmlExceptSpecificTags(accountSetting.getEnglishStartMessageNotice()));
+                }
             }
         }
     }

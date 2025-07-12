@@ -862,6 +862,10 @@ public class AccountServiceImpl implements AccountService {
             accountSetting.setNotGroupAdminNotice(dto.getNotGroupAdminNotice());
             accountSetting.setNotGroupAdminNoticeHtml(dto.getNotGroupAdminNoticeHtml());
             accountSetting.setGroupLanguage(dto.getGroupLanguage().equals("zh"));
+            accountSetting.setStartMessageNotice(dto.getStartMessageNotice());
+            accountSetting.setStartMessageNoticeSwitch(dto.getStartMessageNoticeSwitch());
+            accountSetting.setEnglishStartMessageNotice(dto.getEnglishStartMessageNotice());
+            accountSetting.setPrivateMessageLanguage(dto.getPrivateMessageLanguage().equals("zh"));
             accountSettingMapper.insert(accountSetting);
         }else{
             accountSetting.setExpireNotice(dto.getExpireNotice());
@@ -874,6 +878,10 @@ public class AccountServiceImpl implements AccountService {
             accountSetting.setEnglishNotGroupAdminNotice(dto.getEnglishNotGroupAdminNotice());
             accountSetting.setNotGroupAdminNotice(dto.getNotGroupAdminNotice());
             accountSetting.setNotGroupAdminNoticeHtml(dto.getNotGroupAdminNoticeHtml());
+            accountSetting.setStartMessageNotice(dto.getStartMessageNotice());
+            accountSetting.setStartMessageNoticeSwitch(dto.getStartMessageNoticeSwitch());
+            accountSetting.setEnglishStartMessageNotice(dto.getEnglishStartMessageNotice());
+            accountSetting.setPrivateMessageLanguage(dto.getPrivateMessageLanguage().equals("zh"));
             accountSettingMapper.updateById(accountSetting);
         }
         return new JsonResult();
