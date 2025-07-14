@@ -4,7 +4,7 @@ spring:
       enabled: false
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://localhost:3306/bot?useUnicode=true&characterEncoding=UTF-8&autoReconnect=true&useSSL=false&zeroDateTimeBehavior=convertToNull&useTimezone=true&serverTimezone=GMT%2B8&allowMultiQueries=true
+    url: jdbc:mysql://43.128.113.117:3306/bot?useUnicode=true&characterEncoding=UTF-8&autoReconnect=true&useSSL=false&zeroDateTimeBehavior=convertToNull&useTimezone=true&serverTimezone=GMT%2B8&allowMultiQueries=true
     username: root
     password: root@Liu332331
   jackson:
@@ -22,17 +22,17 @@ logging:
     console: '%d{YYYY-MM-dd HH:mm:ss.SSS} %clr(%-5level) --- [%-15thread]%cyan(%-50logger{50}):%msg%n'
 
 #http://43.128.113.117:8081
-#botUserId: 6764218833
-#Origin: http://www.yaoke.cc
-#Origin1: http://www.yaoke.cc
-#Origin2: http://www.yaoke.cc:8081
-#vueUrl: http://www.yaoke.cc/
+botUserId: 6764218833
+Origin: http://www.yaoke.cc
+Origin1: http://www.yaoke.cc
+Origin2: http://www.yaoke.cc:8081
+vueUrl: http://www.yaoke.cc/
 
-botUserId: 6542803611
-vueUrl: http://www.bot2025.cc/
-Origin: http://43.134.137.221:8081
-Origin1: http://43.134.137.221
-Origin2: http://43.134.137.221:8081
+#botUserId: 6542803611
+#vueUrl: http://www.bot2025.cc/
+#Origin: http://43.134.137.221:8081
+#Origin1: http://43.134.137.221
+#Origin2: http://43.134.137.221:8081
 
 apiKey: 2967e678-556e-497a-a892-a1dcee897ba5
 apiKey1: a7089da7-e17b-4d28-a3d3-29f799983cae
@@ -44,9 +44,9 @@ uploadFileGangbo: /usr/local/jar/UpgradeGangbo/
 telegram:
   bot:
     #正式环境
-    token: 6542803611:AAEkB8_D4iR2dV2-amXcXE6JWddSjS3q2iQ
-    username: IIIvipBot #221
-#      token: 6764218833:AAGzUzy2LEzAK3iLz3fViDoGAkqitZU_s0U
-#      username: HQpayvipbot #117
+#    token: 6542803611:AAEkB8_D4iR2dV2-amXcXE6JWddSjS3q2iQ
+#    username: IIIvipBot #221
+      token: 6764218833:AAGzUzy2LEzAK3iLz3fViDoGAkqitZU_s0U
+      username: HQpayvipbot #117
 
 

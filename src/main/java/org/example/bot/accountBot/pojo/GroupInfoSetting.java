@@ -19,8 +19,8 @@ public class GroupInfoSetting {
     @TableId(type= IdType.AUTO,value = "id")
     public Long id; //主键id
     @TableField("english")
-    public Boolean english=true;//是否切换英文显示 false 是因为 true是中文
-//    public Boolean english=false;//是否切换英文显示 false 是因为 true是中文
+//    public Boolean english=true;//切换英文显示 false 是因为 true是中文
+    public Boolean english=false;//切换英文显示 false 是因为 true是中文
     @TableField("group_id")
     private Long groupId;//群组id 或者userid
 //    @TableField("type")

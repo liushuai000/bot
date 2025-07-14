@@ -15,6 +15,8 @@ public class QueryGroupDTO {
     private String groupId;
     @ApiModelProperty("groupName")
     private String groupName;
+    @ApiModelProperty("inviterName")
+    private String inviterName;//邀请人名称
     @ApiModelProperty("startTime")
     private String startTime;//注册开始时间
     @ApiModelProperty("endTime")

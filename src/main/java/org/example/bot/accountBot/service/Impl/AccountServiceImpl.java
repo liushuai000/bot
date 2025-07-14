@@ -512,6 +512,18 @@ public class AccountServiceImpl implements AccountService {
         if (queryDTO.getGroupName()!=null&& StringUtils.isNotBlank(queryDTO.getGroupName())){
             wrapper.like("group_title", queryDTO.getGroupName().trim());
         }
+        if (queryDTO.getInviterName()!=null && StringUtils.isNotBlank(queryDTO.getInviterName())){
+            QueryWrapper<User> userQueryWrapper = new QueryWrapper<>();
+            userQueryWrapper.or(w -> w.like("first_name", queryDTO.getInviterName().trim())
+                    .or().like("last_name", queryDTO.getInviterName().trim())
+                    .or().apply("CONCAT(first_name, ' ', last_name) = {0}", queryDTO.getInviterName().trim())
+                    .or().apply("CONCAT(first_name, last_name) = {0}", queryDTO.getInviterName().trim()));
+            List<User> users = userMapper.selectList(userQueryWrapper);
+            List<String> userIds = users.stream().map(User::getUserId).collect(Collectors.toList());
+            List<UserNormal> userNormals = userNormalMapper.selectList(new QueryWrapper<UserNormal>().in("user_id", userIds));
+            List<String> groupIds = userNormals.stream().map(UserNormal::getGroupId).collect(Collectors.toList());
+            wrapper.in("group_id", groupIds);
+        }
         if (queryDTO.getStartTime()!=null && StringUtils.isNotBlank(queryDTO.getStartTime())){
             LocalDate startDate = LocalDate.parse(queryDTO.getStartTime(), DateTimeFormatter.ISO_DATE);
             LocalDate endDate = LocalDate.parse(queryDTO.getEndTime(), DateTimeFormatter.ISO_DATE);
@@ -536,7 +548,14 @@ public class AccountServiceImpl implements AccountService {
             dto.setGroupId(groupId);
             dto.setGroupName(status.getGroupTitle());
             dto.setInviterId(userNormal.getUserId());
-            dto.setInviterName(userMapper.selectOne(new QueryWrapper<User>().eq("user_id", userNormal.getUserId())).getFirstLastName());
+            User user = userMapper.selectOne(new QueryWrapper<User>().eq("user_id", userNormal.getUserId()));
+            if (user!=null){
+                dto.setInviterName(user.getFirstLastName());
+            }else{
+                statusMapper.delete(new QueryWrapper<Status>().eq("group_id", groupId));
+                userNormalMapper.delete(new QueryWrapper<UserNormal>().eq("group_id", groupId));
+                continue;
+            }
             List<Rate> rates = rateService.selectRateList(groupId);
             if (rates==null || rates.isEmpty()){
                 dto.setExchangeRate(BigDecimal.ZERO);
@@ -991,8 +1010,8 @@ public class AccountServiceImpl implements AccountService {
     @Override
     public JsonResult setStatus() {
         // 获取所有群组
-        List<Status> statuses = statusMapper.selectList(new QueryWrapper<Status>());
-        for (Status status : statuses) {
+        List<UserNormal> statuses = userNormalMapper.selectList(new QueryWrapper<UserNormal>());
+        for (UserNormal status : statuses) {
             String groupId = status.getGroupId();
             try {
                 // 调用 Telegram API 检查 Bot 是否在群组中
@@ -1000,6 +1019,8 @@ public class AccountServiceImpl implements AccountService {
                 Thread.sleep(500);
                 if (chatMember ==null || chatMember.getStatus().equals("left")|| chatMember.getStatus().equals("kicked")){
                     statusMapper.delete(new UpdateWrapper<Status>().eq("group_id", groupId));
+                    userNormalMapper.delete(new QueryWrapper<UserNormal>().eq("group_id", groupId));
+                    userOperationMapper.delete(new QueryWrapper<UserOperation>().eq("group_id", groupId));
                 }
             } catch (Exception e) {
                 log.error("Failed to check bot presence in group: {}", groupId, e);

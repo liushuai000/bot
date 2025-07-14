@@ -5,10 +5,7 @@ import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.example.bot.accountBot.dto.UserDTO;
-import org.example.bot.accountBot.mapper.AccountSettingMapper;
-import org.example.bot.accountBot.mapper.GroupInfoSettingMapper;
-import org.example.bot.accountBot.mapper.GroupInnerUserMapper;
-import org.example.bot.accountBot.mapper.StatusMapper;
+import org.example.bot.accountBot.mapper.*;
 import org.example.bot.accountBot.pojo.*;
 
 import org.example.bot.accountBot.pojo.User;
@@ -87,6 +84,11 @@ public class AccountBot extends TelegramLongPollingBot {
     private StatusMapper statusMapper;
     @Autowired
     private GroupInnerUserMapper groupInnerUserMapper;
+    @Autowired
+    private UserNormalMapper userNormalMapper;
+    @Autowired
+    private UserOperationMapper userOperationMapper;
+
     @Override
     public String getBotUsername() {
         return username;
@@ -417,6 +419,10 @@ public class AccountBot extends TelegramLongPollingBot {
         if (update.hasMyChatMember()) { //获取个人信息和授权的时候才是admin
             ChatMemberUpdated chatMember = update.getMyChatMember();
             if (chatMember.getNewChatMember().getStatus().equals("administrator")){
+                if (chatMember.getNewChatMember().getStatus().equals("administrator") &&
+                        chatMember.getOldChatMember()!=null && chatMember.getOldChatMember().getStatus().equals("administrator")){
+                    return;
+                }
                 SendMessage sendMessage = new SendMessage();
                 String chatId = chatMember.getChat().getId().toString();//群组id
                 String groupTitle = chatMember.getChat().getTitle().toString();//群组id
@@ -515,11 +521,9 @@ public class AccountBot extends TelegramLongPollingBot {
                     groupInfoSetting = new GroupInfoSetting();
                     groupInfoSetting.setGroupId(Long.valueOf(chatId));
                     groupInfoSetting.setEnglish(accountSetting.isGroupLanguage());
-//                    groupInfoSetting.setEnglish(false);//切换中文要修改111
                     groupInfoSettingMapper.insert(groupInfoSetting);
                 }else {
                     groupInfoSetting.setEnglish(accountSetting.isGroupLanguage());
-//                    groupInfoSetting.setEnglish(false);
                     groupInfoSettingMapper.updateById(groupInfoSetting);
                 }
                 String message;
@@ -536,6 +540,8 @@ public class AccountBot extends TelegramLongPollingBot {
             } else if ( chatMember.getNewChatMember().getStatus().equals("left") || chatMember.getNewChatMember().getStatus().equals("kicked")) {
                 String chatId = chatMember.getChat().getId().toString();
                 statusMapper.delete(new QueryWrapper<Status>().eq("group_id", chatId));
+                userNormalMapper.delete(new QueryWrapper<UserNormal>().eq("group_id", chatId));
+                userOperationMapper.delete(new QueryWrapper<UserOperation>().eq("group_id", chatId));
                 //如果存在已退群 不产生重复数据
                 List<GroupInnerUser> userList = groupInnerUserMapper.selectList(new QueryWrapper<GroupInnerUser>().eq("group_id", chatId));
                 if (userList.isEmpty())return;
@@ -823,7 +829,7 @@ public class AccountBot extends TelegramLongPollingBot {
         getChatMember.setUserId(Long.valueOf(botUserId));
         try {
             ChatMember chatMember = execute(getChatMember);
-            return chatMember; // 返回 true 表示被踢出
+            return chatMember;
         } catch (TelegramApiException e) {
             System.err.println("检查用户状态失败: " + e.getMessage());
             return null;

@@ -22,6 +22,7 @@ import org.springframework.stereotype.Service;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Message;
 import org.telegram.telegrambots.meta.api.objects.Update;
+import org.telegram.telegrambots.meta.api.objects.chatmember.ChatMember;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardMarkup;
 
 import javax.annotation.PostConstruct;
@@ -679,8 +680,8 @@ public class PaperPlaneBotSinglePerson {
         User user = userService.findByUserId(userDTO.getUserId());
         if (user==null){
             user = new User();
-            LocalDateTime tomorrow = LocalDateTime.now().plusHours(48);
-//            LocalDateTime tomorrow = LocalDateTime.now().plusHours(8);//英文8小时
+//            LocalDateTime tomorrow = LocalDateTime.now().plusHours(48);//
+            LocalDateTime tomorrow = LocalDateTime.now().plusHours(8);//英文8小时
             Date validTime = Date.from(tomorrow.atZone(ZoneId.systemDefault()).toInstant());
             user.setUserId(userDTO.getUserId());
             user.setUsername(userDTO.getUsername());
@@ -693,8 +694,8 @@ public class PaperPlaneBotSinglePerson {
             userService.insertUser(user);
 
         }else if (!user.isValidFree()) {//还没有体验过免费6小时
-//            LocalDateTime tomorrow = LocalDateTime.now().plusHours(8);//英文8小时
-            LocalDateTime tomorrow = LocalDateTime.now().plusHours(48);//
+            LocalDateTime tomorrow = LocalDateTime.now().plusHours(8);//英文8小时
+//            LocalDateTime tomorrow = LocalDateTime.now().plusHours(48);//
             Date validTime = Date.from(tomorrow.atZone(ZoneId.systemDefault()).toInstant());
             user.setValidTime(validTime);
             user.setSuperAdmin(true);//默认操作权限管理员
