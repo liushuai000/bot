@@ -885,6 +885,7 @@ public class AccountServiceImpl implements AccountService {
             accountSetting.setStartMessageNoticeSwitch(dto.getStartMessageNoticeSwitch());
             accountSetting.setEnglishStartMessageNotice(dto.getEnglishStartMessageNotice());
             accountSetting.setPrivateMessageLanguage(dto.getPrivateMessageLanguage().equals("zh"));
+            accountSetting.setTrialDurationHours(dto.getTrialDurationHours());
             accountSettingMapper.insert(accountSetting);
         }else{
             accountSetting.setExpireNotice(dto.getExpireNotice());
@@ -901,6 +902,7 @@ public class AccountServiceImpl implements AccountService {
             accountSetting.setStartMessageNoticeSwitch(dto.getStartMessageNoticeSwitch());
             accountSetting.setEnglishStartMessageNotice(dto.getEnglishStartMessageNotice());
             accountSetting.setPrivateMessageLanguage(dto.getPrivateMessageLanguage().equals("zh"));
+            accountSetting.setTrialDurationHours(dto.getTrialDurationHours());
             accountSettingMapper.updateById(accountSetting);
         }
         return new JsonResult();

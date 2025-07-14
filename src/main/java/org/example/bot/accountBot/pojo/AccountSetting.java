@@ -49,4 +49,6 @@ public class AccountSetting {
     private String englishStartMessageNotice;
     @TableField("private_message_language")
     private Boolean privateMessageLanguage;
+    @TableField("trial_duration_hours")
+    private Integer trialDurationHours=8;//试用时长
 }

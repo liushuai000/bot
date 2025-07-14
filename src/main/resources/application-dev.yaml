@@ -1,10 +1,16 @@
 spring:
+  servlet:
+    multipart:
+      max-file-size: 50MB
+      max-request-size: 50MB
   devtools:
     restart:
       enabled: false
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://43.128.113.117:3306/bot?useUnicode=true&characterEncoding=UTF-8&autoReconnect=true&useSSL=false&zeroDateTimeBehavior=convertToNull&useTimezone=true&serverTimezone=GMT%2B8&allowMultiQueries=true
+    #117服务器 bot  bot2 bot3 需要换数据库  221: bot  bot2 bot3 bot4 bot5 bot6
+#    url: jdbc:mysql://43.128.113.117:3306/bot3?useUnicode=true&characterEncoding=UTF-8&autoReconnect=true&useSSL=false&zeroDateTimeBehavior=convertToNull&useTimezone=true&serverTimezone=GMT%2B8&allowMultiQueries=true
+    url: jdbc:mysql://43.134.137.221:3306/bot6?useUnicode=true&characterEncoding=UTF-8&autoReconnect=true&useSSL=false&zeroDateTimeBehavior=convertToNull&useTimezone=true&serverTimezone=GMT%2B8&allowMultiQueries=true
     username: root
     password: root@Liu332331
   jackson:
@@ -21,18 +27,69 @@ logging:
   pattern:
     console: '%d{YYYY-MM-dd HH:mm:ss.SSS} %clr(%-5level) --- [%-15thread]%cyan(%-50logger{50}):%msg%n'
 
-#http://43.128.113.117:8081
-botUserId: 6764218833
-Origin: http://www.yaoke.cc
-Origin1: http://www.yaoke.cc
-Origin2: http://www.yaoke.cc:8081
-vueUrl: http://www.yaoke.cc/
+#vueUrl是切换服务器地址 有二个服务器  http://www.yaoke.cc/      vueUrl: http://www.bot2025.cc/
 
-#botUserId: 6542803611
+#botUserId: 6764218833
+#Origin: http://43.128.113.117
+#Origin1: http://43.128.113.117
+#Origin2: http://43.128.113.117
+#vueUrl: http://www.yaoke.cc/
+
+#botUserId: 6542803611   #这个是221服务器的
 #vueUrl: http://www.bot2025.cc/
 #Origin: http://43.134.137.221:8081
 #Origin1: http://43.134.137.221
 #Origin2: http://43.134.137.221:8081
+
+#botUserId: 6427776393 #117服务器 bot2
+#vueUrl: http://www.yaoke.cc/dist2/
+#Origin: http://43.128.113.117
+#Origin1: http://43.128.113.117
+#Origin2: http://43.128.113.117
+
+#botUserId: 6358555885  #117服务器 bot3
+#vueUrl: http://www.yaoke.cc/dist3/
+#Origin: http://43.128.113.117
+#Origin1: http://43.128.113.117
+#Origin2: http://43.128.113.117
+
+#**************************以上是117服务器记账 除了6542803611*****************************#
+
+#botUserId: 6657334282
+#vueUrl: http://www.bot2025.cc/dist7/
+#Origin: http://43.134.137.221:8081
+#Origin1: http://43.134.137.221
+#Origin2: http://43.134.137.221:8081
+
+#
+#botUserId: 7207331115
+#vueUrl: http://www.bot2025.cc/dist8/
+#Origin: http://43.134.137.221:8081
+#Origin1: http://43.134.137.221
+#Origin2: http://43.134.137.221:8081
+#
+#
+#botUserId: 7252918769
+#vueUrl: http://www.bot2025.cc/dist9/
+#Origin: http://43.134.137.221:8081
+#Origin1: http://43.134.137.221
+#Origin2: http://43.134.137.221:8081
+#
+#
+#botUserId: 6592029170
+#vueUrl: http://www.bot2025.cc/dist10/
+#Origin: http://43.134.137.221:8081
+#Origin1: http://43.134.137.221
+#Origin2: http://43.134.137.221:8081
+#
+#
+botUserId: 7853644445
+vueUrl: http://www.bot2025.cc/dist11/
+Origin: http://43.134.137.221:8081
+Origin1: http://43.134.137.221
+Origin2: http://43.134.137.221:8081
+
+#**************************换机器人需要按照顺序换token*****************************#
 
 apiKey: 2967e678-556e-497a-a892-a1dcee897ba5
 apiKey1: a7089da7-e17b-4d28-a3d3-29f799983cae
@@ -43,10 +100,30 @@ tranHistoryUrl: https://apilist.tronscanapi.com/api/filter/trc20/transfers?limit
 uploadFileGangbo: /usr/local/jar/UpgradeGangbo/
 telegram:
   bot:
+#      token: 6764218833:AAGzUzy2LEzAK3iLz3fViDoGAkqitZU_s0U
+#      username: HQpayvipbot #117 bot
     #正式环境
 #    token: 6542803611:AAEkB8_D4iR2dV2-amXcXE6JWddSjS3q2iQ
-#    username: IIIvipBot #221
-      token: 6764218833:AAGzUzy2LEzAK3iLz3fViDoGAkqitZU_s0U
-      username: HQpayvipbot #117
+#    username: IIIvipBot #221 bot
 
+#    token: 6427776393:AAFuMuoXYudgwyG_zr5y7O04sMvDzxONnYI
+#    username: DDDvipBot  #117 bot2
+
+#    token: 6358555885:AAHLocVRTsvnBNSAIo6XHeMBGDRSw3tjA0s
+#    username: HHHvipBot  #117 bot3
+
+#    token: 6657334282:AAGjn2JhqCazWr3Q7LBQg3IO3GnbIG64zCg
+#    username: GGGvipBot #221 bot2
+
+#    token: 7207331115:AAH0C82S5KmxCtKLoeKpLW4OHLPY2ZxlJSo
+#    username: LLvipbot #221 bot3
+#
+#    token: 7252918769:AAEo6mR2UmhCixZPDNkMtwpckP6TRrU3OUU
+#    username: KKvipbot #221 bot4
+#
+#    token: 6592029170:AAHTRwJhrq98bDkij2flItkwD_suu3tKMDM
+#    username: ooovipBot #221 bot5
+#
+    token: 7853644445:AAHCUuLWqYhZqoqG7o0ouQBNlGvu7sWPA4s
+    username: paofenvipBot #221 bot6
 

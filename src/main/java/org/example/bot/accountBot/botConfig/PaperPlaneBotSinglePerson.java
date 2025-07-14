@@ -315,6 +315,10 @@ public class PaperPlaneBotSinglePerson {
         GroupInfoSetting groupInfoSetting = groupInfoSettingMapper.selectOne(new QueryWrapper<GroupInfoSetting>().eq("group_id", userDTO.getUserId()));
         ConfigEdit configEdit = configEditMapper.selectOne(new QueryWrapper<>());
         User byUserId = userService.findByUserId(userDTO.getUserId());
+        if (configEdit==null){
+            configEdit = new ConfigEdit();
+            configEditMapper.insert(configEdit);
+        }
         ReplyKeyboardMarkup replyKeyboardMarkup = buttonList.sendReplyKeyboard(configEdit,byUserId);
         sendMessage.setReplyMarkup(replyKeyboardMarkup);//是否在onUpdateReceived设置
         String regex = "^授权-[a-zA-Z0-9]+-[a-zA-Z0-9]+$";
@@ -678,10 +682,10 @@ public class PaperPlaneBotSinglePerson {
     //获取用户信息
     private void getUserInfoMessage(Message message, SendMessage sendMessage, UserDTO userDTO) {
         User user = userService.findByUserId(userDTO.getUserId());
+        AccountSetting accountSetting = accountSettingMapper.selectOne(new QueryWrapper<>());
         if (user==null){
             user = new User();
-//            LocalDateTime tomorrow = LocalDateTime.now().plusHours(48);//
-            LocalDateTime tomorrow = LocalDateTime.now().plusHours(8);//英文8小时
+            LocalDateTime tomorrow = LocalDateTime.now().plusHours(accountSetting.getTrialDurationHours());
             Date validTime = Date.from(tomorrow.atZone(ZoneId.systemDefault()).toInstant());
             user.setUserId(userDTO.getUserId());
             user.setUsername(userDTO.getUsername());
@@ -694,8 +698,7 @@ public class PaperPlaneBotSinglePerson {
             userService.insertUser(user);
 
         }else if (!user.isValidFree()) {//还没有体验过免费6小时
-            LocalDateTime tomorrow = LocalDateTime.now().plusHours(8);//英文8小时
-//            LocalDateTime tomorrow = LocalDateTime.now().plusHours(48);//
+            LocalDateTime tomorrow = LocalDateTime.now().plusHours(accountSetting.getTrialDurationHours());
             Date validTime = Date.from(tomorrow.atZone(ZoneId.systemDefault()).toInstant());
             user.setValidTime(validTime);
             user.setSuperAdmin(true);//默认操作权限管理员

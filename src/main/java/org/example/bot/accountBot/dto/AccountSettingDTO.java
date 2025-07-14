@@ -42,6 +42,7 @@ public class AccountSettingDTO {
     private String englishStartMessageNotice;
     @ApiModelProperty("privateMessageLanguage")
     private String privateMessageLanguage;
-
+    @ApiModelProperty("trialDurationHours")
+    private Integer trialDurationHours;//初始化试用时长
 
 }

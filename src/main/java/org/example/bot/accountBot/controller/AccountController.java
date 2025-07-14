@@ -185,11 +185,13 @@ public class AccountController {
             if (!Files.exists(uploadPath)) {
                 Files.createDirectories(uploadPath);
             }
+
             // 生成唯一的文件名
             String originalFilename = file.getOriginalFilename();
             String baseName = originalFilename.substring(0, originalFilename.lastIndexOf('.'));
             String extension = originalFilename.substring(originalFilename.lastIndexOf('.'));
             Path filePath = uploadPath.resolve(originalFilename);
+            String contentType = file.getContentType();
             int counter = 1;
             while (Files.exists(filePath)) {
                 String newFilename = baseName + "_" + counter + extension;
