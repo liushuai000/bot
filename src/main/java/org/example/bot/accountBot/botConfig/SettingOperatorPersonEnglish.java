@@ -107,7 +107,12 @@ public class SettingOperatorPersonEnglish {
                 }
                 for (String usernameTemp : userNames) {
                     User user = userService.findByUsername(usernameTemp);
-                    UserOperation userOperation1 = userOperationService.findByUsername(usernameTemp, userDTO.getGroupId());
+                    UserOperation userOperation1;
+                    if (user!=null){
+                        userOperation1 = userOperationService.selectByUserAndGroupId(user.getUserId(), userDTO.getGroupId());
+                    }else{
+                        userOperation1 = userOperationService.findByUsername(usernameTemp, userDTO.getGroupId());
+                    }
                     if (user!=null && usernameTemp.equals(user.getUsername())){
                         if (userOperation1!=null && userOperation1.isOperation()){//是操作员
                             isShowAdminMessage = true;
@@ -397,8 +402,13 @@ public class SettingOperatorPersonEnglish {
             statusService.updateStatus("show_few"            ,i , userDTO.getGroupId());
             accountBot.sendMessage(sendMessage, "Operation successful");
         }else if (lowerText.startsWith("set the exchange rate")){
-            BigDecimal downExchange=BigDecimal.valueOf(Long.parseLong(lowerText.substring("set the exchange rate".length(), lowerText.length())));
+            String substring = lowerText.substring("set the exchange rate".length(), lowerText.length());
+            BigDecimal downExchange=new BigDecimal(substring);
             status.setDownExchange(downExchange);
+            if (status.getDownExchange().compareTo(BigDecimal.ONE)==-1){
+                accountBot.sendMessage(sendMessage, "Please set the exchange rate to be greater than or equal to 1!" );
+                return;
+            }
             statusMapper.updateById(status);
             accountBot.sendMessage(sendMessage, "Operation successful");
         } else if (lowerText.startsWith("set the delivery rate")) {

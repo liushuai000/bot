@@ -59,28 +59,31 @@ public class Utils{
     public static final Pattern pattern2 = Pattern.compile("([+-]?\\d+(\\.\\d+)?)\\*(\\d+(\\.\\d+)?)");
     //匹配+1000/7
     public static final Pattern pattern3 = Pattern.compile("([+-]?\\d+)/([+-]?\\d+)");
-    public static void main(String[] args) {
-        // 原始字符串
-        String originalString = "下发-3857.14u";
-
-        // 定义正则表达式
-        Pattern pattern = Pattern.compile("下发(\\d+)(u)?");
-        Matcher matcher = pattern.matcher(originalString);
-
-        // 使用 StringBuffer 来构建替换后的字符串
-        StringBuffer sb = new StringBuffer();
-
-        while (matcher.find()) {
-            String number = matcher.group(1); // 提取数字部分
-            String unit = matcher.group(2); // 提取单位部分（可能为空）
-            String replacement = "-" + number + (unit != null ? unit : "");
-            matcher.appendReplacement(sb, replacement);
+    public static boolean checkFormula(String formula) {
+        if (formula == null || formula.trim().isEmpty()) {
+            return false;
         }
-
-        matcher.appendTail(sb);
-        // 输出结果
-        String replacedString = sb.toString();
-        System.out.println(replacedString);
+        formula = formula.trim();
+        if (formula.startsWith("+-")||formula.startsWith("-+")){
+            return false;
+        }
+        // 先去掉正负号
+        if (formula.startsWith("+") || formula.startsWith("-")) {
+            formula = formula.substring(1);
+        }
+        // 统计四种运算符的出现次数
+        int plusCount = countOccurrences(formula, "+");
+        int minusCount = countOccurrences(formula, "-");
+        int mulCount = countOccurrences(formula, "*");
+        int divCount = countOccurrences(formula, "/");
+        // 判断是否有某个运算符出现两次以上
+        if (plusCount > 1 || minusCount > 1 || mulCount > 1 || divCount > 1) {
+            return false;
+        }
+        return true;
+    }
+    private static int countOccurrences(String str, String target) {
+        return str.length() - str.replace(target, "").length();
     }
     //入账操作2.0，匹配公式
     public  boolean calcRecorded(String text1, String messageUserId, String userName, String groupId, Account updateAccount, BigDecimal total, BigDecimal down, Issue issue,
@@ -124,29 +127,37 @@ public class Utils{
         log.info(".....t:{},r:{},e:{}", t, r, e);
         //按照公式进行计算
         if (matchFound&&text1.charAt(0)=='+') {
+            rate.setMatcher(true);
             return calcAdd(messageUserId,userName, updateAccount, total, down, downing, rate, t, r, e,downed,status,messageId);
         } else if (matchFound&&text1.charAt(0)=='-'){
             // 解析数字
             rate.setRate(r);
             rate.setExchange(e);//不应该是updateRate insert
+            rate.setMatcher(true);
             return calcSubtraction(rate,messageUserId,userName, down, issue, downed, t,status,messageId);
         }else if (matchFound1&&text1.charAt(0)=='+'){
+            rate.setMatcher(true);
             return calcAdd(messageUserId,userName, updateAccount, total, down, downing, rate, t, r, e,downed,status,messageId);
         }else if (matchFound1&&text1.charAt(0)=='-'){
             rate.setRate(r);
             rate.setExchange(e);
+            rate.setMatcher(true);
             return calcSubtraction(rate,messageUserId,userName, down, issue, downed, t,status,messageId);
         }else if (matchFound2&&text1.charAt(0)=='+'){
+            rate.setMatcher(true);
             rate.setRate(r);//如果setExchange 默认为null  应该设置为0
             return calcAdd2(messageUserId,userName, updateAccount,  down, downing, rate, t,downed,status,messageId);
         }else if (matchFound2&&text1.charAt(0)=='-'){
             rate.setRate(r);
+            rate.setMatcher(true);
             return calcSubtraction(rate,messageUserId,userName, down, issue, downed, t,status,messageId);
         } else if (matchFound3&&text1.charAt(0)=='+') {
             rate.setExchange(e);
+            rate.setMatcher(true);
             return calcAdd2(messageUserId,userName, updateAccount, down, downing, rate, t,downed,status,messageId);
         }else if (matchFound3&&text1.charAt(0)=='-'){
             rate.setExchange(e);
+            rate.setMatcher(true);
             return calcSubtraction(rate,messageUserId,userName, down, issue, downed, t,status,messageId);
         }
         return false;
@@ -165,7 +176,9 @@ public class Utils{
         updateAccount.setDowning(downing.setScale(2, RoundingMode.HALF_UP));
         updateAccount.setDown(downing.subtract(downed));
         updateAccount.setMessageId(messageId);
+        updateAccount.setPm(false);
         updateAccount.setRiqie(status.isRiqie());
+        updateAccount.setAccountHandlerMoney(status.getAccountHandlerMoney());
         log.info("应下发:{},总入账:{},account:{}", downing, total, updateAccount);
         accountService.insertAccount(updateAccount);
         issueService.updateIssueDown(down.add(t),updateAccount.getGroupId());
@@ -184,8 +197,10 @@ public class Utils{
         updateAccount.setDowning(downing.setScale(2, RoundingMode.HALF_UP));
         updateAccount.setDown(downing.subtract(downed));
         updateAccount.setRateId(rate.getId());
+        updateAccount.setPm(false);
         updateAccount.setMessageId(messageId);
         updateAccount.setRiqie(status.isRiqie());
+        updateAccount.setAccountHandlerMoney(status.getAccountHandlerMoney());
         accountService.insertAccount(updateAccount);
         //应该是新增加一条 已出帐记录吧!issueService.insert();
         issueService.updateIssueDown(down.add(t),updateAccount.getGroupId());
@@ -202,7 +217,9 @@ public class Utils{
         issue.setDown(down.subtract(downed));
         issue.setDowned(downed);
         issue.setMessageId(messageId);
+        issue.setPm(false);
         issue.setRiqie(status.isRiqie());
+        issue.setIssueHandlerMoney(status.getIssueHandlerMoney());
 //        issue.setSetTime(status.getSetTime());
         User byUserId = userService.findByUserId(messageUserId);
         if (byUserId!=null){
@@ -229,7 +246,7 @@ public class Utils{
     public  BigDecimal dowingAccount(BigDecimal total, Rate rate, BigDecimal downing) {
         BigDecimal rate1 = rate.getRate();//费率
         rate1=rate1.multiply(BigDecimal.valueOf(0.01));
-        BigDecimal exchange = rate.getExchange();//汇率 不知道用不用
+        BigDecimal exchange = rate.getExchange();//汇率
         BigDecimal totalTimesRate1=new BigDecimal(0);
         if (!rate.isCalcU()){//只有在+-30U u结尾的这种情况下不计算费率
             totalTimesRate1 = total.multiply(rate1);
@@ -241,7 +258,7 @@ public class Utils{
 //        BigDecimal d = totalMinusTotalTimesRate1.setScale(2, RoundingMode.HALF_UP); // 保留两位小数
 //        log.info("计算最终结果d:{},总入帐*费率: {},应下发历史金额:{} ", d,totalTimesRate1,downing);
         System.err.println(totalMinusTotalTimesRate1);
-        return totalMinusTotalTimesRate1;
+        return total;
     }
 
     //计算器功能
@@ -251,7 +268,7 @@ public class Utils{
             if (StringUtils.isEmpty(calculate)) return;
             accountBot.sendMessage(sendMessage,calculate);
         }catch (Exception e){
-            log.info("计算器功能异常");
+            log.info("计算器功能异常");//加减乘除开头的排除 +100/5这样的
         }
     }
 
@@ -274,6 +291,13 @@ public class Utils{
             return "";
         }
         if (!isValidExpression(text)) {
+            return "";
+        }
+        // 排除以加减乘除开头的情况，如 "+100/5" 或 "-200*3"
+        if (text.trim().startsWith("+") ||
+                text.trim().startsWith("-") ||
+                text.trim().startsWith("*") ||
+                text.trim().startsWith("/")) {
             return "";
         }
         // 判断是否包含数学运算符

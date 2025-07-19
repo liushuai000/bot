@@ -20,7 +20,7 @@ public class IssueDTO{
     @ApiModelProperty("exchange")
     private BigDecimal exchange=BigDecimal.ONE;    //汇率
     @ApiModelProperty("rate")
-    private BigDecimal rate=BigDecimal.ZERO;    //费率
+    private BigDecimal rate=BigDecimal.ZERO;    //公式费率
     @ApiModelProperty("downExchange")
     private BigDecimal downExchange=BigDecimal.ZERO;    //下发汇率
     @ApiModelProperty("downRate")
@@ -54,7 +54,8 @@ public class IssueDTO{
     private BigDecimal issueHandlerMoney=BigDecimal.ZERO;//全局下方手续费
     @ApiModelProperty("downing")
     private BigDecimal downing=BigDecimal.ZERO;  //已下发
-    @TableField("pm")
+    @ApiModelProperty("pm")
     private Boolean pm=false;//是否手动添加
-
+    @ApiModelProperty("calcU")
+    private Boolean calcU=false;//是否U添加
 }

@@ -16,7 +16,7 @@ import java.util.Date;
 //群组状态表 群里显示 隐藏设置
 @Accessors(chain = true)
 @Data
-@TableName(value = "status", schema = "bot", autoResultMap = true)
+@TableName(value = "status",  autoResultMap = true)
 public class Status {
     @TableId(type= IdType.AUTO,value = "id")
     private int id;

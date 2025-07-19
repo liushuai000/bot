@@ -174,8 +174,8 @@ public class AccountController {
 
     @Value("${uploadFileGangbo}")
     private String uploadFileGangbo;
-    @Value("${vueUrl}")
-    private String vueUrl;
+    @Value("${upload}")
+    private String upload;
     @PostMapping("/uploadFileGangbo")//这个是进群欢迎消息配置上传文件
     public JsonResult uploadFileGangbo(@RequestParam("file") MultipartFile file) {
         try {
@@ -201,7 +201,7 @@ public class AccountController {
             // 保存文件
             Files.copy(file.getInputStream(), filePath);
             // 构建文件的 URL
-            String fileUrl = vueUrl + "UpgradeGangbo/" + filePath.getFileName().toString();
+            String fileUrl = upload + "UpgradeGangbo/" + filePath.getFileName().toString();
             String fileName = filePath.getFileName().toString();
             // 封装文件信息到 Map
             Map<String, String> fileInfo = new HashMap<>();

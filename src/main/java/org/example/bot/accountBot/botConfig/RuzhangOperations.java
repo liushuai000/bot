@@ -91,6 +91,10 @@ public class RuzhangOperations {
                 } else {
                     rates.setExchange(new BigDecimal(text.substring(4)));
                 }
+                if (rates.getExchange().compareTo(BigDecimal.ONE)==-1){
+                    accountBot.sendMessage(sendMessage, "请设置汇率大于或等于1!" );
+                    return;
+                }
                 rates.setAddTime(new Date());
                 rateService.insertRate(rates);
                 accountBot.sendMessage(sendMessage, "设置成功,当前汇率为：" + text.substring(4));
@@ -116,6 +120,10 @@ public class RuzhangOperations {
                     rates.setExchange(new BigDecimal(1));
                 } else {
                     rates.setExchange(new BigDecimal(text.substring("set exchange rate".length()).trim()));
+                }
+                if (rates.getExchange().compareTo(BigDecimal.ONE)==-1){
+                    accountBot.sendMessage(sendMessage, "Please set the exchange rate to be greater than or equal to 1!" );
+                    return;
                 }
                 rates.setAddTime(new Date());
                 rateService.insertRate(rates);
@@ -292,6 +300,13 @@ public class RuzhangOperations {
         }
 
     }
+
+    private BigDecimal getEffectiveExchange(Status status, Rate rate) {
+        return status.getDownExchange().compareTo(BigDecimal.ZERO) != 0
+                ? status.getDownExchange()
+                : rate.getExchange();
+    }
+
     public static boolean isIssueCommand(String text) {
         if (text == null) return false;
         return text.startsWith("下发") ||
@@ -316,7 +331,18 @@ public class RuzhangOperations {
                 text.startsWith("修改下发地址") ||
                 text.startsWith("modify the delivery address") ||
                 text.startsWith("查看下发地址") ||
-                text.startsWith("view the sending address")) {
+                text.startsWith("view the sending address")||
+
+                text.startsWith("设置操作人") ||
+                text.startsWith("设置操作员")||
+                text.startsWith("删除操作人") ||
+                text.startsWith("删除操作员")||
+                text.startsWith("delete operator") ||
+                text.startsWith("delete operator person")||
+                text.startsWith("set operator") ||
+                text.startsWith("set operator person")
+
+        ) {
             return true;
         }
         // 入账/出账命令
@@ -328,15 +354,8 @@ public class RuzhangOperations {
             return true;
         }
         if (text.equals("取消")||text.equals("cancel")||text.trim().equals("撤销入款")||text.trim().equals("撤销下发")
-                ||text.equals("cancel deposit")||text.equals("undo delivery")){
+                ||text.equals("cancel deposit")||text.equals("undo delivery") || text.equals("删除账单")||text.equals("delete bill")){
             return false;
-        }
-        // 空金额显示
-        if (showOperatorName.isEmptyMoney(text) ||
-                BaseConstant.showReplay(text) ||
-                BaseConstant.showReplayEnglish(text) ||
-                BaseConstant.showReplayEnglish2(text)) {
-            return true;
         }
         return false;
     }
@@ -348,15 +367,15 @@ public class RuzhangOperations {
         text = text.toLowerCase();
         BigDecimal total;
         BigDecimal down;
+        boolean b = utils.checkFormula(text);
+        if ( !b){
+            return ;
+        }
         //判断是否符合公式 true 是匹配
         boolean isMatcher = utils.isMatcher(text);
         if (!isValidCommand(text)&& !updateAccount.getPm() && !issue.getPm()) {
-            //+0 -0显示账单
-            if (showOperatorName.isEmptyMoney(text) || BaseConstant.showReplay(text) || BaseConstant.showReplayEnglish2(text) ||
-                    text.equals("撤销下发") || text.equals("撤销入款") || text.equals("undo delivery")|| text.equals("cancel deposit")) {
-                showOperatorName.replay(sendMessage, userDTO, updateAccount, rate, issueList, issue, text, status, groupInfoSetting);
-                return;
-            }
+            showOperatorName.replay(sendMessage, userDTO, updateAccount, rate, issueList, issue, text, status, groupInfoSetting);
+            return;
         }
         String xiFa = "";//下发入款的字符传
         if (isIssueCommand(text)) {
@@ -392,10 +411,14 @@ public class RuzhangOperations {
         if (!isMatcher) {
             if (text.substring(1).endsWith("u") || text.substring(1).endsWith("U")) {
                 String numberPart = text.substring(0, text.length() - 1);
-                if (status.getDownExchange().compareTo(BigDecimal.ZERO) == 0) {
+                if (!numberPart.startsWith("-")) {
                     num = new BigDecimal(numberPart.substring(1)).multiply(rate.getExchange());
                 } else {
-                    num = new BigDecimal(numberPart.substring(1)).multiply(status.getDownExchange());
+                    if (status.getDownExchange().compareTo(BigDecimal.ZERO)!=0){
+                        num = new BigDecimal(numberPart.substring(1)).multiply(status.getDownExchange());
+                    }else {
+                        num =new BigDecimal(numberPart.substring(1)).multiply(rate.getExchange());
+                    }
                 }
                 rate1 = new Rate();
                 rate.setCalcU(true);//是+30U 的不计算费率
@@ -419,7 +442,6 @@ public class RuzhangOperations {
                     num = new BigDecimal(text.substring(1,text.length()));
                 }
             } else {
-                System.err.println("这个转换了一个不正常的BigDecimal------------>>>>>>>>>"+text);
                 num = new BigDecimal(text.substring(1));
             }
         }
@@ -442,7 +464,6 @@ public class RuzhangOperations {
         updateAccount.setRiqie(status.isRiqie());
         issue.setAddTime(new Date());
         issue.setRiqie(status.isRiqie());
-//        issue.setSetTime(status.getSetTime());
         down = updateAccount.getDown();
         BigDecimal downed = issue.getDowned();
         BigDecimal downing = updateAccount.getDowning();
@@ -460,6 +481,8 @@ public class RuzhangOperations {
         }
         updateAccount.setTotal(total);
         updateAccount.setDowning(downing);
+        updateAccount.setCallBackUserId(userDTO.getCallBackUserId());
+        issue.setCallBackUserId(userDTO.getCallBackUserId());
         issue.setDowned(downed);
         issue.setUserId(userDTO.getUserId());
         //如果是回复消息，设置回复人的相关消息 用不用判断空 然后给空字符串
@@ -491,14 +514,17 @@ public class RuzhangOperations {
                 accountService.insertAccount(updateAccount);
             } else if (firstChar == '-') {
                 issue.setUserId(userDTO.getUserId());
-                issue.setRateId(rate.getId());
+                if (rate1 != null) {
+                    issue.setRateId(rate1.getId());
+                } else {
+                    issue.setRateId(rate.getId());
+                }
                 issue.setDown(updateAccount.getDowning().subtract(num));//issue里的num如果是-30 updateAccount应该是＋
                 issue.setDowned(num);
                 issue.setCallBackUserId(userDTO.getCallBackUserId());
                 issue.setIssueHandlerMoney(status.getIssueHandlerMoney());
                 issue.setRiqie(status.isRiqie());
                 issue.setPm(false);
-//                issue.setSetTime(status.getSetTime());
                 issue.setMessageId(message.getMessageId());
                 issue.setDownExchange(status.getDownExchange());
                 issue.setDownRate(status.getDownRate());
@@ -543,16 +569,10 @@ public class RuzhangOperations {
                     issue.setCallBackUserId(userDTO.getCallBackUserId());
                     issue.setIssueHandlerMoney(BigDecimal.ZERO);
                     issue.setRiqie(status.isRiqie());
-//                issue.setSetTime(status.getSetTime());
                     issue.setMessageId(message.getMessageId());
                     issue.setDownExchange(status.getDownExchange());
                     issue.setDownRate(status.getDownRate());
-//                    User byUserId = userService.findByUserId(userDTO.getUserId());
                     issueService.insertIssue(issue);
-//                    if (byUserId!=null){
-//                        accountService.updateDown(updateAccount.getDowning().subtract(num),userDTO.getGroupId());
-//                        log.info("执行了issue.getHandle()!=null issue--:{}",issue);
-//                    }
                 }
             }
         }
@@ -636,24 +656,55 @@ public class RuzhangOperations {
                 BigDecimal down = new BigDecimal(0);
                 String format = "";
                 for (int i = 0; i < issueList.size(); i++) {
-                    Rate rate1 = rateService.selectRateByID(issueList.get(i).getRateId());
-                    tot = tot.add(issueList.get(i).getDowned());
-                    down = down.add(issueList.get(i).getDowned().divide(rate1.getExchange(), 2, RoundingMode.HALF_UP));
+                    Issue issue1T = issueList.get(i);
+                    if (issue1T.getPm()){
+                        continue;
+                    }
+                    BigDecimal aaa = issueList.get(i).getDowned();
+                    Rate rate1 = rateService.selectRateByID(issue1T.getRateId());
+                    if (issue1T != null && !issue1T.getPm()) {
+                        BigDecimal downRate = issue1T.getDownRate(); // 下发费率
+                        BigDecimal uValue = issue1T.getDowned();
+                        // 如果有费率，扣除对应比例
+                        if (downRate.compareTo(BigDecimal.ZERO) != 0 && !rate1.isMatcher()) {
+                            if (!rate1.isCalcU()) {
+                                BigDecimal feePercent = downRate.divide(BigDecimal.valueOf(100), 4, RoundingMode.HALF_UP);
+                                BigDecimal feeAmount = uValue.multiply(feePercent).setScale(2, RoundingMode.HALF_UP);
+                                uValue = uValue.subtract(feeAmount);
+                            }
+                        }else if (rate1.getRate().compareTo(BigDecimal.ZERO) != 0 && rate1.isMatcher()){
+                            BigDecimal feePercent = rate1.getRate().divide(BigDecimal.valueOf(100), 4, RoundingMode.HALF_UP).stripTrailingZeros(); // 转换为小数
+                            BigDecimal feeAmount = uValue.multiply(feePercent); // 扣除的手续费
+                            uValue = uValue.subtract(feeAmount); // 实际到账金额
+                        }
+                        aaa=uValue;
+                    }
+                    tot = tot.add(aaa);
+                    BigDecimal exchange;
+                    if (!rate1.isMatcher()){
+                        // 使用自定义汇率或默认汇率
+                        exchange = issue.getDownExchange().compareTo(BigDecimal.ZERO) != 0 ? issue.getDownExchange() : rate1.getExchange();
+                    }else{
+                        exchange = rate1.getExchange();
+                    }
+                    down = down.add(aaa.divide(exchange, 2, RoundingMode.HALF_UP));
                     User byUserId = userService.findByUserId(issueList.get(i).getCallBackUserId());
                     String callBackFirstName = byUserId.getFirstName() == null ? "" : byUserId.getFirstName();
                     String callBackLastName = byUserId.getLastName() == null ? "" : byUserId.getLastName();
                     String name = callBackFirstName + callBackLastName;
                     format = String.format("<a href=\"tg://user?id=%d\">%s</a>", Long.parseLong(issueList.get(i).getCallBackUserId()), name);
                 }
-                String xf;
-                if (status.getShowMoneyStatus() == 0) {
-                    xf = tot + "\n";
-                } else if (status.getShowMoneyStatus() == 1) {
-                    xf = down + "U\n";
-                } else {
-                    xf = tot + " | " + down + "U\n";
+                String xf=null;
+                if (status.getShowMoneyStatus() == 0 && tot.compareTo(BigDecimal.ZERO)!=0) {
+                    xf = tot.stripTrailingZeros().toPlainString() + "\n";
+                } else if (status.getShowMoneyStatus() == 1 && down.compareTo(BigDecimal.ZERO)!=0) {
+                    xf = down.stripTrailingZeros().toPlainString() + "U\n";
+                } else  if (down.compareTo(BigDecimal.ZERO)!=0 && tot.compareTo(BigDecimal.ZERO)!=0){
+                    xf = tot.stripTrailingZeros().toPlainString() + " | " + down.stripTrailingZeros().toPlainString() + "U\n";
                 }
-                issuesStringBuilder.append(format + ": " + xf);
+                if (xf!=null){
+                    issuesStringBuilder.append(format + " : " + xf);
+                }
             });
         }
         BigDecimal sxfCount2 = new BigDecimal(0);
@@ -695,11 +746,66 @@ public class RuzhangOperations {
         BigDecimal yixiafa = this.forYixiafa(issuesList);//已下发
         if (!accounts.isEmpty()) {
             //已下发
-            BigDecimal downed = issuesList.stream().filter(Objects::nonNull).filter(c -> !c.getPm()).map(Issue::getDowned).reduce(BigDecimal.ZERO, BigDecimal::add);
+            BigDecimal downed = BigDecimal.ZERO;
+            for (Issue issue1T : issuesList) {
+                if (issue1T != null && !issue1T.getPm()) {
+                    Rate rate1 = rateService.selectRateByID(issue1T.getRateId());
+                    BigDecimal downRate = issue1T.getDownRate(); // 下发费率
+                    BigDecimal uValue = issue1T.getDowned();
+                    // 如果有费率，扣除对应比例
+                    if (downRate.compareTo(BigDecimal.ZERO) != 0 && !rate1.isMatcher()) {
+                        if (!rate1.isCalcU()) {
+                            BigDecimal feePercent = downRate.divide(BigDecimal.valueOf(100), 4, RoundingMode.HALF_UP);
+                            BigDecimal feeAmount = uValue.multiply(feePercent).setScale(2, RoundingMode.HALF_UP);
+                            uValue = uValue.subtract(feeAmount);
+                        }
+                    }else if (rate1.getRate().compareTo(BigDecimal.ZERO) != 0 && rate1.isMatcher()){
+                        BigDecimal feePercent = rate1.getRate().divide(BigDecimal.valueOf(100), 4, RoundingMode.HALF_UP).stripTrailingZeros(); // 转换为小数
+                        BigDecimal feeAmount = uValue.multiply(feePercent).setScale(2, RoundingMode.HALF_UP).stripTrailingZeros(); // 扣除的手续费
+                        uValue = uValue.subtract(feeAmount).setScale(2, RoundingMode.HALF_UP).stripTrailingZeros(); // 实际到账金额
+                    }
+                    downed = downed.add(uValue);
+                }
+            }
             BigDecimal downed2 = issuesList.stream().filter(Objects::nonNull).filter(c -> c.getPm()).map(Issue::getDowned).reduce(BigDecimal.ZERO, BigDecimal::add);
-            //应下发
-            BigDecimal downing = accounts.stream().filter(Objects::nonNull).filter(c -> !c.getPm()).map(Account::getDowning).reduce(BigDecimal.ZERO, BigDecimal::add);
-            BigDecimal downing2 = accounts.stream().filter(Objects::nonNull).map(Account::getDowning).reduce(BigDecimal.ZERO, BigDecimal::add);
+            BigDecimal downing = BigDecimal.ZERO;
+            for (Account account : accounts) {
+                BigDecimal total = account.getTotal();
+                BigDecimal totalMinusFee = total;
+                if (!account.getPm()) {
+                    Rate rate1 = rateService.selectRateByID(account.getRateId());
+                    BigDecimal exchange = rate1.getExchange();
+                    BigDecimal rateValue = rate1.getRate();
+                    // 如果有费率，扣除对应比例
+                    if (rateValue.compareTo(BigDecimal.ZERO) != 0 ) {
+                        if (!rate1.isCalcU()){
+                            BigDecimal feePercent = rateValue.divide(BigDecimal.valueOf(100), 4, RoundingMode.HALF_UP);
+                            BigDecimal feeAmount = total.multiply(feePercent).setScale(2, RoundingMode.HALF_UP);
+                            totalMinusFee = total.subtract(feeAmount);
+                        }
+                    }
+                    downing = downing.add(totalMinusFee);
+                }
+            }
+            BigDecimal downing2 = BigDecimal.ZERO;
+            for (Account account : accounts) {
+                BigDecimal total = account.getDowning();
+                BigDecimal totalMinusFee = total;
+                if (!account.getPm()) {
+                    Rate rate1 = rateService.selectRateByID(account.getRateId());
+                    BigDecimal exchange = rate1.getExchange();
+                    BigDecimal rateValue = rate1.getRate();
+                    // 如果有费率，扣除对应比例
+                    if (rateValue.compareTo(BigDecimal.ZERO) != 0 ) {
+                        if (!rate1.isCalcU()){
+                            BigDecimal feePercent = rateValue.divide(BigDecimal.valueOf(100), 4, RoundingMode.HALF_UP);
+                            BigDecimal feeAmount = total.multiply(feePercent).setScale(2, RoundingMode.HALF_UP);
+                            totalMinusFee = total.subtract(feeAmount);
+                        }
+                    }
+                }
+                downing2 = downing2.add(totalMinusFee);
+            }
             BigDecimal total = accounts.stream().filter(Objects::nonNull).filter(c -> !c.getPm()).map(Account::getTotal).reduce(BigDecimal.ZERO, BigDecimal::add);
             String yxf;//应下发
             String yixf;//已下发
@@ -715,7 +821,7 @@ public class RuzhangOperations {
                 wxf = yingxiafa.subtract(yixiafa).setScale(2, RoundingMode.HALF_UP).stripTrailingZeros().toPlainString() + "U";
             } else {
                 // 只有当 exchange > 1 时才显示双格式
-                if (rate.getExchange().compareTo(BigDecimal.ONE) > 0) {
+                if (this.getEffectiveExchange( status,rate).compareTo(BigDecimal.ONE) > 0) {
                     yxf = downing.setScale(2, RoundingMode.HALF_UP).stripTrailingZeros().toPlainString() + "   |    " + yingxiafa.setScale(2, RoundingMode.HALF_UP).stripTrailingZeros().toPlainString() + "U";
                     yixf = downed.setScale(2, RoundingMode.HALF_UP).stripTrailingZeros().toPlainString() + "   |    " + yixiafa.setScale(2, RoundingMode.HALF_UP).stripTrailingZeros().toPlainString() + "U";
                     BigDecimal subtract = downing2.subtract(downed);
@@ -764,24 +870,41 @@ public class RuzhangOperations {
                     BigDecimal down = new BigDecimal(0);
                     String format = "";
                     for (int i = 0; i < accountList.size(); i++) {
+                        if (accountList.get(i).getPm()){
+                            continue;
+                        }
                         Rate rate1 = rateService.selectRateByID(accountList.get(i).getRateId());
-                        tot = tot.add(accountList.get(i).getTotal());
-                        down = down.add(accountList.get(i).getDowning().divide(rate1.getExchange(), 2, RoundingMode.HALF_UP));
+                        BigDecimal rateValue = rate1.getRate();
+                        BigDecimal aaa=accountList.get(i).getTotal();
+                        if (!accountList.get(i).getPm()){
+                            // 如果有费率，扣除对应比例
+                            if (rateValue.compareTo(BigDecimal.ZERO) != 0 ) {
+                                if (!rate1.isCalcU()){
+                                    BigDecimal feePercent = rateValue.divide(BigDecimal.valueOf(100), 4, RoundingMode.HALF_UP);
+                                    BigDecimal feeAmount = accountList.get(i).getTotal().multiply(feePercent).setScale(2, RoundingMode.HALF_UP);
+                                    aaa= accountList.get(i).getTotal().subtract(feeAmount);
+                                }
+                            }
+                        }
+                        tot = tot.add(aaa);
+                        down = down.add(aaa.divide(rate1.getExchange(), 2, RoundingMode.HALF_UP));
                         User byUserId = userService.findByUserId(accountList.get(i).getCallBackUserId());
                         String callBackFirstName = byUserId.getFirstName() == null ? "" : byUserId.getFirstName();
                         String callBackLastName = byUserId.getLastName() == null ? "" : byUserId.getLastName();
                         String name = callBackFirstName + callBackLastName;
                         format = String.format("<a href=\"tg://user?id=%d\">%s</a>", Long.parseLong(accountList.get(i).getCallBackUserId()), name);
                     }
-                    String xf;
-                    if (status.getShowMoneyStatus() == 0) {
-                        xf = tot + "\n";
-                    } else if (status.getShowMoneyStatus() == 1) {
-                        xf = down + "U\n";
-                    } else {
-                        xf = tot + " | " + down + "U\n";
+                    String xf=null;
+                    if (status.getShowMoneyStatus() == 0 && tot.compareTo(BigDecimal.ZERO)!=0) {
+                        xf = tot.stripTrailingZeros().toPlainString() + "\n";
+                    } else if (status.getShowMoneyStatus() == 1 && down.compareTo(BigDecimal.ZERO)!=0) {
+                        xf = down.stripTrailingZeros().toPlainString() + "U\n";
+                    } else if (down.compareTo(BigDecimal.ZERO)!=0 && tot.compareTo(BigDecimal.ZERO)!=0){
+                        xf = tot.stripTrailingZeros().toPlainString() + " | " + down.stripTrailingZeros().toPlainString() + "U\n";
                     }
-                    stringBuilder.append(format + ": " + xf);
+                    if (xf!=null){
+                        stringBuilder.append(format + " : " + xf);
+                    }
                 });
             }
             String sxf = "";
@@ -845,8 +968,8 @@ public class RuzhangOperations {
 //                    "\n已入账：<strong>" + total + "</strong>，:共" + (accounts.size()) + "笔:\n" +  暂时不用显示 已入账
                     stringBuilder + iusseText +"\n"+
                     zrz1+"：<strong>" + total.setScale(2, RoundingMode.HALF_UP).stripTrailingZeros().toPlainString() +"</strong>"+
-                    (rate.getExchange().compareTo(BigDecimal.ONE) > 0 ? "\n"+hl1+" ： <strong>" + rate.getExchange().setScale(2, RoundingMode.HALF_UP).stripTrailingZeros().toPlainString() +"</strong>": "") +
-                    (rate.getRate().compareTo(BigDecimal.ZERO) > 0 ? "\n"+fl1+" ： <strong>" + rate.getRate().setScale(2, RoundingMode.HALF_UP).stripTrailingZeros().toPlainString() +"</strong>": "") +
+                    (rate.getExchange().compareTo(BigDecimal.ONE) > 0 ? "\n"+hl1+" ： <strong>" + rate.getExchange().setScale(2, RoundingMode.HALF_UP).stripTrailingZeros().toPlainString() +"</strong>": "")+
+                    (rate.getRate().compareTo(BigDecimal.ZERO) != 0 ? "\n"+fl1+" ： <strong>" + rate.getRate().setScale(2, RoundingMode.HALF_UP).stripTrailingZeros().toPlainString() +"</strong>": "") +
                     "\n"+
                     downExchangeText +
                     downRate +
@@ -857,12 +980,66 @@ public class RuzhangOperations {
                     (status.getShowHandlerMoneyStatus() == 0 ? sxf : "");
         } else {
             //已下发
-            BigDecimal downed = issuesList.stream().filter(Objects::nonNull).filter(c -> !c.getPm()).map(Issue::getDowned).reduce(BigDecimal.ZERO, BigDecimal::add);
-            //用于区分手动添加的
+            BigDecimal downed = BigDecimal.ZERO;
+            for (Issue issue1T : issuesList) {
+                if (issue1T != null && !issue1T.getPm()) {
+                    Rate rate1 = rateService.selectRateByID(issue1T.getRateId());
+                    BigDecimal downRate = issue1T.getDownRate(); // 下发费率
+                    BigDecimal uValue = issue1T.getDowned();
+                    // 如果有费率，扣除对应比例
+                    if (downRate.compareTo(BigDecimal.ZERO) != 0 && !rate1.isMatcher()) {
+                        if (!rate1.isCalcU()) {
+                            BigDecimal feePercent = downRate.divide(BigDecimal.valueOf(100), 4, RoundingMode.HALF_UP);
+                            BigDecimal feeAmount = uValue.multiply(feePercent).setScale(2, RoundingMode.HALF_UP);
+                            uValue = uValue.subtract(feeAmount);
+                        }
+                    }else if (rate1.getRate().compareTo(BigDecimal.ZERO) != 0 && rate1.isMatcher()){
+                        BigDecimal feePercent = rate1.getRate().divide(BigDecimal.valueOf(100), 4, RoundingMode.HALF_UP).stripTrailingZeros(); // 转换为小数
+                        BigDecimal feeAmount = uValue.multiply(feePercent).setScale(2, RoundingMode.HALF_UP).stripTrailingZeros(); // 扣除的手续费
+                        uValue = uValue.subtract(feeAmount).setScale(2, RoundingMode.HALF_UP).stripTrailingZeros(); // 实际到账金额
+                    }
+                    downed = downed.add(uValue);
+                }
+            }
             BigDecimal downed2 = issuesList.stream().filter(Objects::nonNull).filter(c -> c.getPm()).map(Issue::getDowned).reduce(BigDecimal.ZERO, BigDecimal::add);
-            //应下发
-            BigDecimal downing = accounts.stream().filter(Objects::nonNull).filter(c -> !c.getPm()).map(Account::getDowning).reduce(BigDecimal.ZERO, BigDecimal::add);
-            BigDecimal downing2 = accounts.stream().filter(Objects::nonNull).filter(c -> !c.getPm()).map(Account::getDowning).reduce(BigDecimal.ZERO, BigDecimal::add);
+            BigDecimal downing = BigDecimal.ZERO;
+            for (Account account : accounts) {
+                BigDecimal total = account.getTotal();
+                BigDecimal totalMinusFee = total;
+                if (!account.getPm()) {
+                    Rate rate1 = rateService.selectRateByID(account.getRateId());
+                    BigDecimal exchange = rate1.getExchange();
+                    BigDecimal rateValue = rate1.getRate();
+                    // 如果有费率，扣除对应比例
+                    if (rateValue.compareTo(BigDecimal.ZERO) != 0) {
+                        if (!rate1.isCalcU()){
+                            BigDecimal feePercent = rateValue.divide(BigDecimal.valueOf(100), 4, RoundingMode.HALF_UP);
+                            BigDecimal feeAmount = total.multiply(feePercent).setScale(2, RoundingMode.HALF_UP);
+                            totalMinusFee = total.subtract(feeAmount);
+                        }
+                    }
+                    downing = downing.add(totalMinusFee);
+                }
+            }
+            BigDecimal downing2 = BigDecimal.ZERO;
+            for (Account account : accounts) {
+                BigDecimal total = account.getDowning();
+                BigDecimal totalMinusFee = total;
+                if (!account.getPm()) {
+                    Rate rate1 = rateService.selectRateByID(account.getRateId());
+                    BigDecimal exchange = rate1.getExchange();
+                    BigDecimal rateValue = rate1.getRate();
+                    // 如果有费率，扣除对应比例
+                    if (rateValue.compareTo(BigDecimal.ZERO) != 0 ) {
+                        if (!rate1.isCalcU()){
+                            BigDecimal feePercent = rateValue.divide(BigDecimal.valueOf(100), 4, RoundingMode.HALF_UP);
+                            BigDecimal feeAmount = total.multiply(feePercent).setScale(2, RoundingMode.HALF_UP);
+                            totalMinusFee = total.subtract(feeAmount);
+                        }
+                    }
+                }
+                downing2 = downing2.add(totalMinusFee);
+            }
             BigDecimal total = accounts.stream().filter(Objects::nonNull).map(Account::getTotal).reduce(BigDecimal.ZERO, BigDecimal::add);
             String yxf;//应下方
             String yixf;//已下发
@@ -873,15 +1050,15 @@ public class RuzhangOperations {
                 BigDecimal subtract = downing2.subtract(downed);
                 wxf = subtract.add(downed2).setScale(2, RoundingMode.HALF_UP).stripTrailingZeros().toPlainString() + "";
             } else if (status.getShowMoneyStatus() == 1) {
-                yxf = yingxiafa + "U";
-                yixf = yixiafa + "U";
-                wxf = yingxiafa.subtract(yixiafa) + "U";
+                yxf = yingxiafa.stripTrailingZeros().toPlainString() + "U";
+                yixf = yixiafa.stripTrailingZeros().toPlainString() + "U";
+                wxf = yingxiafa.subtract(yixiafa).stripTrailingZeros().toPlainString() + "U";
             } else {
-                if (rate.getExchange().compareTo(BigDecimal.ONE) > 0) {
-                    yxf = downing.setScale(2, RoundingMode.HALF_UP).stripTrailingZeros().toPlainString() + "   |    " + yingxiafa + "U";
-                    yixf = downed.setScale(2, RoundingMode.HALF_UP).stripTrailingZeros().toPlainString() + "   |    " + yixiafa + "U";
+                if (this.getEffectiveExchange( status,rate).compareTo(BigDecimal.ONE) > 0) {
+                    yxf = downing.setScale(2, RoundingMode.HALF_UP).stripTrailingZeros().toPlainString() + "   |    " + yingxiafa.stripTrailingZeros().toPlainString() + "U";
+                    yixf = downed.setScale(2, RoundingMode.HALF_UP).stripTrailingZeros().toPlainString() + "   |    " + yixiafa.stripTrailingZeros().toPlainString() + "U";
                     BigDecimal subtract = downing2.subtract(downed);
-                    wxf = subtract.add(downed2).setScale(2, RoundingMode.HALF_UP).stripTrailingZeros().toPlainString() + "   |    " + yingxiafa.subtract(yixiafa) + "U";
+                    wxf = subtract.add(downed2).setScale(2, RoundingMode.HALF_UP).stripTrailingZeros().toPlainString() + "   |    " + yingxiafa.subtract(yixiafa).stripTrailingZeros().toPlainString() + "U";
                 } else {
                     // exchange <= 1 时不显示 U 部分
                     yxf = downing.setScale(2, RoundingMode.HALF_UP).stripTrailingZeros().toPlainString() + "";
@@ -964,7 +1141,7 @@ public class RuzhangOperations {
                     " " +none1+"\n" + iusseText +"\n" +
                     zrz1+"：<strong>" + 0 +"</strong>"+
                     (rate.getExchange().compareTo(BigDecimal.ONE) > 0 ? "\n"+hl1+" ： <strong>" + rate.getExchange().setScale(2, RoundingMode.HALF_UP).stripTrailingZeros().toPlainString()+"</strong>" : "") +
-                    (rate.getRate().compareTo(BigDecimal.ZERO) > 0 ? "\n"+fl1+" ： <strong>" + rate.getRate().setScale(2, RoundingMode.HALF_UP).stripTrailingZeros().toPlainString()+"</strong>" : "") +
+                    (rate.getRate().compareTo(BigDecimal.ZERO) != 0 ? "\n"+fl1+" ： <strong>" + rate.getRate().setScale(2, RoundingMode.HALF_UP).stripTrailingZeros().toPlainString()+"</strong>" : "") +
                     "\n"+
                     downExchangeText +
                     downRate +
@@ -981,40 +1158,70 @@ public class RuzhangOperations {
         BigDecimal temp = new BigDecimal(0);
         for (int i = 0; i < issuesList.size(); i++) {
             Issue issue = issuesList.get(i);
+            Rate rate = rateService.selectRateByID(issue.getRateId());
             if (issue.getPm()) {
 
             } else {
-                Rate rate1 = rateService.selectRateByID(issue.getRateId());
                 BigDecimal downExchange = issue.getDownExchange();
                 BigDecimal downRate = issue.getDownRate(); // 下发费率，如 12 表示 12%
-                // 使用自定义汇率或默认汇率
-                BigDecimal exchange = downExchange.compareTo(BigDecimal.ZERO) != 0 ? downExchange : rate1.getExchange();
-//            exchange = exchange.setScale(2, RoundingMode.HALF_UP).stripTrailingZeros().toPlainString();
+                BigDecimal exchange;
+                if (!rate.isMatcher()){
+                    // 使用自定义汇率或默认汇率
+                    exchange = downExchange.compareTo(BigDecimal.ZERO) != 0 ? downExchange : rate.getExchange();
+                }else{
+                    exchange = rate.getExchange();
+                }
                 BigDecimal uValue = issue.getDowned().divide(exchange, 2, RoundingMode.HALF_UP);
                 // 如果有费率，扣除对应比例
-                if (downRate.compareTo(BigDecimal.ZERO) != 0) {
-                    BigDecimal feePercent = downRate.divide(BigDecimal.valueOf(100), 4, RoundingMode.HALF_UP); // 转换为小数
-                    BigDecimal feeAmount = uValue.multiply(feePercent).setScale(2, RoundingMode.HALF_UP).stripTrailingZeros(); // 扣除的手续费
-                    uValue = uValue.subtract(feeAmount).setScale(2, RoundingMode.HALF_UP).stripTrailingZeros(); // 实际到账金额
+                if (downRate.compareTo(BigDecimal.ZERO) != 0 && !rate.isMatcher()) {
+                    if (!rate.isCalcU()){
+                        BigDecimal feePercent = downRate.divide(BigDecimal.valueOf(100), 4, RoundingMode.HALF_UP); // 转换为小数
+                        BigDecimal feeAmount = uValue.multiply(feePercent).setScale(2, RoundingMode.HALF_UP).stripTrailingZeros(); // 扣除的手续费
+                        uValue = uValue.subtract(feeAmount).setScale(2, RoundingMode.HALF_UP).stripTrailingZeros(); // 实际到账金额
+                    }
+                }else if (downRate.compareTo(BigDecimal.ZERO) != 0 && !rate.isMatcher()){
+                    if (!rate.isCalcU()){
+                        BigDecimal feePercent = rate.getRate().divide(BigDecimal.valueOf(100), 4, RoundingMode.HALF_UP).stripTrailingZeros(); // 转换为小数
+                        BigDecimal feeAmount = uValue.multiply(feePercent).setScale(2, RoundingMode.HALF_UP).stripTrailingZeros(); // 扣除的手续费
+                        uValue = uValue.subtract(feeAmount).setScale(2, RoundingMode.HALF_UP).stripTrailingZeros(); // 实际到账金额
+                    }
+                }else if (rate.getRate().compareTo(BigDecimal.ZERO) != 0 && rate.isMatcher()){
+                    if (!rate.isCalcU()){
+                        BigDecimal feePercent = rate.getRate().divide(BigDecimal.valueOf(100), 4, RoundingMode.HALF_UP).stripTrailingZeros(); // 转换为小数
+                        BigDecimal feeAmount = uValue.multiply(feePercent).setScale(2, RoundingMode.HALF_UP).stripTrailingZeros(); // 扣除的手续费
+                        uValue = uValue.subtract(feeAmount).setScale(2, RoundingMode.HALF_UP).stripTrailingZeros(); // 实际到账金额
+                    }
                 }
                 temp = temp.add(uValue);
             }
         }
         return temp;
     }
-
-    //应下方
     private BigDecimal forYingxiafa(List<Account> accounts) {
         BigDecimal temp = new BigDecimal(0);
-        for (int i = 0; i < accounts.size(); i++) {
-            if (accounts.get(i).getPm()) {
-
-            } else {
-                Rate rate1 = rateService.selectRateByID(accounts.get(i).getRateId());
-                BigDecimal exchange = rate1.getExchange();
-                BigDecimal divide = accounts.get(i).getDowning().divide(exchange, 2, RoundingMode.HALF_UP);
-                temp = temp.add(divide);
+        for (Account account : accounts) {
+            Rate rate1 = rateService.selectRateByID(account.getRateId());
+            if (account.getPm()) {
+//                temp = temp.add(account.getTotal().divide(rate1.getExchange(), 2, RoundingMode.HALF_UP));
+                continue;
             }
+            if (rate1 == null) continue;
+            BigDecimal exchange = rate1.getExchange();
+            BigDecimal total = account.getTotal();
+            // 扣除手续费
+            BigDecimal rateValue = rate1.getRate();
+            if (rateValue.compareTo(BigDecimal.ZERO) != 0 && !rate1.isCalcU()) {
+                BigDecimal feePercent = rateValue.divide(BigDecimal.valueOf(100), 4, RoundingMode.HALF_UP);
+                BigDecimal feeAmount = total.multiply(feePercent).setScale(2, RoundingMode.HALF_UP);
+                total = total.subtract(feeAmount);
+            }else if (rate1.isMatcher()){
+                BigDecimal feePercent = rateValue.divide(BigDecimal.valueOf(100), 4, RoundingMode.HALF_UP);
+                BigDecimal feeAmount = total.multiply(feePercent).setScale(2, RoundingMode.HALF_UP);
+                total = total.subtract(feeAmount);
+            }
+            // 换算为 USDT
+            BigDecimal uValue = total.divide(exchange, 2, RoundingMode.HALF_UP);
+            temp = temp.add(uValue);
         }
         return temp;
     }
@@ -1075,7 +1282,7 @@ public class RuzhangOperations {
                     total2 = total;
                 }
                 String isCalc = "";
-                if (rate.getRate().compareTo(BigDecimal.ZERO) > 0) {
+                if (rate.getRate().compareTo(BigDecimal.ZERO) != 0) {
                     isCalc = !rate.isCalcU() ? "*" + rate.getRate().setScale(2, RoundingMode.HALF_UP).stripTrailingZeros().toPlainString() : "";
                 } else {
                     isCalc = "";
@@ -1136,20 +1343,39 @@ public class RuzhangOperations {
                 // 获取下发汇率和费率
                 BigDecimal downExchange = issue.getDownExchange();
                 BigDecimal downRate = issue.getDownRate(); // 下发费率，如 12 表示 12%
-                // 使用自定义汇率或默认汇率
-                BigDecimal exchange = downExchange.compareTo(BigDecimal.ZERO) != 0 ? downExchange : rate.getExchange();
+                BigDecimal exchange;
+                if (!rate.isMatcher()){
+                    // 使用自定义汇率或默认汇率
+                    exchange = downExchange.compareTo(BigDecimal.ZERO) != 0 ? downExchange : rate.getExchange();
+                }else{
+                    exchange = rate.getExchange();
+                }
                 exchange = exchange.setScale(2, RoundingMode.HALF_UP);
-                String exchange2=exchange.compareTo(BigDecimal.ONE)==0?exchange+"":exchange.stripTrailingZeros().toPlainString();
+                String exchange2=exchange.compareTo(BigDecimal.ONE)==0?exchange.stripTrailingZeros().toPlainString()+"":exchange.stripTrailingZeros().toPlainString();
                 BigDecimal total = issue.getDowned().setScale(2, RoundingMode.HALF_UP);
                 // 计算 U 值：金额 / 汇率
                 BigDecimal uValue = total.divide(exchange, 2, RoundingMode.HALF_UP);
                 String feeInfo = ""; // 费率信息
                 // 如果有费率，扣除对应比例
-                if (downRate.compareTo(BigDecimal.ZERO) != 0) {
-                    BigDecimal feePercent = downRate.divide(BigDecimal.valueOf(100), 4, RoundingMode.HALF_UP).stripTrailingZeros(); // 转换为小数
-                    BigDecimal feeAmount = uValue.multiply(feePercent).setScale(2, RoundingMode.HALF_UP).stripTrailingZeros(); // 扣除的手续费
-                    uValue = uValue.subtract(feeAmount).setScale(2, RoundingMode.HALF_UP).stripTrailingZeros(); // 实际到账金额
-                    feeInfo = " * " + downRate; // 显示格式如 *12%
+                if (downRate.compareTo(BigDecimal.ZERO) != 0 && !rate.isMatcher()) {
+                    if (!rate.isCalcU()){//如果是U入款 不计算这个下发费率
+                        BigDecimal feePercent = downRate.divide(BigDecimal.valueOf(100), 4, RoundingMode.HALF_UP).stripTrailingZeros(); // 转换为小数
+                        BigDecimal feeAmount = uValue.multiply(feePercent).setScale(2, RoundingMode.HALF_UP).stripTrailingZeros(); // 扣除的手续费
+                        uValue = uValue.subtract(feeAmount).setScale(2, RoundingMode.HALF_UP).stripTrailingZeros(); // 实际到账金额
+                        feeInfo = " * " + downRate.stripTrailingZeros().toPlainString(); // 显示格式如 *12%
+                    }
+                }else if (downRate.compareTo(BigDecimal.ZERO) != 0 && !rate.isMatcher()){
+                    if (!rate.isCalcU()){
+                        BigDecimal feePercent = rate.getRate().divide(BigDecimal.valueOf(100), 4, RoundingMode.HALF_UP).stripTrailingZeros(); // 转换为小数
+                        BigDecimal feeAmount = uValue.multiply(feePercent).setScale(2, RoundingMode.HALF_UP).stripTrailingZeros(); // 扣除的手续费
+                        uValue = uValue.subtract(feeAmount).setScale(2, RoundingMode.HALF_UP).stripTrailingZeros(); // 实际到账金额
+                        feeInfo = " * " + rate.getRate().stripTrailingZeros().toPlainString(); // 显示格式如 *12%
+                    }
+                }else if (rate.getRate().compareTo(BigDecimal.ZERO) != 0 && rate.isMatcher()){
+                        BigDecimal feePercent = rate.getRate().divide(BigDecimal.valueOf(100), 4, RoundingMode.HALF_UP).stripTrailingZeros(); // 转换为小数
+                        BigDecimal feeAmount = uValue.multiply(feePercent).setScale(2, RoundingMode.HALF_UP).stripTrailingZeros(); // 扣除的手续费
+                        uValue = uValue.subtract(feeAmount).setScale(2, RoundingMode.HALF_UP).stripTrailingZeros(); // 实际到账金额
+                        feeInfo = " * " + rate.getRate().stripTrailingZeros().toPlainString(); // 显示格式如 *12%
                 }
                 // 构建显示文本
                 String showDetail = detailStatus == 0 ? "/ " + exchange2 + feeInfo + "=" + uValue.stripTrailingZeros().toPlainString() + "U" : "";

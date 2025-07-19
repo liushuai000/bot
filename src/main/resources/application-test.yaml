@@ -4,9 +4,9 @@ spring:
       enabled: false
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://43.134.137.221:3306/bot2?useUnicode=true&characterEncoding=UTF-8&autoReconnect=true&useSSL=false&zeroDateTimeBehavior=convertToNull&useTimezone=true&serverTimezone=GMT%2B8&allowMultiQueries=true
+    url: jdbc:mysql://localhost:3306/bot?useUnicode=true&characterEncoding=UTF-8&autoReconnect=true&useSSL=false&zeroDateTimeBehavior=convertToNull&useTimezone=true&serverTimezone=GMT%2B8&allowMultiQueries=true
     username: root
-    password: root@Liu332331
+    password: root
   jackson:
     date-format: yyyy-MM-dd HH:mm:ss
     time-zone: GMT+8
@@ -20,6 +20,8 @@ logging:
     org.example.bot.accountBot.mapper: debug
   pattern:
     console: '%d{YYYY-MM-dd HH:mm:ss.SSS} %clr(%-5level) --- [%-15thread]%cyan(%-50logger{50}):%msg%n'
+
+upload: http://www.yaoke.cc/
 botUserId: 7203617407   #我机器人的id
 vueUrl: http://192.168.0.2:8080/
 Origin: http://43.128.113.117:8081

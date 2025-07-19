@@ -117,7 +117,13 @@ public class BaseConstant {
             "设置日切","设置费率","设置汇率","设置入款单笔手续费","删除操作员","删除操作人","设置操作员", "设置操作人",
             "设置入款单笔手续费","设置入款手续费","设置下发手续费", "设置下发单笔手续费",
             "设置单笔下发手续费","设置单笔入款手续费","设置下发费率","设置下发汇率","设置下发地址","修改下发地址",
-            "设置手续费", "下发","D","T","issue","P"
+            "设置手续费", "下发","D","T","issue","P","显示明细","隐藏明细",
+            "显示操作人名称","将操作员显示","显示操作人名字","隐藏操作人名称","隐藏操作人名字","显示操作人", "显示操作员",
+            "隐藏名字","隐藏名称","关闭显示","将回复人显示","显示回复人名称","显示余额","显示金额","显示USDT","显示usdt","显示全部",
+            "显示1条","显示3条","显示5条", "+0","-0","+0u","-0u","+0U","-0U","显示分类","隐藏分类","账单","显示账单",
+            "清理今天数据", "删除今天数据","清理今天账单","清理今日账单","删除今日账单","清理今天帐单","删除今天账单",
+            "删除账单", "删除今天帐单","删除帐单","清除账单","清除帐单", "删除全部账单","删除全部帐单", "删除全部账单","清除全部账单",
+            "撤销下发","撤销入款","显示手续费","隐藏手续费","关闭回复人显示","隐藏回复人显示","隐藏回复人名称",
     };
     //这个是需要显示账单的第一行都是contains 其余行都是equals 因为第一行有  下发-30.equals(下发)
     public final static String[] arrayEnglish2 = {
@@ -134,7 +140,14 @@ public class BaseConstant {
     public final static String[] showArrayEnglish2 = {
             "Set daily cut-off", "Set Rate", "Set Exchange Rate", "Set Single Deposit Fee", "Delete Operator", "Delete Operator Person", "Set Operator", "Set Operator Person",
             "Set Deposit Fee", "Set Withdrawal Fee", "Set Single Withdrawal Fee", "Set the exchange rate", "Set the delivery rate",
-            "Set the delivery address", "Modify the delivery address", "Setup fee", "Withdraw", "Deposit","D", "T", "issue", "P"
+            "Set the delivery address", "Modify the delivery address", "Setup fee", "Withdraw", "Deposit","D", "T", "issue", "P",
+            "Show Operator Name", "Show Operator", "Show Operator Person", "Hide Operator Name", "Hide Operator Person", "Display Operator", "Display Operator Person",
+            "Hide Name", "Hide Title", "Turn Off Display", "Show Replyer", "Show Replyer Name", "Show Balance", "Display Amount", "Show USDT", "Show All",
+            "Show 1 item", "Show 3 item", "Show 5 item", "+0", "-0", "+0u", "-0u", "+0U", "-0U", "Show Categories", "Hide Categories",
+            "Clear Today Data", "Delete Today Data", "Clear Today Bill", "Clear Today Bills", "Delete Today Bills", "Clear Today Account", "Delete Today Account",
+            "Delete Bill", "Delete Today Account", "Delete Account", "Clear Bill", "Clear Account", "Delete All Bills", "Delete All Accounts", "Delete All Bills Again", "Clear All Bills",
+            "Undo delivery", "Cancel deposit", "Show Handling Fee", "Hidden fees", "Hide reply name"
+
     };
 
 
@@ -158,8 +171,14 @@ public class BaseConstant {
         if (text.startsWith("设置手续费")||text.toLowerCase().contains("setup fee")){
             return true;
         }
-        if (text.startsWith("下发")||text.toLowerCase().contains("withdraw")){
-            return true;
+        if (text.startsWith("下发") || text.toLowerCase().contains("withdraw")) {
+            // 使用正则表达式判断是否符合 "下发[+-]?数字[uU]?" 或 "withdraw[+-]?数字[uU]?"
+            Pattern pattern = Pattern.compile("^(下发|withdraw)([+\\-]?(\\d+\\.?\\d*|\\d*\\.\\d+))[uU]?$", Pattern.CASE_INSENSITIVE);
+            Matcher matcher = pattern.matcher(text.trim());
+            if (matcher.matches()) {
+                return true; // 合法的下发命令
+            }
+            return false; // 不合法的下发命令（后面不是数字）
         }
         if (text.startsWith("入款")||text.toLowerCase().contains("deposit")){
             return true;
@@ -182,8 +201,14 @@ public class BaseConstant {
         if (text.startsWith("设置手续费")||text.toLowerCase().contains("setup fee")){
             return true;
         }
-        if (text.startsWith("下发")||text.toLowerCase().contains("withdraw")){
-            return true;
+        if (text.startsWith("下发") || text.toLowerCase().contains("withdraw")) {
+            // 使用正则表达式判断是否符合 "下发[+-]?数字[uU]?" 或 "withdraw[+-]?数字[uU]?"
+            Pattern pattern = Pattern.compile("^(下发|withdraw)([+\\-]?(\\d+\\.?\\d*|\\d*\\.\\d+))[uU]?$", Pattern.CASE_INSENSITIVE);
+            Matcher matcher = pattern.matcher(text.trim());
+            if (matcher.matches()) {
+                return true; // 合法的下发命令
+            }
+            return false; // 不合法的下发命令（后面不是数字）
         }
         if (text.startsWith("入款")||text.toLowerCase().contains("deposit")){
             return true;

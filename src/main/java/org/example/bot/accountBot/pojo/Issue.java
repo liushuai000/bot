@@ -18,7 +18,7 @@ import java.util.Date;
 @ApiModel("issue")
 @Accessors(chain = true)
 @Data
-@TableName(value = "issue", schema = "bot", autoResultMap = true)
+@TableName(value = "issue", autoResultMap = true)
 public class Issue {
     @TableId(type= IdType.AUTO,value = "id")
     private int id;

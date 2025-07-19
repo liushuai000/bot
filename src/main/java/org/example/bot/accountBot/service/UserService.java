@@ -32,7 +32,7 @@ public class UserService {
     //查询是否已经在数据库的操作员
     public User findByUsername(String userName) {
         QueryWrapper<User> queryWrapper = new QueryWrapper<>();
-        queryWrapper.eq("username", userName);
+        queryWrapper.eq("username", userName).or().eq("history_username",userName);
         return mapper.selectOne(queryWrapper);
     }
 

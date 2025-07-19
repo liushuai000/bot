@@ -22,10 +22,14 @@ public class AccountAssembler {
         accountDTO.setAccountHandlerMoney(account.getAccountHandlerMoney());
         accountDTO.setFirstName(user.getFirstLastName());
         accountDTO.setPm(account.getPm());
-        if (rate.isCalcU()){
-            accountDTO.setTotal(account.getTotal());
+        accountDTO.setCalcU(rate.isCalcU());
+        accountDTO.setTotal(account.getTotal());
+        if (rate.getRate().compareTo(BigDecimal.ZERO) != 0 && !accountDTO.getCalcU()){
+            BigDecimal feePercent = rate.getRate().divide(BigDecimal.valueOf(100), 4, RoundingMode.HALF_UP); // 转换为小数
+            BigDecimal feeAmount = account.getTotal().multiply(feePercent).setScale(2, RoundingMode.HALF_UP); // 扣除的手续费
+            accountDTO.setTotalUSDT(account.getTotal().subtract(feeAmount).setScale(2, RoundingMode.HALF_UP)); // 实际到账金额
         }else {
-            accountDTO.setTotal(account.getTotal());//.subtract(account.getTotal().multiply(rate.getRate().multiply(BigDecimal.valueOf(0.01))))
+            accountDTO.setTotalUSDT(account.getTotal());
         }
         accountDTO.setDowning(account.getDowning());//.divide(rate.getExchange(), 2, RoundingMode.HALF_UP)
         accountDTO.setRate(rate.getRate());
@@ -34,7 +38,7 @@ public class AccountAssembler {
         if (callBackUser!=null){
             accountDTO.setCallBackUserId(callBackUser.getUserId());
             accountDTO.setCallBackName(callBackUser.getUsername());
-            accountDTO.setCallBackFirstName(callBackUser.getFirstName()+callBackUser.getLastName());
+            accountDTO.setCallBackFirstName(callBackUser.getFirstName()+(callBackUser.getLastName()==null?"":callBackUser.getLastName()));
         }
         accountDTO.setGroupId(account.getGroupId());
         accountDTO.setUserId(account.getUserId());
@@ -48,7 +52,12 @@ public class AccountAssembler {
         issueDTO.setIssueHandlerMoney(issue.getIssueHandlerMoney());
         issueDTO.setFirstName(user.getFirstLastName());
         issueDTO.setDowned(issue.getDowned());
-        issueDTO.setRate(rate.getRate());
+        issueDTO.setCalcU(rate.isCalcU());
+        if (rate.isMatcher()){
+            issueDTO.setRate(rate.getRate());
+        }else{
+            issueDTO.setRate(new BigDecimal(0));
+        }
         issueDTO.setExchange(rate.getExchange());
         issueDTO.setDownRate(issue.getDownRate());
         issueDTO.setDownExchange(issue.getDownExchange());
@@ -57,19 +66,26 @@ public class AccountAssembler {
         if (callBackUser!=null){
             issueDTO.setCallBackUserId(callBackUser.getUserId());
             issueDTO.setCallBackName(callBackUser.getUsername());
-            issueDTO.setCallBackFirstName(callBackUser.getFirstName()+callBackUser.getLastName());
+            issueDTO.setCallBackFirstName(callBackUser.getFirstName()+(callBackUser.getLastName()==null?"":callBackUser.getLastName()));
         }
         BigDecimal downExchange = issue.getDownExchange();
         BigDecimal downRate = issue.getDownRate(); // 下发费率，如 12 表示 12%
         // 使用自定义汇率或默认汇率
         BigDecimal exchange = downExchange.compareTo(BigDecimal.ZERO) != 0 ? downExchange : rate.getExchange();
-//            exchange = exchange.setScale(2, RoundingMode.HALF_UP);
         BigDecimal uValue = issue.getDowned().divide(exchange, 2, RoundingMode.HALF_UP);
         // 如果有费率，扣除对应比例
-        if (downRate.compareTo(BigDecimal.ZERO) != 0) {
-            BigDecimal feePercent = downRate.divide(BigDecimal.valueOf(100), 4, RoundingMode.HALF_UP); // 转换为小数
-            BigDecimal feeAmount = uValue.multiply(feePercent).setScale(2, RoundingMode.HALF_UP); // 扣除的手续费
-            uValue = uValue.subtract(feeAmount).setScale(2, RoundingMode.HALF_UP); // 实际到账金额
+        if (downRate.compareTo(BigDecimal.ZERO) != 0 && !rate.isMatcher()) {
+            if (!issueDTO.getCalcU()){
+                BigDecimal feePercent = downRate.divide(BigDecimal.valueOf(100), 4, RoundingMode.HALF_UP); // 转换为小数
+                BigDecimal feeAmount = uValue.multiply(feePercent).setScale(2, RoundingMode.HALF_UP); // 扣除的手续费
+                uValue = uValue.subtract(feeAmount).setScale(2, RoundingMode.HALF_UP); // 实际到账金额
+            }
+        }else if (rate.isMatcher() && rate.getRate().compareTo(BigDecimal.ZERO) != 0){
+            if (!issueDTO.getCalcU()){
+                BigDecimal feePercent = rate.getRate().divide(BigDecimal.valueOf(100), 4, RoundingMode.HALF_UP); // 转换为小数
+                BigDecimal feeAmount = uValue.multiply(feePercent).setScale(2, RoundingMode.HALF_UP); // 扣除的手续费
+                uValue = uValue.subtract(feeAmount).setScale(2, RoundingMode.HALF_UP); // 实际到账金额
+            }
         }
         issueDTO.setDownedUSDT(uValue);
         issueDTO.setGroupId(issue.getGroupId());
@@ -87,46 +103,96 @@ public class AccountAssembler {
         BigDecimal totalUSDT=new BigDecimal(0);
         BigDecimal downingUSDT=new BigDecimal(0);
         BigDecimal downedUSDT=new BigDecimal(0);
+        BigDecimal downedPmAdd=new BigDecimal(0);//手动添加的
+        BigDecimal downedPmDelete=new BigDecimal(0);//手动添加的 减去
         if (accountDTOList!= null){
             // 计算 accountHandlerMoney 的总和
-            AccountMoney = accountDTOList.stream().map(AccountDTO::getAccountHandlerMoney)
+            AccountMoney = accountDTOList.stream().filter(c-> !c.getPm()).map(AccountDTO::getAccountHandlerMoney)
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
             total = accountDTOList.stream().filter(c-> !c.getPm()).map(AccountDTO::getTotal)
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
-            totalUSDT = accountDTOList.stream()
+            totalUSDT = accountDTOList.stream().filter(c-> !c.getPm())
                     .map(accountDTO -> accountDTO.getTotal().divide(accountDTO.getExchange(), 2, RoundingMode.HALF_UP))
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
-            downing = accountDTOList.stream().map(AccountDTO::getDowning)
+            downedPmAdd= accountDTOList.stream().filter(c-> c.getPm()).map(AccountDTO::getTotal)
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
-            downingUSDT = accountDTOList.stream()
-                    .map(accountDTO -> accountDTO.getDowning().divide(accountDTO.getExchange(),2,RoundingMode.HALF_UP))
-                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+            downing = accountDTOList.stream().filter(c -> !c.getPm()).map(dto -> {
+                BigDecimal total0 = dto.getTotal();
+                BigDecimal rate0 = dto.getRate();
+                if (rate0.compareTo(BigDecimal.ZERO) != 0) {
+                    if (!dto.getCalcU()){
+                        BigDecimal feePercent = rate0.divide(BigDecimal.valueOf(100), 4, RoundingMode.HALF_UP);
+                        BigDecimal feeAmount = total0.multiply(feePercent).setScale(2, RoundingMode.HALF_UP);
+                        total0 = total0.subtract(feeAmount);
+                    }
+                }
+                return total0;
+            }).reduce(BigDecimal.ZERO, BigDecimal::add);
+            downingUSDT = accountDTOList.stream().filter(c -> !c.getPm()).map(dto -> {
+                BigDecimal total0 = dto.getTotal();
+                BigDecimal rate0 = dto.getRate();
+                BigDecimal exchange = dto.getExchange();
+                if (rate0.compareTo(BigDecimal.ZERO) != 0) {
+                    if (!dto.getCalcU()){
+                        BigDecimal feePercent = rate0.divide(BigDecimal.valueOf(100), 4, RoundingMode.HALF_UP);
+                        BigDecimal feeAmount = total0.multiply(feePercent).setScale(2, RoundingMode.HALF_UP);
+                        total0 = total0.subtract(feeAmount);
+                    }
+                }
+                return total0.divide(exchange, 2, RoundingMode.HALF_UP);
+            }).reduce(BigDecimal.ZERO, BigDecimal::add);
         }
         if (issueDTOList!= null){
-            IssueMoney = issueDTOList.stream().map(IssueDTO::getIssueHandlerMoney)
+            IssueMoney = issueDTOList.stream().filter(c-> !c.getPm()).map(IssueDTO::getIssueHandlerMoney)
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
-
-            downed = issueDTOList.stream().map(IssueDTO::getDowned)
-                    .reduce(BigDecimal.ZERO, BigDecimal::add);//总下发
-
-            downedUSDT = issueDTOList.stream().map(issue -> {
+            downedPmDelete= issueDTOList.stream().filter(c-> c.getPm()).map(IssueDTO::getDowned)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+            for (IssueDTO issue1T : issueDTOList) {
+                if (issue1T != null && !issue1T.getPm()) {
+                    BigDecimal downRate = issue1T.getDownRate(); // 下发费率
+                    BigDecimal uValue = issue1T.getDowned();
+                    // 如果有费率，扣除对应比例
+                    if (downRate.compareTo(BigDecimal.ZERO) != 0 && !issue1T.isMatcher()) {
+                        if (!issue1T.getCalcU()) {
+                            BigDecimal feePercent = downRate.divide(BigDecimal.valueOf(100), 4, RoundingMode.HALF_UP);
+                            BigDecimal feeAmount = uValue.multiply(feePercent).setScale(2, RoundingMode.HALF_UP);
+                            uValue = uValue.subtract(feeAmount);
+                        }
+                    }else if (issue1T.getRate().compareTo(BigDecimal.ZERO) != 0 && issue1T.isMatcher()){
+                        BigDecimal feePercent = issue1T.getRate().divide(BigDecimal.valueOf(100), 4, RoundingMode.HALF_UP).stripTrailingZeros(); // 转换为小数
+                        BigDecimal feeAmount = uValue.multiply(feePercent).setScale(2, RoundingMode.HALF_UP).stripTrailingZeros(); // 扣除的手续费
+                        uValue = uValue.subtract(feeAmount).setScale(2, RoundingMode.HALF_UP).stripTrailingZeros(); // 实际到账金额
+                    }
+                    downed = downed.add(uValue);
+                }
+            }
+            downedUSDT = issueDTOList.stream().filter(c-> !c.getPm()).map(issue -> {
                 BigDecimal downExchange = issue.getDownExchange();
                 BigDecimal downRate = issue.getDownRate(); // 下发费率，如 12 表示 12%
                 // 使用自定义汇率或默认汇率
                 BigDecimal exchange = downExchange.compareTo(BigDecimal.ZERO) != 0 ? downExchange : issue.getExchange();
                 BigDecimal uValue = issue.getDowned().divide(exchange, 2, RoundingMode.HALF_UP);
                 // 如果有费率，扣除对应比例
-                if (downRate.compareTo(BigDecimal.ZERO) != 0) {
-                    BigDecimal feePercent = downRate.divide(BigDecimal.valueOf(100), 4, RoundingMode.HALF_UP); // 转换为小数
-                    BigDecimal feeAmount = uValue.multiply(feePercent).setScale(2, RoundingMode.HALF_UP); // 扣除的手续费
-                    uValue = uValue.subtract(feeAmount).setScale(2, RoundingMode.HALF_UP); // 实际到账金额
+                if (downRate.compareTo(BigDecimal.ZERO) != 0 && !rate.isMatcher()) {
+                    if (!issue.getCalcU()){
+                        BigDecimal feePercent = downRate.divide(BigDecimal.valueOf(100), 4, RoundingMode.HALF_UP); // 转换为小数
+                        BigDecimal feeAmount = uValue.multiply(feePercent).setScale(2, RoundingMode.HALF_UP); // 扣除的手续费
+                        uValue = uValue.subtract(feeAmount).setScale(2, RoundingMode.HALF_UP); // 实际到账金额
+                    }
+                }else if (issue.isMatcher() && issue.getRate().compareTo(BigDecimal.ZERO) != 0){
+                    if (!issue.getCalcU()){
+                        BigDecimal feePercent = issue.getRate().divide(BigDecimal.valueOf(100), 4, RoundingMode.HALF_UP); // 转换为小数
+                        BigDecimal feeAmount = uValue.multiply(feePercent).setScale(2, RoundingMode.HALF_UP); // 扣除的手续费
+                        uValue = uValue.subtract(feeAmount).setScale(2, RoundingMode.HALF_UP); // 实际到账金额
+                    }
                 }
                 return uValue;
             }).reduce(BigDecimal.ZERO, BigDecimal::add);
         }
         return new RateDTO()
                 .setCount(total)//.subtract(total.multiply(rate.getRate())).multiply(BigDecimal.valueOf(0.01))
-                .setDown(downing.subtract(downed))
+                .setDown(downing.subtract(downed).add(downedPmAdd.add(downedPmDelete)))
                 .setDowned(downed)
                 .setPmoney(status.getPmoney())
                 .setDownRate(status.getDownRate())

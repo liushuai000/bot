@@ -703,6 +703,7 @@ public class AccountBot extends TelegramLongPollingBot {
                                 +"⬇\uFE0F\n"
                                 +userDTO.getUsername();
                     }
+                    user.setHistoryUsername(user.getUsername());
                     user.setUsername(username);
                     sendMessage(sendMessage,message);
                 }
@@ -724,6 +725,13 @@ public class AccountBot extends TelegramLongPollingBot {
                     sendMessage(sendMessage,message);
                 }
                 userService.updateUserid(user);
+                if (user.getUserId()!=null && StringUtils.isNotBlank(user.getUserId())){
+                    List<UserOperation> userOperations = userOperationMapper.selectList(new QueryWrapper<UserOperation>().eq("user_id", user.getUserId()));
+                    userOperations.stream().forEach(c->{
+                        c.setUsername(user.getUsername());
+                        userOperationService.update(c);
+                    });
+                }
             }
         } else if (byUsername!=null ){//设置完操作员  然后操作员也不说话 然后操作员直接修改了用户名 会有问题
             if (byUsername.getUsername()!=null){

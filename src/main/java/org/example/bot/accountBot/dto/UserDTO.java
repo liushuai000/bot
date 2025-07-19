@@ -4,6 +4,7 @@ import io.swagger.annotations.ApiModel;
 import lombok.Data;
 import lombok.experimental.Accessors;
 import org.telegram.telegrambots.meta.api.objects.Message;
+import org.telegram.telegrambots.meta.api.objects.User;
 
 /**
  * 此类封装发送消息的用户信息 回复的信息
@@ -51,6 +52,13 @@ public class UserDTO {
             this.groupTitle=message.getChat().getTitle();
             System.out.println("群组 ID: " + groupId+" 标题:"+groupTitle);
             this.groupId=groupId+"";
+        }
+        if (message.getReplyToMessage()!=null){
+            User callFrom = message.getReplyToMessage().getFrom();
+            this.callBackUserId=callFrom.getId()+"";
+            this.callBackFirstName=callFrom.getFirstName();
+            this.callBackLastName=callFrom.getLastName();
+            this.callBackName=callFrom.getUserName();
         }
     }
 

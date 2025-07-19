@@ -14,7 +14,7 @@ import java.util.Date;
 @ApiModel("notification")
 @Accessors(chain = true)
 @Data
-@TableName(value = "notification", schema = "bot", autoResultMap = true)
+@TableName(value = "notification", autoResultMap = true)
 public class Notification {
     @TableId(type= IdType.AUTO,value = "id")
     private int id;

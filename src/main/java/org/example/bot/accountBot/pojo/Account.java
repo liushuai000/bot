@@ -19,7 +19,7 @@ import java.util.Date;
 @ApiModel("accounts")
 @Accessors(chain = true)
 @Data
-@TableName(value = "accounts", schema = "bot", autoResultMap = true)
+@TableName(value = "accounts",  autoResultMap = true)
 public class Account {
     @TableId(type= IdType.AUTO,value = "id")
     private int id;

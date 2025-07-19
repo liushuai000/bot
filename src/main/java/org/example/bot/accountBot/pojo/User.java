@@ -16,7 +16,7 @@ import java.util.Date;
 @ApiModel("user")
 @Accessors(chain = true)
 @Data
-@TableName(value = "user", schema = "bot", autoResultMap = true)
+@TableName(value = "user", autoResultMap = true)
 public class User {
     @TableId(type= IdType.AUTO,value = "id")
     public int id; //主键id
@@ -24,6 +24,8 @@ public class User {
     public String userId; //主键id
     @TableField("username")
     public String username;  //用户名 liuxiaolon
+    @TableField("history_username")
+    public String historyUsername;  //历史用户名 为了解决重复插入user
     @TableField("first_name")
     public String firstName;    //昵称 刘
     @TableField("last_name")

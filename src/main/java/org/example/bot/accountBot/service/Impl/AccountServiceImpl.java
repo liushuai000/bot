@@ -26,6 +26,7 @@ import org.telegram.telegrambots.meta.api.objects.chatmember.ChatMember;
 
 import javax.annotation.Resource;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.time.Instant;
@@ -148,8 +149,7 @@ public class AccountServiceImpl implements AccountService {
     private List<OperationUserDTO> getOperationUserDTO(List<AccountDTO> accountDTOList,List<IssueDTO> issueDTOList) {
         Map<String, OperationUserDTO> summaryMap = new ConcurrentHashMap<>();
         if (accountDTOList!=null){
-            accountDTOList.stream().filter(Objects::nonNull)
-                    .forEach(accountDTO -> {
+            accountDTOList.stream().filter(Objects::nonNull).filter(c->!c.getPm()).forEach(accountDTO -> {
                         String userId = accountDTO.getUserId();
                         BigDecimal total = accountDTO.getTotal();
                         BigDecimal downing = accountDTO.getDowning();
@@ -161,11 +161,25 @@ public class AccountServiceImpl implements AccountService {
                             accountSummary.addTotal(total);
                             BigDecimal totalUSDT = total.divide(exchange, 2, BigDecimal.ROUND_HALF_UP);
                             accountSummary.addTotalUSDT(totalUSDT);
+                            if (rate.compareTo(BigDecimal.ZERO) != 0 ) {
+                                if (!accountDTO.getCalcU()){
+                                    BigDecimal feePercent = rate.divide(BigDecimal.valueOf(100), 4, RoundingMode.HALF_UP);
+                                    BigDecimal feeAmount = downing.multiply(feePercent).setScale(2, RoundingMode.HALF_UP);
+                                    downing = total.subtract(feeAmount);
+                                }
+                            }
                             accountSummary.addIssueDowning(downing);
                             accountSummary.addIssueDowningUSDT(downing.divide(exchange, 2, BigDecimal.ROUND_HALF_UP));
                             accountSummary.incrementCount();
                             summaryMap.put(userId,accountSummary);
                         }else {
+                            if (rate.compareTo(BigDecimal.ZERO) != 0 ) {
+                                if (!accountDTO.getCalcU()){
+                                    BigDecimal feePercent = rate.divide(BigDecimal.valueOf(100), 4, RoundingMode.HALF_UP);
+                                    BigDecimal feeAmount = downing.multiply(feePercent).setScale(2, RoundingMode.HALF_UP);
+                                    downing = total.subtract(feeAmount);
+                                }
+                            }
                             accountSummary.addIssueDowning(downing);
                             accountSummary.addIssueDowningUSDT(downing.divide(exchange, 2, BigDecimal.ROUND_HALF_UP));
                             accountSummary.incrementCount();
@@ -181,21 +195,59 @@ public class AccountServiceImpl implements AccountService {
                     });
         }
         if (issueDTOList!=null){
-            issueDTOList.stream().filter(Objects::nonNull)
-                    .forEach(issueDTO -> {
+            issueDTOList.stream().filter(Objects::nonNull).filter(c->!c.getPm()).forEach(issueDTO -> {
                         String userId = issueDTO.getUserId();
                         BigDecimal total = issueDTO.getDowned();
                         BigDecimal down = issueDTO.getDown();//未下发
-                        BigDecimal exchange = issueDTO.getExchange();
-//                    BigDecimal rate = issueDTO.getRate();
+                        BigDecimal exchange;
+                        if (!issueDTO.isMatcher()){
+                         // 使用自定义汇率或默认汇率
+                            exchange = issueDTO.getDownExchange().compareTo(BigDecimal.ZERO) != 0 ? issueDTO.getDownExchange() : issueDTO.getExchange();
+                        }else{
+                            exchange = issueDTO.getExchange();
+                        }
                         OperationUserDTO accountSummary = summaryMap.get(userId);
                         if (accountSummary==null){
                             accountSummary = new OperationUserDTO();
+                            if (issueDTO != null && !issueDTO.getPm()) {
+                                BigDecimal downRate = issueDTO.getDownRate(); // 下发费率
+                                BigDecimal uValue = issueDTO.getDowned();
+                                // 如果有费率，扣除对应比例
+                                if (downRate.compareTo(BigDecimal.ZERO) != 0 && !issueDTO.isMatcher()) {
+                                    if (!issueDTO.getCalcU()) {
+                                        BigDecimal feePercent = downRate.divide(BigDecimal.valueOf(100), 4, RoundingMode.HALF_UP);
+                                        BigDecimal feeAmount = uValue.multiply(feePercent).setScale(2, RoundingMode.HALF_UP);
+                                        uValue = uValue.subtract(feeAmount);
+                                    }
+                                }else if (issueDTO.getRate().compareTo(BigDecimal.ZERO) != 0 && issueDTO.isMatcher()){
+                                    BigDecimal feePercent = issueDTO.getRate().divide(BigDecimal.valueOf(100), 4, RoundingMode.HALF_UP).stripTrailingZeros(); // 转换为小数
+                                    BigDecimal feeAmount = uValue.multiply(feePercent).setScale(2, RoundingMode.HALF_UP).stripTrailingZeros(); // 扣除的手续费
+                                    uValue = uValue.subtract(feeAmount).setScale(2, RoundingMode.HALF_UP).stripTrailingZeros(); // 实际到账金额
+                                }
+                                total = uValue;
+                            }
                             accountSummary.addIssueTotal(total);
                             accountSummary.addIssueTotalUSDT(total.divide(exchange, 2, BigDecimal.ROUND_HALF_UP));
                             accountSummary.IssueIncrementCount();
                             summaryMap.put(userId,accountSummary);
                         }else {
+                            if (issueDTO != null && !issueDTO.getPm()) {
+                                BigDecimal downRate = issueDTO.getDownRate(); // 下发费率
+                                BigDecimal uValue = issueDTO.getDowned();
+                                // 如果有费率，扣除对应比例
+                                if (downRate.compareTo(BigDecimal.ZERO) != 0 && !issueDTO.isMatcher()) {
+                                    if (!issueDTO.getCalcU()) {
+                                        BigDecimal feePercent = downRate.divide(BigDecimal.valueOf(100), 4, RoundingMode.HALF_UP);
+                                        BigDecimal feeAmount = uValue.multiply(feePercent).setScale(2, RoundingMode.HALF_UP);
+                                        uValue = uValue.subtract(feeAmount);
+                                    }
+                                }else if (issueDTO.getRate().compareTo(BigDecimal.ZERO) != 0 && issueDTO.isMatcher()){
+                                    BigDecimal feePercent = issueDTO.getRate().divide(BigDecimal.valueOf(100), 4, RoundingMode.HALF_UP).stripTrailingZeros(); // 转换为小数
+                                    BigDecimal feeAmount = uValue.multiply(feePercent).setScale(2, RoundingMode.HALF_UP).stripTrailingZeros(); // 扣除的手续费
+                                    uValue = uValue.subtract(feeAmount).setScale(2, RoundingMode.HALF_UP).stripTrailingZeros(); // 实际到账金额
+                                }
+                                total = uValue;
+                            }
                             accountSummary.IssueIncrementCount();
                             accountSummary.addIssueTotal(total);
                             accountSummary.addIssueTotalUSDT(total.divide(exchange, 2, BigDecimal.ROUND_HALF_UP));
@@ -215,7 +267,7 @@ public class AccountServiceImpl implements AccountService {
     private List<CallbackUserDTO> getCallbackDTO(List<AccountDTO> accountDTOList,List<IssueDTO> issueDTOList) {
         Map<String, CallbackUserDTO> summaryMap = new ConcurrentHashMap<>();
         if (accountDTOList!=null){
-            accountDTOList.stream().filter(Objects::nonNull).filter(this::isCallBackUserIdNoNull)
+            accountDTOList.stream().filter(Objects::nonNull).filter(c->!c.getPm()).filter(this::isCallBackUserIdNoNull)
                     .forEach(accountDTO -> {
                         String userId = accountDTO.getCallBackUserId();
                         BigDecimal total = accountDTO.getTotal();
@@ -228,6 +280,13 @@ public class AccountServiceImpl implements AccountService {
                             accountSummary.addTotal(total);
                             BigDecimal totalUSDT = total.divide(exchange, 2, BigDecimal.ROUND_HALF_UP);
                             accountSummary.addTotalUSDT(totalUSDT);
+                            if (rate.compareTo(BigDecimal.ZERO) != 0 ) {
+                                if (!accountDTO.getCalcU()){
+                                    BigDecimal feePercent = rate.divide(BigDecimal.valueOf(100), 4, RoundingMode.HALF_UP);
+                                    BigDecimal feeAmount = downing.multiply(feePercent).setScale(2, RoundingMode.HALF_UP);
+                                    downing = total.subtract(feeAmount);
+                                }
+                            }
                             accountSummary.addIssueDowning(downing);
                             accountSummary.addIssueDowningUSDT(downing.divide(exchange, 2, BigDecimal.ROUND_HALF_UP));
                             accountSummary.incrementCount();
@@ -237,6 +296,13 @@ public class AccountServiceImpl implements AccountService {
                             accountSummary.addTotal(total);
                             BigDecimal totalUSDT = total.divide(exchange, 2, BigDecimal.ROUND_HALF_UP);
                             accountSummary.addTotalUSDT(totalUSDT);
+                            if (rate.compareTo(BigDecimal.ZERO) != 0 ) {
+                                if (!accountDTO.getCalcU()){
+                                    BigDecimal feePercent = rate.divide(BigDecimal.valueOf(100), 4, RoundingMode.HALF_UP);
+                                    BigDecimal feeAmount = downing.multiply(feePercent).setScale(2, RoundingMode.HALF_UP);
+                                    downing = total.subtract(feeAmount);
+                                }
+                            }
                             accountSummary.addIssueDowning(downing);
                             accountSummary.addIssueDowningUSDT(downing.divide(exchange, 2, BigDecimal.ROUND_HALF_UP));
                         }
@@ -248,17 +314,38 @@ public class AccountServiceImpl implements AccountService {
                     });
         }
         if (issueDTOList!=null){
-            issueDTOList.stream().filter(Objects::nonNull).filter(this::isCallBackUserIdNoNullIssue)
+            issueDTOList.stream().filter(Objects::nonNull).filter(c->!c.getPm()).filter(this::isCallBackUserIdNoNullIssue)
                     .forEach(issueDTO -> {
                         String userId = issueDTO.getCallBackUserId();
                         BigDecimal total = issueDTO.getDowned();
                         BigDecimal down = issueDTO.getDown();//未下发
-//                        BigDecimal downing = issueDTO.getDowning();
-                        BigDecimal exchange = issueDTO.getExchange();
-//                        BigDecimal rate = issueDTO.getRate();// 出账没有费率
+                        BigDecimal exchange;
+                        if (!issueDTO.isMatcher()){
+                            // 使用自定义汇率或默认汇率
+                            exchange = issueDTO.getDownExchange().compareTo(BigDecimal.ZERO) != 0 ? issueDTO.getDownExchange() : issueDTO.getExchange();
+                        }else{
+                            exchange = issueDTO.getExchange();
+                        }
                         CallbackUserDTO accountSummary = summaryMap.get(userId);
                         if (accountSummary==null){
                             accountSummary = new CallbackUserDTO();
+                            if (issueDTO != null && !issueDTO.getPm()) {
+                                BigDecimal downRate = issueDTO.getDownRate(); // 下发费率
+                                BigDecimal uValue = issueDTO.getDowned();
+                                // 如果有费率，扣除对应比例
+                                if (downRate.compareTo(BigDecimal.ZERO) != 0 && !issueDTO.isMatcher()) {
+                                    if (!issueDTO.getCalcU()) {
+                                        BigDecimal feePercent = downRate.divide(BigDecimal.valueOf(100), 4, RoundingMode.HALF_UP);
+                                        BigDecimal feeAmount = uValue.multiply(feePercent).setScale(2, RoundingMode.HALF_UP);
+                                        uValue = uValue.subtract(feeAmount);
+                                    }
+                                }else if (issueDTO.getRate().compareTo(BigDecimal.ZERO) != 0 && issueDTO.isMatcher()){
+                                    BigDecimal feePercent = issueDTO.getRate().divide(BigDecimal.valueOf(100), 4, RoundingMode.HALF_UP).stripTrailingZeros(); // 转换为小数
+                                    BigDecimal feeAmount = uValue.multiply(feePercent).setScale(2, RoundingMode.HALF_UP).stripTrailingZeros(); // 扣除的手续费
+                                    uValue = uValue.subtract(feeAmount).setScale(2, RoundingMode.HALF_UP).stripTrailingZeros(); // 实际到账金额
+                                }
+                                total = uValue ;
+                            }
                             accountSummary.addIssueTotal(total);
                             accountSummary.addIssueTotalUSDT(total.divide(exchange, 2, BigDecimal.ROUND_HALF_UP));
 //                            accountSummary.addIssueDowning(downing);
@@ -266,9 +353,25 @@ public class AccountServiceImpl implements AccountService {
                             summaryMap.put(userId,accountSummary);
                         }else {
                             accountSummary.IssueIncrementCount();
-//                            accountSummary.addIssueDowning(downing);
-                            accountSummary.addIssueTotalUSDT(total.divide(exchange, 2, BigDecimal.ROUND_HALF_UP));
+                            if (issueDTO != null && !issueDTO.getPm()) {
+                                BigDecimal downRate = issueDTO.getDownRate(); // 下发费率
+                                BigDecimal uValue = issueDTO.getDowned();
+                                // 如果有费率，扣除对应比例
+                                if (downRate.compareTo(BigDecimal.ZERO) != 0 && !issueDTO.isMatcher()) {
+                                    if (!issueDTO.getCalcU()) {
+                                        BigDecimal feePercent = downRate.divide(BigDecimal.valueOf(100), 4, RoundingMode.HALF_UP);
+                                        BigDecimal feeAmount = uValue.multiply(feePercent).setScale(2, RoundingMode.HALF_UP);
+                                        uValue = uValue.subtract(feeAmount);
+                                    }
+                                }else if (issueDTO.getRate().compareTo(BigDecimal.ZERO) != 0 && issueDTO.isMatcher()){
+                                    BigDecimal feePercent = issueDTO.getRate().divide(BigDecimal.valueOf(100), 4, RoundingMode.HALF_UP).stripTrailingZeros(); // 转换为小数
+                                    BigDecimal feeAmount = uValue.multiply(feePercent).setScale(2, RoundingMode.HALF_UP).stripTrailingZeros(); // 扣除的手续费
+                                    uValue = uValue.subtract(feeAmount).setScale(2, RoundingMode.HALF_UP).stripTrailingZeros(); // 实际到账金额
+                                }
+                                total = uValue ;
+                            }
                             accountSummary.addIssueTotal(total);
+                            accountSummary.addIssueTotalUSDT(total.divide(exchange, 2, BigDecimal.ROUND_HALF_UP));
                         }
                         accountSummary.setExchange(exchange);
                         accountSummary.setDown(down);

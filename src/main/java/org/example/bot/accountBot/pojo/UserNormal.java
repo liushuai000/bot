@@ -17,7 +17,7 @@ import java.util.List;
 @ApiModel("user_normal")
 @Accessors(chain = true)
 @Data
-@TableName(value = "user_normal", schema = "bot", autoResultMap = true)
+@TableName(value = "user_normal", autoResultMap = true)
 public class UserNormal {
     @TableId(type= IdType.AUTO,value = "id")
     public int id; //主键id

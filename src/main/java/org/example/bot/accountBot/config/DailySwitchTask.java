@@ -102,7 +102,7 @@ public class DailySwitchTask {
                     sendMessage.setChatId(Long.parseLong(userId));
                     GroupInfoSetting groupInfoSetting = groupInfoSettingMapper.selectOne(new QueryWrapper<GroupInfoSetting>().eq("group_id", userId));
                     if (groupInfoSetting.getEnglish()){
-                        sendMessage.setText(String.format("⚠️ 您的权限已到期！请续费以继续使用此功能！"));
+                        sendMessage.setText(String.format("⚠️ 您的权限已到期！请续费后继续使用此功能！"));
                     }else {
                         sendMessage.setText(String.format("⚠️ Your usage permission has expired! Please renew to continue using this function!"));
                     }

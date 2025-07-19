@@ -1,9 +1,11 @@
 package org.example.bot.accountBot.botConfig;
 
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.example.bot.accountBot.dto.UserDTO;
 import org.example.bot.accountBot.mapper.StatusMapper;
+import org.example.bot.accountBot.mapper.UserMapper;
 import org.example.bot.accountBot.pojo.*;
 import org.example.bot.accountBot.service.*;
 import org.example.bot.accountBot.utils.ConstantMap;
@@ -11,6 +13,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
+import org.telegram.telegrambots.meta.api.objects.MessageEntity;
 import org.telegram.telegrambots.meta.api.objects.Update;
 
 import java.math.BigDecimal;
@@ -101,8 +104,13 @@ public class SettingOperatorPerson{
                 }
                 for (String usernameTemp : userNames) {
                     User user = userService.findByUsername(usernameTemp);
-                    UserOperation userOperation1 = userOperationService.findByUsername(usernameTemp, userDTO.getGroupId());
-                    if (user != null && usernameTemp.equals(user.getUsername())) {
+                    UserOperation userOperation1;
+                    if (user!=null){
+                        userOperation1 = userOperationService.selectByUserAndGroupId(user.getUserId(), userDTO.getGroupId());
+                    }else{
+                        userOperation1 = userOperationService.findByUsername(usernameTemp, userDTO.getGroupId());
+                    }
+                    if (user != null) {
                         if (userOperation1 != null && userOperation1.isOperation()) {//是操作员
                             upAdmin.add(" @"+usernameTemp);
                             isShowAdminMessage = true;
@@ -416,8 +424,12 @@ public class SettingOperatorPerson{
             statusService.updateStatus("show_few"            ,i , userDTO.getGroupId());
             accountBot.sendMessage(sendMessage, "操作成功");
         }else if (split1[0].startsWith("设置下发汇率")){
-            BigDecimal downExchange=BigDecimal.valueOf(Long.parseLong(split1[0].substring("设置下发汇率".length(), split1[0].length())));
+            BigDecimal downExchange=new BigDecimal(split1[0].substring("设置下发汇率".length(), split1[0].length()));
             status.setDownExchange(downExchange);
+            if (status.getDownExchange().compareTo(BigDecimal.ONE)==-1){
+                accountBot.sendMessage(sendMessage, "请设置下发汇率大于或等于1!" );
+                return;
+            }
             statusMapper.updateById(status);
             accountBot.sendMessage(sendMessage, "操作成功");
         } else if (split1[0].startsWith("设置下发费率")) {

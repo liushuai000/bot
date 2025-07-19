@@ -18,7 +18,7 @@ import java.util.Map;
 @ApiModel("WalletListener")
 @Accessors(chain = true)
 @Data
-@TableName(value = "wallet_listener", schema = "bot", autoResultMap = true)
+@TableName(value = "wallet_listener",  autoResultMap = true)
 public class WalletListener {
     @TableId(type= IdType.AUTO,value = "id")
     private int id;

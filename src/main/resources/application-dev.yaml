@@ -8,9 +8,8 @@ spring:
       enabled: false
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
-    #117服务器 bot  bot2 bot3 需要换数据库  221: bot  bot2 bot3 bot4 bot5 bot6
-#    url: jdbc:mysql://43.128.113.117:3306/bot3?useUnicode=true&characterEncoding=UTF-8&autoReconnect=true&useSSL=false&zeroDateTimeBehavior=convertToNull&useTimezone=true&serverTimezone=GMT%2B8&allowMultiQueries=true
-    url: jdbc:mysql://43.134.137.221:3306/bot6?useUnicode=true&characterEncoding=UTF-8&autoReconnect=true&useSSL=false&zeroDateTimeBehavior=convertToNull&useTimezone=true&serverTimezone=GMT%2B8&allowMultiQueries=true
+    #43.128.113.117服务器 bot  bot2 bot3 需要换数据库  43.134.137.221: bot  bot2 bot3 bot4 bot5 bot6
+    url: jdbc:mysql://localhost:3306/bot3?useUnicode=true&characterEncoding=UTF-8&autoReconnect=true&useSSL=false&zeroDateTimeBehavior=convertToNull&useTimezone=true&serverTimezone=GMT%2B8&allowMultiQueries=true
     username: root
     password: root@Liu332331
   jackson:
@@ -28,6 +27,8 @@ logging:
     console: '%d{YYYY-MM-dd HH:mm:ss.SSS} %clr(%-5level) --- [%-15thread]%cyan(%-50logger{50}):%msg%n'
 
 #vueUrl是切换服务器地址 有二个服务器  http://www.yaoke.cc/      vueUrl: http://www.bot2025.cc/
+upload: http://www.yaoke.cc/
+#upload: http://www.bot2025.cc/
 
 #botUserId: 6764218833
 #Origin: http://43.128.113.117
@@ -47,11 +48,11 @@ logging:
 #Origin1: http://43.128.113.117
 #Origin2: http://43.128.113.117
 
-#botUserId: 6358555885  #117服务器 bot3
-#vueUrl: http://www.yaoke.cc/dist3/
-#Origin: http://43.128.113.117
-#Origin1: http://43.128.113.117
-#Origin2: http://43.128.113.117
+botUserId: 6358555885  #117服务器 bot3
+vueUrl: http://www.yaoke.cc/dist3/
+Origin: http://43.128.113.117
+Origin1: http://43.128.113.117
+Origin2: http://43.128.113.117
 
 #**************************以上是117服务器记账 除了6542803611*****************************#
 
@@ -83,11 +84,11 @@ logging:
 #Origin2: http://43.134.137.221:8081
 #
 #
-botUserId: 7853644445
-vueUrl: http://www.bot2025.cc/dist11/
-Origin: http://43.134.137.221:8081
-Origin1: http://43.134.137.221
-Origin2: http://43.134.137.221:8081
+#botUserId: 7853644445
+#vueUrl: http://www.bot2025.cc/dist11/
+#Origin: http://43.134.137.221:8081
+#Origin1: http://43.134.137.221
+#Origin2: http://43.134.137.221:8081
 
 #**************************换机器人需要按照顺序换token*****************************#
 
@@ -109,8 +110,8 @@ telegram:
 #    token: 6427776393:AAFuMuoXYudgwyG_zr5y7O04sMvDzxONnYI
 #    username: DDDvipBot  #117 bot2
 
-#    token: 6358555885:AAHLocVRTsvnBNSAIo6XHeMBGDRSw3tjA0s
-#    username: HHHvipBot  #117 bot3
+    token: 6358555885:AAHLocVRTsvnBNSAIo6XHeMBGDRSw3tjA0s
+    username: HHHvipBot  #117 bot3
 
 #    token: 6657334282:AAGjn2JhqCazWr3Q7LBQg3IO3GnbIG64zCg
 #    username: GGGvipBot #221 bot2
@@ -124,6 +125,6 @@ telegram:
 #    token: 6592029170:AAHTRwJhrq98bDkij2flItkwD_suu3tKMDM
 #    username: ooovipBot #221 bot5
 #
-    token: 7853644445:AAHCUuLWqYhZqoqG7o0ouQBNlGvu7sWPA4s
-    username: paofenvipBot #221 bot6
+#    token: 7853644445:AAHCUuLWqYhZqoqG7o0ouQBNlGvu7sWPA4s
+#    username: paofenvipBot #221 bot6
 
