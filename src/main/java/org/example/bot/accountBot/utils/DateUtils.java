@@ -48,7 +48,18 @@ public class DateUtils {
         LocalDateTime renewalTime = baseTime.plusDays(daysToAdd);
         return Date.from(renewalTime.atZone(zoneId).toInstant());
     }
-
+    //小时
+    public static Date calculateRenewalDateHours(Date validTime, long hourToAdd, ZoneId zoneId) {
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime baseTime;
+        if (validTime == null || validTime.before(Date.from(now.atZone(zoneId).toInstant()))) {
+            baseTime = now;
+        } else {
+            baseTime = validTime.toInstant().atZone(zoneId).toLocalDateTime();
+        }
+        LocalDateTime renewalTime = baseTime.plusHours(hourToAdd);
+        return Date.from(renewalTime.atZone(zoneId).toInstant());
+    }
     /**
      * 将Duration对象转换为时间字符串，根据不同的时间单位进行格式化。
      *

@@ -9,7 +9,7 @@ spring:
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
     #43.128.113.117服务器 bot  bot2 bot3 需要换数据库  43.134.137.221: bot  bot2 bot3 bot4 bot5 bot6
-    url: jdbc:mysql://localhost:3306/bot3?useUnicode=true&characterEncoding=UTF-8&autoReconnect=true&useSSL=false&zeroDateTimeBehavior=convertToNull&useTimezone=true&serverTimezone=GMT%2B8&allowMultiQueries=true
+    url: jdbc:mysql://localhost:3306/bot2?useUnicode=true&characterEncoding=UTF-8&autoReconnect=true&useSSL=false&zeroDateTimeBehavior=convertToNull&useTimezone=true&serverTimezone=GMT%2B8&allowMultiQueries=true
     username: root
     password: root@Liu332331
   jackson:
@@ -27,8 +27,8 @@ logging:
     console: '%d{YYYY-MM-dd HH:mm:ss.SSS} %clr(%-5level) --- [%-15thread]%cyan(%-50logger{50}):%msg%n'
 
 #vueUrl是切换服务器地址 有二个服务器  http://www.yaoke.cc/      vueUrl: http://www.bot2025.cc/
-upload: http://www.yaoke.cc/
-#upload: http://www.bot2025.cc/
+#upload: http://www.yaoke.cc/
+upload: http://www.bot2025.cc/
 
 #botUserId: 6764218833
 #Origin: http://43.128.113.117
@@ -48,19 +48,19 @@ upload: http://www.yaoke.cc/
 #Origin1: http://43.128.113.117
 #Origin2: http://43.128.113.117
 
-botUserId: 6358555885  #117服务器 bot3
-vueUrl: http://www.yaoke.cc/dist3/
-Origin: http://43.128.113.117
-Origin1: http://43.128.113.117
-Origin2: http://43.128.113.117
+#botUserId: 6358555885  #117服务器 bot3
+#vueUrl: http://www.yaoke.cc/dist3/
+#Origin: http://43.128.113.117
+#Origin1: http://43.128.113.117
+#Origin2: http://43.128.113.117
 
 #**************************以上是117服务器记账 除了6542803611*****************************#
 
-#botUserId: 6657334282
-#vueUrl: http://www.bot2025.cc/dist7/
-#Origin: http://43.134.137.221:8081
-#Origin1: http://43.134.137.221
-#Origin2: http://43.134.137.221:8081
+botUserId: 6657334282
+vueUrl: http://www.bot2025.cc/dist7/
+Origin: http://43.134.137.221:8081
+Origin1: http://43.134.137.221
+Origin2: http://43.134.137.221:8081
 
 #
 #botUserId: 7207331115
@@ -92,9 +92,13 @@ Origin2: http://43.128.113.117
 
 #**************************换机器人需要按照顺序换token*****************************#
 
-apiKey: 2967e678-556e-497a-a892-a1dcee897ba5
-apiKey1: a7089da7-e17b-4d28-a3d3-29f799983cae
-apiKey2: e9b66829-5dde-4f5e-9611-37bc9f26f4c7
+#apiKey: 2967e678-556e-497a-a892-a1dcee897ba5
+#apiKey1: a7089da7-e17b-4d28-a3d3-29f799983cae
+#apiKey2: e9b66829-5dde-4f5e-9611-37bc9f26f4c7
+#  221服务器从 bot2 开始用这个apiKey 如果报错apiKey 换换地方试试 因为有监听地址间隔多少秒查询 每秒最大呼叫次数5 次调用/（API 密钥 * 秒） 就可能是这个限制的问题
+apiKey: 9aa39142-ee50-4218-bb99-64e9366f22f0
+apiKey1: 71367bca-a9a1-41a5-b1ae-27bf37a4a1c9
+apiKey2: 20151ec8-190a-44c8-8052-2580d52deb02
 #获取最新汇率
 tranAccountUrl: https://apilist.tronscanapi.com/api/accountv2?address=
 tranHistoryUrl: https://apilist.tronscanapi.com/api/filter/trc20/transfers?limit=10&start=0&sort=-timestamp&count=true&filterTokenValue=0&relatedAddress=
@@ -110,11 +114,11 @@ telegram:
 #    token: 6427776393:AAFuMuoXYudgwyG_zr5y7O04sMvDzxONnYI
 #    username: DDDvipBot  #117 bot2
 
-    token: 6358555885:AAHLocVRTsvnBNSAIo6XHeMBGDRSw3tjA0s
-    username: HHHvipBot  #117 bot3
+#    token: 6358555885:AAHLocVRTsvnBNSAIo6XHeMBGDRSw3tjA0s
+#    username: HHHvipBot  #117 bot3
 
-#    token: 6657334282:AAGjn2JhqCazWr3Q7LBQg3IO3GnbIG64zCg
-#    username: GGGvipBot #221 bot2
+    token: 6657334282:AAGjn2JhqCazWr3Q7LBQg3IO3GnbIG64zCg
+    username: GGGvipBot #221 bot2
 
 #    token: 7207331115:AAH0C82S5KmxCtKLoeKpLW4OHLPY2ZxlJSo
 #    username: LLvipbot #221 bot3

@@ -11,7 +11,6 @@ import lombok.experimental.Accessors;
 import java.util.Date;
 
 //48小时内发送消息的人
-@ApiModel("notification")
 @Accessors(chain = true)
 @Data
 @TableName(value = "notification", autoResultMap = true)

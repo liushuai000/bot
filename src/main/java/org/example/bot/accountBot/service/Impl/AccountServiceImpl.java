@@ -643,20 +643,22 @@ public class AccountServiceImpl implements AccountService {
         for (Status status : resultPage.getRecords()){
             ReturnGroupDTO dto = new ReturnGroupDTO();
             String groupId = status.getGroupId();
-            UserNormal userNormal = userNormalMapper.selectOne(new QueryWrapper<UserNormal>().eq("group_id", groupId));
-            if (userNormal==null){
-                statusMapper.delete(new QueryWrapper<Status>().eq("group_id", groupId));
-                continue;
-            }
             dto.setGroupId(groupId);
             dto.setGroupName(status.getGroupTitle());
+            dto.setDailyCutTime(status.getSetTime().getHours()+"");
+            dto.setBillCount(status.getShowFew());
+            dto.setJoinTime(status.getCreateTime());
+            UserNormal userNormal = userNormalMapper.selectOne(new QueryWrapper<UserNormal>().eq("group_id", groupId));
+            if (userNormal==null){
+                returnDTOList.add(dto);
+                continue;
+            }
             dto.setInviterId(userNormal.getUserId());
             User user = userMapper.selectOne(new QueryWrapper<User>().eq("user_id", userNormal.getUserId()));
             if (user!=null){
                 dto.setInviterName(user.getFirstLastName());
             }else{
-                statusMapper.delete(new QueryWrapper<Status>().eq("group_id", groupId));
-                userNormalMapper.delete(new QueryWrapper<UserNormal>().eq("group_id", groupId));
+                returnDTOList.add(dto);
                 continue;
             }
             List<Rate> rates = rateService.selectRateList(groupId);
@@ -667,16 +669,11 @@ public class AccountServiceImpl implements AccountService {
                 dto.setExchangeRate(rates.get(0).getExchange());
                 dto.setFeeRate(rates.get(0).getRate());
             }
-            dto.setDailyCutTime(status.getSetTime().getHours()+"");
             List<UserOperation> userOperations = userOperationMapper.selectList(new QueryWrapper<UserOperation>()
                     .eq("group_id", groupId).eq("is_operation", true));
             String result = userOperations.stream().filter(userOp -> userOp.getUserId()==null || !isNotInviter(userOp, userNormal)).filter(Objects::nonNull)
                     .map(userOp -> "@" + userOp.getUsername()).collect(Collectors.joining(" ")); // 使用空格分隔
             dto.setOperator(result);
-            dto.setBillCount(status.getShowFew());
-            dto.setJoinTime(status.getCreateTime());
-            dto.setIsAccountingEnabled(true);
-            dto.setIsPinned(true);
             returnDTOList.add(dto);
         }
         returnDTOList.sort(Comparator.comparing(ReturnGroupDTO::getInviterName, Comparator.nullsFirst(String::compareTo)));

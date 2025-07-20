@@ -697,9 +697,9 @@ public class PaperPlaneBotSinglePerson {
             user.setValidFree(true);//已经体验过会员
             userService.insertUser(user);
 
-        }else if (!user.isValidFree()) {//还没有体验过免费6小时
-            LocalDateTime tomorrow = LocalDateTime.now().plusHours(accountSetting.getTrialDurationHours());
-            Date validTime = Date.from(tomorrow.atZone(ZoneId.systemDefault()).toInstant());
+        }else if (!user.isValidFree()) {//还没有体验过免费8小时
+            DateUtils dateUtils = new DateUtils();
+            Date validTime = dateUtils.calculateRenewalDateHours(user.getValidTime(), accountSetting.getTrialDurationHours(), ZoneId.systemDefault());
             user.setValidTime(validTime);
             user.setSuperAdmin(true);//默认操作权限管理员
             user.setValidFree(true);//是使用过免费6小时
