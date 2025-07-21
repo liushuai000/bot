@@ -9,6 +9,8 @@ import lombok.experimental.Accessors;
 @Data
 @ApiModel(value = "QueryUserDTO",description = "查询")
 public class QueryUserDTO {
+    @ApiModelProperty("userId")
+    private String userId;//用户id搜索
     @ApiModelProperty("nickname")
     private String nickname;//用户昵称
     @ApiModelProperty("startTime")

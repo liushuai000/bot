@@ -569,6 +569,9 @@ public class AccountServiceImpl implements AccountService {
                     .or().apply("CONCAT(first_name, ' ', last_name) = {0}", queryDTO.getNickname().trim())
                     .or().apply("CONCAT(first_name, last_name) = {0}", queryDTO.getNickname().trim()));
         }
+        if (queryDTO.getUserId()!=null && StringUtils.isNotBlank(queryDTO.getUserId())){
+            wrapper.eq("user_id",queryDTO.getUserId());
+        }
         Boolean isRepeatUser = queryDTO.getIsRepeatUser();
         if (!isRepeatUser){
             wrapper.select("user_id", "MAX(last_time) as last_time")
