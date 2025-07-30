@@ -123,6 +123,7 @@ public class DateOperator{
                 status.setDownRate(BigDecimal.ZERO);
                 status.setAccountHandlerMoney(BigDecimal.ZERO);
                 status.setIssueHandlerMoney(BigDecimal.ZERO);
+                status.setMatcherHandlerMoney( true);//重置为开启
                 statusService.update(status);
                 accountService.deleteTodayData(status,groupId);
                 issueService.deleteTodayIssueData(status,groupId);
@@ -163,6 +164,7 @@ public class DateOperator{
                 status.setDownRate(BigDecimal.ZERO);
                 status.setAccountHandlerMoney(BigDecimal.ZERO);
                 status.setIssueHandlerMoney(BigDecimal.ZERO);
+                status.setMatcherHandlerMoney( true);//重置为开启
                 statusService.update(status);
                 accountService.deleteTodayData(status, groupId);
                 issueService.deleteTodayIssueData(status, groupId);

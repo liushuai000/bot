@@ -434,11 +434,13 @@ public class SettingOperatorPerson{
             accountBot.sendMessage(sendMessage, "操作成功");
         }else if (split1[0].startsWith("设置下发汇率")){
             BigDecimal downExchange=new BigDecimal(split1[0].substring("设置下发汇率".length(), split1[0].length()));
-            status.setDownExchange(downExchange);
-            if (status.getDownExchange().compareTo(BigDecimal.ONE)==-1){
+            if (downExchange.compareTo(BigDecimal.ZERO)==0){
+                status.setDownExchange(downExchange);
+            }else if (downExchange.compareTo(BigDecimal.ONE)==-1){
                 accountBot.sendMessage(sendMessage, "请设置下发汇率大于或等于1!" );
                 return;
             }
+            status.setDownExchange(downExchange);
             statusMapper.updateById(status);
             accountBot.sendMessage(sendMessage, "操作成功");
         } else if (split1[0].startsWith("设置下发费率")) {

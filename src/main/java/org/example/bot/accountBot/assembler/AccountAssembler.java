@@ -59,8 +59,13 @@ public class AccountAssembler {
             issueDTO.setRate(new BigDecimal(0));
         }
         issueDTO.setExchange(rate.getExchange());
-        issueDTO.setDownRate(issue.getDownRate());
-        issueDTO.setDownExchange(issue.getDownExchange());
+        if (rate.isMatcher()){
+            issueDTO.setDownExchange(BigDecimal.ZERO);
+            issueDTO.setDownRate(BigDecimal.ZERO);
+        }else{
+            issueDTO.setDownExchange(issue.getDownExchange());
+            issueDTO.setDownRate(issue.getDownRate());
+        }
         issueDTO.setAddTime(issue.getAddTime());
         issueDTO.setPm(issue.getPm());
         if (callBackUser!=null){

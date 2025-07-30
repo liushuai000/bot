@@ -413,11 +413,13 @@ public class SettingOperatorPersonEnglish {
         }else if (lowerText.startsWith("set the exchange rate")){
             String substring = lowerText.substring("set the exchange rate".length(), lowerText.length());
             BigDecimal downExchange=new BigDecimal(substring);
-            status.setDownExchange(downExchange);
-            if (status.getDownExchange().compareTo(BigDecimal.ONE)==-1){
+            if (downExchange.compareTo(BigDecimal.ZERO)==0){
+                status.setDownExchange(downExchange);
+            }else if (status.getDownExchange().compareTo(BigDecimal.ONE)==-1){
                 accountBot.sendMessage(sendMessage, "Please set the exchange rate to be greater than or equal to 1!" );
                 return;
             }
+            status.setDownExchange(downExchange);
             statusMapper.updateById(status);
             accountBot.sendMessage(sendMessage, "Operation successful");
         } else if (lowerText.startsWith("set the delivery rate")) {
