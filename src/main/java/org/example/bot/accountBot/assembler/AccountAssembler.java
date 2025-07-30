@@ -152,17 +152,19 @@ public class AccountAssembler {
                 if (issue1T != null && !issue1T.getPm()) {
                     BigDecimal downRate = issue1T.getDownRate(); // 下发费率
                     BigDecimal uValue = issue1T.getDowned();
-                    // 如果有费率，扣除对应比例
-                    if (downRate.compareTo(BigDecimal.ZERO) != 0 && !issue1T.isMatcher()) {
+                    // 如果有公式费率 先计算公式，扣除对应比例
+                    if (issue1T.getRate().compareTo(BigDecimal.ZERO) != 0 && issue1T.isMatcher()){
+                        if (!issue1T.getCalcU()){
+                            BigDecimal feePercent = issue1T.getRate().divide(BigDecimal.valueOf(100), 4, RoundingMode.HALF_UP).stripTrailingZeros(); // 转换为小数
+                            BigDecimal feeAmount = uValue.multiply(feePercent).setScale(2, RoundingMode.HALF_UP).stripTrailingZeros(); // 扣除的手续费
+                            uValue = uValue.subtract(feeAmount).setScale(2, RoundingMode.HALF_UP).stripTrailingZeros(); // 实际到账金额
+                        }
+                    } else  if (downRate.compareTo(BigDecimal.ZERO) != 0 && !issue1T.isMatcher()) {
                         if (!issue1T.getCalcU()) {
                             BigDecimal feePercent = downRate.divide(BigDecimal.valueOf(100), 4, RoundingMode.HALF_UP);
                             BigDecimal feeAmount = uValue.multiply(feePercent).setScale(2, RoundingMode.HALF_UP);
                             uValue = uValue.subtract(feeAmount);
                         }
-                    }else if (issue1T.getRate().compareTo(BigDecimal.ZERO) != 0 && issue1T.isMatcher()){
-                        BigDecimal feePercent = issue1T.getRate().divide(BigDecimal.valueOf(100), 4, RoundingMode.HALF_UP).stripTrailingZeros(); // 转换为小数
-                        BigDecimal feeAmount = uValue.multiply(feePercent).setScale(2, RoundingMode.HALF_UP).stripTrailingZeros(); // 扣除的手续费
-                        uValue = uValue.subtract(feeAmount).setScale(2, RoundingMode.HALF_UP).stripTrailingZeros(); // 实际到账金额
                     }
                     downed = downed.add(uValue);
                 }
@@ -173,16 +175,16 @@ public class AccountAssembler {
                 // 使用自定义汇率或默认汇率
                 BigDecimal exchange = downExchange.compareTo(BigDecimal.ZERO) != 0 ? downExchange : issue.getExchange();
                 BigDecimal uValue = issue.getDowned().divide(exchange, 2, RoundingMode.HALF_UP);
-                // 如果有费率，扣除对应比例
-                if (downRate.compareTo(BigDecimal.ZERO) != 0 && !rate.isMatcher()) {
+                if (issue.getRate().compareTo(BigDecimal.ZERO) != 0 && issue.isMatcher()){
+                    // 如果有费率，扣除对应比例
                     if (!issue.getCalcU()){
-                        BigDecimal feePercent = downRate.divide(BigDecimal.valueOf(100), 4, RoundingMode.HALF_UP); // 转换为小数
+                        BigDecimal feePercent = issue.getRate().divide(BigDecimal.valueOf(100), 4, RoundingMode.HALF_UP); // 转换为小数
                         BigDecimal feeAmount = uValue.multiply(feePercent).setScale(2, RoundingMode.HALF_UP); // 扣除的手续费
                         uValue = uValue.subtract(feeAmount).setScale(2, RoundingMode.HALF_UP); // 实际到账金额
                     }
-                }else if (issue.isMatcher() && issue.getRate().compareTo(BigDecimal.ZERO) != 0){
+                } else if (downRate.compareTo(BigDecimal.ZERO) != 0 && !issue.isMatcher()) {
                     if (!issue.getCalcU()){
-                        BigDecimal feePercent = issue.getRate().divide(BigDecimal.valueOf(100), 4, RoundingMode.HALF_UP); // 转换为小数
+                        BigDecimal feePercent = downRate.divide(BigDecimal.valueOf(100), 4, RoundingMode.HALF_UP); // 转换为小数
                         BigDecimal feeAmount = uValue.multiply(feePercent).setScale(2, RoundingMode.HALF_UP); // 扣除的手续费
                         uValue = uValue.subtract(feeAmount).setScale(2, RoundingMode.HALF_UP); // 实际到账金额
                     }

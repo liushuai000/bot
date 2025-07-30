@@ -99,6 +99,9 @@ public class ConstantMap {
         put("显示手续费(Show handling fee)", "XSSXF");
         put("隐藏手续费(Hidden fees)", "YCSXF");
 
+        put("开启公式手续费(Enable Formula Fee)", "");
+        put("关闭公式手续费(Close Formula Fee)", "");
+
         put("账单(Bill)", "ZD");
         put("查看账单(View Bill)", "CKZD");
         put("显示账单(Show Bill)", "XXZD");
@@ -209,6 +212,8 @@ public class ConstantMap {
         putEnglish("撤销入款", "CXRK");
         putEnglish("显示手续费", "XSSXF");
         putEnglish("隐藏手续费", "YCSXF");
+        putEnglish("开启公式手续费", "KQGSSXF");
+        putEnglish("关闭公式手续费", "GBGSSXF");
 
         putEnglish("权限人", "QXR");
         putEnglish("管理员", "GLY");

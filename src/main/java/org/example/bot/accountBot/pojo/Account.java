@@ -45,7 +45,7 @@ public class Account {
     private BigDecimal down;    //未下发
     @TableField("riqie")
     private boolean riqie=false;   //是否设置了日切  用status里的 set_riqie
-    @TableField("account_handler_money")
+    @TableField("account_handler_money") //如果status里的matcher_handler_money为false则不计算手续费
     private BigDecimal accountHandlerMoney=BigDecimal.ZERO;//全局入款手续费 account issue 里的手续费是记录单笔历史的
     @TableField("message_id")
     private Integer messageId;//用户发送消息的id用于取消用

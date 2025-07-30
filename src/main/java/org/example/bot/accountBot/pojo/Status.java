@@ -71,7 +71,8 @@ public class Status {
     private Date dTime;//下发地址 修改时间
     @TableField("d_user_id")
     private String dUserId;//下发地址 修改人id
-
+    @TableField("matcher_handler_money")
+    private Boolean matcherHandlerMoney=true;//公式记账的手续费  是否开启公式手续费 true是开启
 
 
     public Date parseDate(){

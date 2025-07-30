@@ -1,6 +1,7 @@
 package org.example.bot.accountBot.botConfig;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.example.bot.accountBot.dto.UserDTO;
@@ -296,6 +297,14 @@ public class SettingOperatorPerson{
         }else if (split1[0].equals("隐藏手续费") || split1[0].equals(constantMap.get("隐藏手续费"))){
             status.setShowHandlerMoneyStatus(1);
             statusService.updateStatus("show_handler_money_status"     ,1, userDTO.getGroupId());
+            accountBot.sendMessage(sendMessage,"操作成功");
+        }else if (split1[0].equals("关闭公式手续费")|| split1[0].equals(constantMap.get("关闭公式手续费"))){
+            status.setMatcherHandlerMoney( false);
+            statusMapper.updateById( status);
+            accountBot.sendMessage(sendMessage,"操作成功");
+        }else if (split1[0].equals("开启公式手续费")|| split1[0].equals(constantMap.get("开启公式手续费"))){
+            status.setMatcherHandlerMoney(true);
+            statusMapper.updateById( status);
             accountBot.sendMessage(sendMessage,"操作成功");
         }else if (split1[0].contains("设置手续费")){
             BigDecimal money=BigDecimal.valueOf(Long.parseLong(split1[0].substring("设置手续费".length(), split1[0].length())));

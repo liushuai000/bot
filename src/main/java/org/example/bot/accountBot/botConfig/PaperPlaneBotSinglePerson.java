@@ -637,6 +637,8 @@ public class PaperPlaneBotSinglePerson {
                 "设置手续费10（Setup fee 10）0为关闭（0 is off）\n" +
                 "隐藏手续费（Hidden fees）\n" +
                 "显示手续费（Show handling fee）\n" +
+                "关闭公式手续费 （Close Formula Fee）\n" +
+                "开启公式手续费（Enable Formula Fee）\n" +
                 "显示1条（Show 1 item）\n" +
                 "显示3条（Show 3 item）\n" +
                 "显示5条（Show 5 item）\n" +

@@ -1,5 +1,6 @@
 package org.example.bot.accountBot.botConfig;
 
+import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.example.bot.accountBot.dto.UserDTO;
@@ -317,6 +318,14 @@ public class SettingOperatorPersonEnglish {
         }else if (lowerText.startsWith("hidden fees")){
             status.setShowHandlerMoneyStatus(1);
             statusService.updateStatus("show_handler_money_status"     ,1, userDTO.getGroupId());
+            accountBot.sendMessage(sendMessage,"Operation successful");
+        }else if (lowerText.startsWith("close formula fee")){
+            status.setMatcherHandlerMoney( false);
+            statusMapper.updateById( status);
+            accountBot.sendMessage(sendMessage,"Operation successful");
+        }else if (lowerText.startsWith("enable formula fee")){
+            status.setMatcherHandlerMoney( true);
+            statusMapper.updateById( status);
             accountBot.sendMessage(sendMessage,"Operation successful");
         }else if (lowerText.startsWith("setup fee ")){
             BigDecimal money=BigDecimal.valueOf(Long.parseLong(lowerText.substring("setup fee ".length(), lowerText.length())));

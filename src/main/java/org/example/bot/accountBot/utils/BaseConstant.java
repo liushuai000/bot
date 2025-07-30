@@ -99,7 +99,9 @@ public class BaseConstant {
             constantMap.get("撤销下发"),
             constantMap.get("撤销入款"),
             constantMap.get("显示手续费"),
-            constantMap.get("隐藏手续费")
+            constantMap.get("隐藏手续费"),
+            constantMap.get("关闭公式手续费"),
+            constantMap.get("开启公式手续费"),
     };
     //这个是equals
     public final static String[] array={
@@ -110,7 +112,7 @@ public class BaseConstant {
             "显示1条","显示3条","显示5条", "+0","-0","+0u","-0u","+0U","-0U","显示分类","隐藏分类","账单","显示账单",
             "清理今天数据", "删除今天数据","清理今天账单","清理今日账单","删除今日账单","清理今天帐单","删除今天账单",
             "删除账单", "删除今天帐单","删除帐单","清除账单","清除帐单", "删除全部账单","删除全部帐单", "删除全部账单","清除全部账单",
-            "撤销下发","撤销入款","显示手续费","隐藏手续费","关闭回复人显示","隐藏回复人显示","隐藏回复人名称",
+            "撤销下发","撤销入款","显示手续费","隐藏手续费","开启公式手续费","关闭公式手续费","关闭回复人显示","隐藏回复人显示","隐藏回复人名称",
     };
     //这个是包含的
     public final static String[] showArray={
@@ -123,7 +125,7 @@ public class BaseConstant {
             "显示1条","显示3条","显示5条", "+0","-0","+0u","-0u","+0U","-0U","显示分类","隐藏分类","账单","显示账单",
             "清理今天数据", "删除今天数据","清理今天账单","清理今日账单","删除今日账单","清理今天帐单","删除今天账单",
             "删除账单", "删除今天帐单","删除帐单","清除账单","清除帐单", "删除全部账单","删除全部帐单", "删除全部账单","清除全部账单",
-            "撤销下发","撤销入款","显示手续费","隐藏手续费","关闭回复人显示","隐藏回复人显示","隐藏回复人名称",
+            "撤销下发","撤销入款","显示手续费","隐藏手续费","关闭公式手续费","开启公式手续费","关闭回复人显示","隐藏回复人显示","隐藏回复人名称",
     };
     //这个是需要显示账单的第一行都是contains 其余行都是equals 因为第一行有  下发-30.equals(下发)
     public final static String[] arrayEnglish2 = {
@@ -134,7 +136,7 @@ public class BaseConstant {
             "Show 1 item", "Show 3 item", "Show 5 item", "+0", "-0", "+0u", "-0u", "+0U", "-0U", "Show Categories", "Hide Categories",
             "Clear Today Data", "Delete Today Data", "Clear Today Bill", "Clear Today Bills", "Delete Today Bills", "Clear Today Account", "Delete Today Account",
             "Delete Bill", "Delete Today Account", "Delete Account", "Clear Bill", "Clear Account", "Delete All Bills", "Delete All Accounts", "Delete All Bills Again", "Clear All Bills",
-            "Undo delivery", "Cancel deposit", "Show Handling Fee", "Hidden fees", "Hide reply name"
+            "Undo delivery", "Cancel deposit", "Show Handling Fee", "Hidden fees","Close Formula Fee","Enable Formula Fee", "Hide reply name"
     };
 
     public final static String[] showArrayEnglish2 = {
@@ -146,7 +148,7 @@ public class BaseConstant {
             "Show 1 item", "Show 3 item", "Show 5 item", "+0", "-0", "+0u", "-0u", "+0U", "-0U", "Show Categories", "Hide Categories",
             "Clear Today Data", "Delete Today Data", "Clear Today Bill", "Clear Today Bills", "Delete Today Bills", "Clear Today Account", "Delete Today Account",
             "Delete Bill", "Delete Today Account", "Delete Account", "Clear Bill", "Clear Account", "Delete All Bills", "Delete All Accounts", "Delete All Bills Again", "Clear All Bills",
-            "Undo delivery", "Cancel deposit", "Show Handling Fee", "Hidden fees", "Hide reply name"
+            "Undo delivery", "Cancel deposit", "Show Handling Fee", "Hidden fees","Close Formula Fee","Enable Formula Fee",  "Hide reply name"
 
     };
 

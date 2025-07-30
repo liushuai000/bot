@@ -373,7 +373,8 @@ public class RuzhangOperations {
         }
         //判断是否符合公式 true 是匹配
         boolean isMatcher = utils.isMatcher(text);
-        if (!isValidCommand(text)&& !updateAccount.getPm() && !issue.getPm()) {
+        boolean matcher2 = utils.isMatcher2(text,new StringBuilder(""));//匹配公式 /后面是-负数就不给反应或者给提示
+        if (!isValidCommand(text) && !updateAccount.getPm() && !issue.getPm()) {
             showOperatorName.replay(sendMessage, userDTO, updateAccount, rate, issueList, issue, text, status, groupInfoSetting);
             return;
         }
@@ -489,11 +490,13 @@ public class RuzhangOperations {
         updateAccount.setCallBackUserId(userDTO.getCallBackUserId());
         char firstChar = text.charAt(0);
         if (isMatcher) {
+            if (!matcher2){
+                return;
+            }
             //公式入账 isMatch
             utils.calcRecorded(text, userDTO.getUserId(), userDTO.getUsername(), userDTO.getGroupId(), updateAccount,
                     total, down, issue, downed, downing, status,message.getMessageId());
-        }
-        if (isMatcher == false && !showOperatorName.isEmptyMoney(text)) {
+        }else if (isMatcher == false && !showOperatorName.isEmptyMoney(text)) {
             if (firstChar == '+') {
                 //+10u
                 updateAccount.setTotal(num);

@@ -40,7 +40,7 @@ public class IssueDTO{
     @ApiModelProperty("callBackFirstName")
     private String callBackFirstName;//操作人名称  是firstName+lastName
     @TableField("is_matcher")
-    private boolean isMatcher=false;
+    private boolean isMatcher=false;//是否公式入账
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
     @ApiModelProperty("addTime")
     private Date addTime;

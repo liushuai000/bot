@@ -101,8 +101,6 @@ public class DateOperator{
 
     }
 
-
-
     // 操作人跟最高权限人都可以删除。 删除今日数据/关闭日切 到时间后账单数据自动保存为历史数据，软件界面内数据全部自动清空，操作员权限保留。
     public void deleteTodayData(String text1, SendMessage sendMessage, String groupId, Status status, Rate rate,GroupInfoSetting groupInfoSetting) {
         String text = text1.toLowerCase();

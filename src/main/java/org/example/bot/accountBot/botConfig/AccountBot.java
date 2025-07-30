@@ -546,9 +546,11 @@ public class AccountBot extends TelegramLongPollingBot {
                 List<GroupInnerUser> userList = groupInnerUserMapper.selectList(new QueryWrapper<GroupInnerUser>().eq("group_id", chatId));
                 if (userList.isEmpty())return;
                 for (GroupInnerUser user : userList){
-                    GroupInnerUser groupInnerUser = groupInnerUserMapper.selectOne(new QueryWrapper<GroupInnerUser>().eq("user_id", user.getUserId()).eq("type", "退群"));
+                    GroupInnerUser groupInnerUser = groupInnerUserMapper.selectOne(new QueryWrapper<GroupInnerUser>().eq("group_id", chatId).eq("user_id", user.getUserId()).eq("type", "退群"));
                     if (groupInnerUser !=null && user !=null){
                         groupInnerUserMapper.deleteById(user.getId());
+                    }else if (groupInnerUser== null){
+                        this.insertInnerUser("退群", chatId, user.getUserId(), username, user.getFirstName(), user.getLastName());
                     }
                 }
             }
@@ -565,10 +567,10 @@ public class AccountBot extends TelegramLongPollingBot {
             String lastName = chatMember.getFrom().getLastName();
             if ("left".equals(newMember.getStatus()) || "kicked".equals(newMember.getStatus())) {
                 GroupInnerUser user = groupInnerUserMapper.selectOne(new QueryWrapper<GroupInnerUser>().eq("user_id", userId).eq("group_id", chatId));
-                GroupInnerUser groupInnerUser = groupInnerUserMapper.selectOne(new QueryWrapper<GroupInnerUser>().eq("user_id", userId).eq("type", "退群"));
+                GroupInnerUser groupInnerUser = groupInnerUserMapper.selectOne(new QueryWrapper<GroupInnerUser>().eq("group_id", chatId).eq("user_id", userId).eq("type", "退群"));
                 if (groupInnerUser !=null && user !=null){
                     groupInnerUserMapper.deleteById(user.getId());
-                }else{
+                }else if (groupInnerUser== null){
                     this.insertInnerUser("退群", chatId, userId, username, firstName, lastName);
                 }
             }
@@ -577,11 +579,12 @@ public class AccountBot extends TelegramLongPollingBot {
             }
         }else if (update.getMessage()!=null && update.getMessage().getLeftChatMember()!=null){
             org.telegram.telegrambots.meta.api.objects.User leftChatMember = update.getMessage().getLeftChatMember();
+            String chatId = update.getMessage().getChat().getId().toString();
             GroupInnerUser user = groupInnerUserMapper.selectOne(new QueryWrapper<GroupInnerUser>().eq("user_id", leftChatMember.getId()).eq("group_id", update.getMessage().getChat().getId().toString()));
-            GroupInnerUser groupInnerUser = groupInnerUserMapper.selectOne(new QueryWrapper<GroupInnerUser>().eq("user_id", leftChatMember.getId()).eq("type", "退群"));
+            GroupInnerUser groupInnerUser = groupInnerUserMapper.selectOne(new QueryWrapper<GroupInnerUser>().eq("group_id", chatId).eq("user_id", leftChatMember.getId()).eq("type", "退群"));
             if (groupInnerUser !=null && user !=null){
                 groupInnerUserMapper.deleteById(user.getId());
-            }else{
+            }else if (groupInnerUser== null){
                 this.insertInnerUser("退群", update.getMessage().getChat().getId().toString(), leftChatMember.getId()+"", leftChatMember.getUserName(), leftChatMember.getFirstName(), leftChatMember.getLastName());
             }
         }
@@ -649,6 +652,8 @@ public class AccountBot extends TelegramLongPollingBot {
                 "设置手续费10（Setup fee 10）0为关闭（0 is off）\n" +
                 "隐藏手续费（Hidden fees）\n" +
                 "显示手续费（Show handling fee）\n" +
+                "关闭公式手续费 （Close Formula Fee）\n" +
+                "开启公式手续费（Enable Formula Fee）\n" +
                 "显示1条（Show 1 item）\n" +
                 "显示3条（Show 3 item）\n" +
                 "显示5条（Show 5 item）\n" +
